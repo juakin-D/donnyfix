@@ -1,0 +1,517 @@
+<!DOCTYPE html> 
+<html  lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book a Repair - Donnyfix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+    <style>
+
+        /* some CSS Variables as index.html for consistency */
+        :root {
+            --bg: #fafafa;
+            --bg2: #f5f4f0;
+            --text: #18181b;
+            --text2: #52525b;
+            --text3: #a1a1aa;
+            --accent: #0d9488;
+            --accent-lt:#ccfbf1;
+            --border: #e4e4e7;
+            --white: #ffffff;
+            --radius: 10px;
+            --font-head:playfair display, georgia, serif;
+            --font-body: Epilogue, system-ui, sans-serif;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
+            --transition: 0.18s ease;
+
+        }
+        *, *::before, *::after  {
+            box-sizing: border-box; margin: 0; padding: 0;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 16px;
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            
+        }
+        a { color: inherit; text-decoration: none; }
+        .container {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 0 clamp(20px, 5vw, 48px);
+        }
+        /* page load animation same as index.html */
+        @keyframes fadeup {
+            from { opacity: 0; transform: translateY(16px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .reveal { animation: fadeup 0.5s ease both;}
+        .reveal-1 { animation-delay: 0.5s;}
+        .reveal-2 { animation-delay: 0.15s;}
+        .reveal-3 { animation-delay: 0.25s;}
+
+
+        /* NAV identical to index.html */
+        nav {
+            position: fixed; top: 0; z-index: 100;
+            background: rgba(250, 250, 249, 0.88);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            display: flex; align-items: center; justify-content: space-between; height: 60px;
+        }
+
+
+        /* logo style*/
+        .logo {
+            font-family: var(--font-head);
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        .logo em { font-style: normal; color: var(--accent);}
+        .nav-links{
+            display: flex; align-items: center; gap: 28px; list-style: none;
+        }
+
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(250, 250, 249, 0.88);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 40px;
+        }
+
+        .nav-links {
+            display: flex; align-items: center; gap: 28px; list-style: none;
+        }
+        .nav-links a {
+            font-size: 0.785rem;
+            color: var(--white);
+            transition: color var(--transition);
+        }
+        .nav-links a:hover { color: var(--text2); }
+        @media (max-width: 600px) {
+            .nav-links li:not(:last-child) { display: none;}
+        }
+
+        /* BUTTONS SYSTEMS SAME AS INDEX.HTML */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            border-radius: var(--radius);
+            padding: 11px 22px;
+            font-family: var(--font-body);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            white-space: nowrap;
+        }
+        .btn-primary { background: var(--text); color: var(--white); }
+        .btn-primary:hover { background: var(--accent);transform: translateY(-2px); box-shadow: var(--shadow-md);}
+        .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border);} 
+        .btn-outline:hover { border-color: var(--text2); background: var(--white); }
+
+
+        /* PAGE LAYOUT 
+        TWO- column layout layout on Desktop. On mobile, it stacks vertically */
+
+        .page-body {
+             padding: clamp(40px, 8vw, 72px) 0 80px;
+        }
+        .page-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: clamp(32px, 5vw, 64px);
+            align-items: start;
+        }
+        @media (max-width: 760px) {
+            .page-grid { grid-template-columns: 1fr; }
+            .sidebar { order: 2;}
+            .form-col { order: 1;}
+        }
+
+        /* sidebar styles, sticky summary panel */
+        .sidebar {
+            position: sticky;
+            top: 80px;
+        }
+        .sidebar-eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-size: 0.75rem; font-weight: 600; letter-spacing: 1.8px;
+            color: var(--text3);
+            text-transform: uppercase; margin: 16px;
+        }
+        .sidebar h1 {
+            font-family: var(--font-head);
+            font-size: clamp(1.6rem, 3vw, 2.2rem);
+            font-weight: 700; line-height: 1.5;
+            letter-spacing: -0.8px;
+             margin-bottom: 12px;
+        }
+        .sidebar h1 em { font-style: normal; color: var(--accent);}
+
+        .sidebar-desc {
+            font-size: 0.9rem; color: var(--text2); 
+            font-weight: 300; line-height: 1.65;
+             margin-bottom: 28px;
+        }
+
+        /* TRUST checklist in sidebar*/
+
+        .trust-list {
+            list-style: none; display: flex; flex-direction: column; gap: 10px;
+            padding: 20px; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+        }
+        .trust-list li {
+            display: flex; align-items: center; gap: 10px;font-size: 0.83rem; color: var(--text2);
+        }
+
+        .trust-list li::before {
+            content: '';
+            width: 6px; height: 6px;
+            background: var(--accent);
+            border-radius: 50%; flex-shrink: 0;
+        }
+
+        /* FORM CARD */
+        .form-card {
+            background: var(--white);
+            border: 1px solid var(--white);
+            border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm);
+        }
+           /* Section headers inside the form */
+         .form-section {
+      padding: 20px 28px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .form-section:first-child { border-top: none; }
+
+    .form-section-label {
+      font-size: 0.7rem; font-weight: 600;
+      letter-spacing: 1.8px; text-transform: uppercase;
+      color: var(--text-3); margin-bottom: 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .form-section-label::after {
+      content: ''; flex: 1; height: 1px;
+      background: var(--border);
+    }
+
+    .form-fields {
+      padding: 0 28px 24px;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+
+    /* Two-column row within the form */
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 500px) {
+      .field-row { grid-template-columns: 1fr; }
+      .form-section { padding: 20px 20px 0; }
+      .form-fields { padding: 0 20px 20px; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+       /*
+      LABELS
+      for="X" on label ties to id="X" on input.
+      Clicking the label focuses the field —
+      a small UX detail that makes forms easier to use.
+    */
+
+     label {
+      font-size: 0.8rem; font-weight: 500;
+      color: var(--text-2); letter-spacing: 0.2px;
+    }
+
+    label .req { color: var(--accent); margin-left: 2px; }
+      /*
+      INPUT STYLES
+       The transition animates the border and glow
+      smoothly when the user clicks in.
+    */
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 400;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+     /*
+      FOCUS STATE
+      WHY: :focus fires when the element is active/selected.
+      The teal border + soft glow matches the accent color
+      and makes it immediately clear which field is active.
+    */
+    input:focus, select:focus, textarea:focus  {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+      background: var(--white);
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: var(--text-3);
+      font-weight: 300;
+    }
+
+    /* Custom dropdown arrow */
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '▾'; position: absolute;
+      right: 14px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-3); font-size: 0.8rem;
+      pointer-events: none;
+    }
+    select option { background: var(--white); }
+
+    textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+    
+
+    /* FORM FOOTER - Submit area*/
+
+     .form-footer {
+      padding: 20px 28px 28px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-head);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.2px;
+      transition: all var(--transition);
+    }
+
+    .submit-btn:hover {
+      background: #0f766e;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(13,148,136,0.25);
+    }
+
+    .submit-btn:active { transform: translateY(0); }
+
+    .form-note {
+      text-align: center; font-size: 0.775rem;
+      color: var(--text-3); margin-top: 12px;
+    }
+
+    /* FOOTER*/
+
+     footer { border-top: 1px solid var(--border); padding: 32px 0; }
+    .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+    .footer-copy { font-size: 0.8rem; color: var(--text-3); }
+    .footer-links { display: flex; gap: 20px; list-style: none; }
+    .footer-links a { font-size: 0.8rem; color: var(--text-3); transition: color var(--transition); }
+    .footer-links a:hover { color: var(--text); }
+
+    </style>
+</head>
+<body>
+    <!-- NAV — same markup as index.html -->
+    <nav>
+         <div class="container nav-inner">
+             <a href="/" class="logo">Donny<em>Fix</em></a>
+             <ul class="nav-links">
+                 <li><a href="/#services">Services</a></li>
+                <li><a href="/#how-it-works">How it works</a></li>
+                <li><a href="/#reviews">Reviews</a></li>
+                <li><a href="/" class="btn btn-primary" style="padding:8px 18px;font-size:0.82rem;">Book home</a></li>
+             </ul>
+         </div>
+    </nav>  
+
+     <!-- PAGE BODY -->
+
+  <div class="page-body">
+    <div class="container">
+      <div class="page-grid">
+
+            <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar reveal reveal-1">
+
+     <!----<p class="sidebar-eyebrow">Booking</p>
+
+      <h1>Book a<br /><em>repair.</em></h1>
+    -->
+      <p class="sidebar-desc">
+        Fill in the form and we'll confirm your slot within the hour.
+        Most repairs are done same day.
+      </p>
+<!---
+      <ul class="trust-list">
+        <li>No fix, no fee — ever</li>
+        <li>90-day repair guarantee</li>
+        <li>Genuine parts only</li>
+        <li>Most repairs under 60 min</li>
+        <li>Free full diagnostic</li>
+        <li>Your data stays private</li>
+      </ul>
+    </aside>
+-->
+    <!-- ========== FORM ========== -->
+    <div class="form-col reveal reveal-2">
+      <!--
+        FORM ELEMENT
+        action="/booking" — URL Flask handles
+        method="POST"    — sends data in request body, not URL
+        WHY POST not GET: GET puts form data in the URL
+        (visible, bookmarkable). POST hides it in the
+        request body — correct for personal data.
+      -->
+      <form action="/booking" method="POST">
+        <div class="form-card">
+
+          <!-- Section 1: Personal details -->
+          <div class="form-section">
+            <p class="form-section-label">Your details</p>
+          </div>
+          <div class="form-fields">
+            <div class="field-row">
+              <div class="field">
+                <label for="name">Full name <span class="req">*</span></label>
+                <input type="text" id="name" name="name"
+                  placeholder="e.g. Donny Joe " required />
+              </div>
+              <div class="field">
+                <!--
+                  type="tel" WHY: On mobile devices this
+                  opens a numeric keypad instead of the
+                  full keyboard — small UX improvement.
+                -->
+                <label for="phone">Phone number <span class="req">*</span></label>
+                <input type="tel" id="phone" name="phone"
+                  placeholder="e.g. 020 000 0000" required />
+              </div>
+            </div>
+            <div class="field">
+              <!--
+                type="email" WHY: Browser auto-validates
+                that input contains @ and a domain.
+                On mobile it shows an email keyboard.
+              -->
+              <label for="email">Email address <span class="req">*</span></label>
+              <input type="email" id="email" name="email"
+                placeholder="you@example.com" required />
+            </div>
+          </div>
+
+          <!-- Section 2: Device & service -->
+          <div class="form-section">
+            <p class="form-section-label">Device & service</p>
+          </div>
+          <div class="form-fields">
+            <div class="field-row">
+              <div class="field">
+                <label for="device">Device <span class="req">*</span></label>
+                <!--
+                  WHY select-wrap div: We use it to inject
+                  the custom ▾ arrow via CSS ::after,
+                  because you can't style ::after on <select>
+                  directly in most browsers.
+                -->
+                <div class="select-wrap">
+                  <select id="device" name="device" required>
+                    <option value="" disabled selected>Select device</option>
+                    <option value="iphone">iPhone</option>
+                    <option value="samsung">Samsung</option>
+                    <option value="pixel">Google Pixel</option>
+                    <option value="other">Other Android</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label for="service">Service needed <span class="req">*</span></label>
+                <div class="select-wrap">
+                  <select id="service" name="service" required>
+                    <option value="" disabled selected>Select service</option>
+                    <option value="screen">Screen replacement</option>
+                    <option value="battery">Battery replacement</option>
+                    <option value="water">Water damage recovery</option>
+                    <option value="camera">Camera repair</option>
+                    <option value="charging">Charging port fix</option>
+                    <option value="diagnostic">Free diagnostic</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <!--
+                type="date" WHY: Shows a native date picker.
+                The browser handles the calendar UI for free.
+              -->
+              <label for="date">Preferred date <span class="req">*</span></label>
+              <input type="date" id="date" name="date" required />
+            </div>
+            <div class="field">
+              <label for="notes">Additional notes</label>
+              <textarea id="notes" name="notes"
+                placeholder="Describe the issue, mention your model, or add anything useful..."></textarea>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <div class="form-footer">
+            <button type="submit" class="submit-btn">
+              Confirm booking →
+            </button>
+            <p class="form-note">🔒 Your details are never shared with third parties.</p>
+          </div>
+        </div><!-- /.form-card -->
+      </form>
+    </div>
+  </div><!-- /.page-grid -->
+</div><!-- /.container -->
+
+    <footer>
+    <div class="container footer-inner">
+      <span class="footer-copy">© 2026 DonnyFix. All rights reserved.</span>
+      <ul class="footer-links">     
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Terms</a></li>
+        <li><a href="#">Contact: <span>0541057500</span></a></li>
+      </ul>
+    </div>
+    </footer>
+</body>
+</html>

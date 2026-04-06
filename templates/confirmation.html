@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF8" />
+    <title>Booking Confirmed- Donnyfix</title>
+    <link href="https//fonts.googlapis.com/css2?family=Syne:wght@40;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --bg2: #f5f4f0;
+            --text: #18181b;
+            --text2: #52525b;
+            --text3: #a1a1aa;
+            --accent: #0d9488;
+            --accent-lt:#1db090;
+            --border: #e4e4e7;
+            --white: #ffffff;
+            --radius: 10px;
+            --font-head:playfair display, georgia, serif;
+            --font-body: Epilogue, system-ui, sans-serif;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
+            --transition: 0.18s ease;
+
+
+
+          
+            --color-surface: #161616;
+            --color-border: #2a2a2a;
+            --color-text: #f5f5f5;
+            --color-muted: #888;
+            --font-display: 'Syns', sans-serif;
+            --font-body: 'DM sans', sans-serif;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0;}
+        body{
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+        }
+        .card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 16px;
+            padding: 48px;
+            max-width: 560px;
+            width: 100%;
+            text-align: center;
+        }
+        .check {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-family: var(--font-display);
+            color: var(--color-text);
+            font-size: 1.9rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+        h1 span { color: var(--accent);}
+        .subtitle {
+            color: var(--text2);
+            margin-bottom: 36px;
+            font-size: 0.95rem;
+        }
+        /* summary table*/
+        .summary {
+            background: var(--bg);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            overflow: hidden;
+            text-align: left;
+            margin-bottom: 32px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px 20px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--text3);
+        }
+        .summary-row:last-child { border-bottom: none;}
+        .summary-label { color: var(--text);}
+        .summary-value { 
+            font-weight: 500;
+            text-transform: capitalize; /* turn iphon into Iphone*/
+        }
+        .btn {
+            display: inline-block;
+            padding: 13px 28px;
+            border-radius: 10px;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--accent-lt);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="check">✅</div>
+        <h1>Booked, <span>{{ name.split()[0] }}</span></h1>
+        <p class="subtitle">Your booking has been received. We'll contact you shortly!</p>
+        <!--{{variable}} is a jinja2 variable template syntax  Flask replaces these with real values we passed in from app.py 
+        using the render_template function-->
+        <div class="summary">
+            <div class="summary-row">
+                <div class="summary-label">Name:</div>
+                <div class="summary-value">{{ name }}</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">phone:</div>
+                <div class="summary-value">{{ phone }}</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">email:</div>
+                <div class="summary-value">{{ email }}</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">Device:</div>
+                <div class="summary-value">{{ device }}</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">Service:</div>
+                <div class="summary-value">{{ service }}</div>
+            </div>
+            <div class="summary-row">
+                <div class="summary-label">Preferred Date:</div>
+                <div class="summary-value">{{ date }}</div>
+            </div>
+            {% if notes %}
+            <div class="summary-row">
+                <div class="summary-label">Notes:</div>
+                <div class="summary-value">{{ notes }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <a href="/booking"class="btn btn-primary">⬅Book Another Service</a>
+    </div>
+</body>
+</html>

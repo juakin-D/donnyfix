@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — DonnyFix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#0c0c0e;--bg-2:#111114;--surface:#18181d;--surface-2:#1f1f26;
+      --border:#2a2a35;--border-2:#34343f;--text:#e8e8f0;--text-2:#8888a0;
+      --text-3:#4a4a5a;--accent:#0d9488;--accent-lt:rgba(13,148,136,0.12);
+      --accent-glow:rgba(13,148,136,0.25);--red:#ef4444;--red-lt:rgba(239,68,68,0.1);
+      --yellow:#f59e0b;--green:#22c55e;
+      --font-head:'Playfair Display',Georgia,serif;
+      --font-body:'Epilogue',system-ui,sans-serif;
+      --radius:8px;--transition:0.18s ease;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+    body {background:var(--bg);
+        color:var(--text);
+        font-family:var(--font-body);
+        font-size:14px;
+        line-height:1.6;
+        -webkit-font-smoothing:antialiased;
+        min-height:100vh;}
+    a{color:inherit;text-decoration:none;}
+    .layout{display:flex;min-height:100vh;}
+    .sidebar{width:220px;
+        flex-shrink:0;
+        background:var(--bg-2);
+        border-right:1px solid var(--border);
+        display:flex;flex-direction:column;
+        position:fixed; top:0; left:0;
+        bottom:0;z-index:50;}
+    .sidebar-logo{padding:24px 20px 20px;
+        border-bottom:1px solid var(--border);}
+    .logo-text{font-family:var(--font-head);font-size:1.15rem;font-weight:700;}
+    .logo-text em{font-style:normal;color:var(--accent);}
+    .admin-badge{display:inline-block;font-size:0.6rem;
+      font-weight:600;letter-spacing:1.5px;
+      text-transform:uppercase;color:var(--accent);background:var(--accent-lt);
+      border:1px solid rgba(13,148,136,0.2);
+      padding:2px 7px;
+      border-radius:4px;margin-top:5px;}
+    .sidebar-nav{padding:16px 12px;flex:1;}
+    .nav-label{font-size:0.6rem;font-weight:600;
+      letter-spacing:1.8px;text-transform:uppercase;
+      color:var(--text-3);padding:0 8px;margin-bottom:6px;}
+    .nav-item{display:flex;align-items:center;gap:10px;
+      padding:9px 10px;border-radius:var(--radius);
+      font-size:0.83rem;color:var(--text-2);cursor:pointer;
+      transition:all var(--transition);margin-bottom:2px;}
+    .nav-item:hover{background:var(--surface);color:var(--text);}
+    .nav-item.active{background:var(--accent-lt);color:var(--accent);}
+    .sidebar-footer{padding:16px 12px;border-top:1px solid var(--border);}
+    .back-link{display:flex;align-items:center;gap:8px;
+      font-size:0.78rem;color:var(--text-3);padding:8px 10px;
+      border-radius:var(--radius);transition:all var(--transition);}
+    .back-link:hover{color:var(--text-2);background:var(--surface);}
+    .main{margin-left:220px;flex:1;display:flex;flex-direction:column;}
+    .topbar{height:56px;background:var(--bg-2);
+      border-bottom:1px solid var(--border);
+      display:flex;align-items:center;
+      justify-content:space-between;
+      padding:0 28px;position:sticky;top:0;z-index:40;}
+    .topbar-title{font-family:var(--font-head);font-size:1rem;font-weight:700;}
+    .topbar-meta{font-size:0.75rem;color:var(--text-2);}
+    .topbar-meta strong{color:var(--accent);font-weight:600;}
+    .content{padding:28px;flex:1;}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;
+      transform:translateY(0);}}
+    .stats-grid{display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:14px;margin-bottom:24px;animation:fadeUp 0.4s ease both;}
+    .stat-card{background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:10px;padding:18px 20px;}
+    .stat-label{font-size:0.68rem;font-weight:600;
+      letter-spacing:1.5px;text-transform:uppercase;
+      color:var(--text-3);margin-bottom:8px;}
+    .stat-value{font-family:var(--font-head);
+      font-size:1.8rem;font-weight:700;
+      line-height:1;margin-bottom:4px;}
+    .stat-sub{font-size:0.7rem;color:var(--text-3);}
+    .c-accent{color:var(--accent);}
+    .c-yellow{color:var(--yellow);}
+    .c-green{color:var(--green);}.c-text{color:var(--text);}
+
+    .toolbar{display:flex;gap:10px;margin-bottom:16px;
+      flex-wrap:wrap;align-items:center;animation:fadeUp 0.4s ease 0.1s both;}
+    .search-wrap{position:relative;flex:1;min-width:220px;}
+    .search-icon{position:absolute;left:11px;
+      top:50%;transform:translateY(-50%);
+      color:var(--text-3);pointer-events:none;font-size:0.85rem;}
+    .search-input{width:100%;background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:9px 12px 9px 32px;
+      color:var(--text);font-family:var(--font-body);
+      font-size:0.83rem;outline:none;
+      transition:border-color var(--transition),box-shadow var(--transition);}
+    .search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+    .search-input::placeholder{color:var(--text-3);}
+    .filter-select{background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:9px 30px 9px 12px;color:var(--text);
+      font-family:var(--font-body);font-size:0.83rem;
+      outline:none;cursor:pointer;appearance:none;
+      -webkit-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a4a5a'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;
+      background-position:right 10px center;
+      transition:border-color var(--transition);}
+    .filter-select:focus{border-color:var(--accent);outline:none;}
+    .filter-select option{background:var(--surface-2);}
+    .result-count{font-size:0.75rem;color:var(--text-3);white-space:nowrap;}
+    .table-wrap{background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:10px;overflow:hidden;
+      animation:fadeUp 0.4s ease 0.2s both;}
+    table{width:100%;border-collapse:collapse;}
+    thead{background:var(--surface-2);border-bottom:1px solid var(--border);}
+    th{padding:10px 16px;text-align:left;font-size:0.65rem;font-weight:600;
+      letter-spacing:1.4px;text-transform:uppercase;color:var(--text-3);
+      white-space:nowrap;}
+    tbody tr{border-bottom:1px solid var(--border);transition:background var(--transition);}
+    tbody tr:last-child{border-bottom:none;}
+    tbody tr:hover{background:var(--surface-2);}
+    tbody tr.hidden{display:none;}
+    td{padding:12px 16px;font-size:0.82rem;color:var(--text-2);vertical-align:middle;}
+    .id-pill{display:inline-flex;align-items:center;justify-content:center;
+      background:var(--accent-lt);color:var(--accent);border-radius:5px;
+      font-size:0.68rem;font-weight:600;padding:2px 8px;min-width:30px;}
+    .name-primary{color:var(--text);font-weight:500;font-size:0.85rem;}
+    .name-secondary{font-size:0.71rem;color:var(--text-3);margin-top:2px;}
+    .badge{display:inline-block;background:var(--surface-2);
+      border:1px solid var(--border-2);border-radius:5px;
+      padding:3px 9px;font-size:0.71rem;font-weight:500;text-transform:capitalize;color:var(--text-2);}
+    .date-cell{font-size:0.78rem;color:var(--text-2);white-space:nowrap;}
+    .notes-cell{max-width:150px;white-space:nowrap;
+      overflow:hidden;text-overflow:ellipsis;color:var(--text-3);
+      font-style:italic;font-size:0.78rem;}
+    .delete-btn{display:inline-flex;align-items:center;gap:5px;
+      background:transparent;border:1px solid var(--border);color:var(--text-3);
+      border-radius:6px;padding:5px 10px;font-family:var(--font-body);
+      font-size:0.72rem;font-weight:500;cursor:pointer;transition:all var(--transition);}
+    .delete-btn:hover{background:var(--red-lt);border-color:var(--red);color:var(--red);}
+    .empty-state{text-align:center;padding:60px 24px;}
+    .empty-icon{font-size:2.2rem;margin-bottom:14px;opacity:0.35;}
+    .empty-title{font-family:var(--font-head);font-size:1rem;color:var(--text);margin-bottom:6px;}
+    .empty-sub{font-size:0.82rem;color:var(--text-3);}
+
+    #no-results{display:none;text-align:center;padding:36px;color:var(--text-3);font-size:0.82rem;}
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);
+      backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;
+      justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s ease;}
+    .overlay.open{opacity:1;pointer-events:all;}
+
+    .modal{background:var(--surface);border:1px solid var(--border-2);
+      border-radius:14px;padding:32px;max-width:380px;
+      width:90%;transform:scale(0.95);transition:transform 0.2s ease;}
+    .overlay.open .modal{transform:scale(1);}
+    .modal-icon{font-size:1.8rem;margin-bottom:14px;}
+    .modal h3{font-family:var(--font-head);
+      font-size:1.1rem;font-weight:700;
+      margin-bottom:8px;color:var(--text);}
+    .modal p{font-size:0.84rem;color:var(--text-2);
+      margin-bottom:24px;line-height:1.6;
+      font-weight:300;}
+    .modal-actions{display:flex;gap:10px;}
+    .btn-cancel{flex:1;padding:10px;
+      background:var(--surface-2);
+      border:1px solid var(--border);
+      border-radius:var(--radius);color:var(--text-2);
+      font-family:var(--font-body);font-size:0.83rem;
+      cursor:pointer;transition:all var(--transition);}
+    .btn-cancel:hover{color:var(--text);border-color:var(--border-2);}
+    .btn-delete{flex:1;padding:10px;
+      background:var(--red);
+      border:none;
+      border-radius:var(--radius);
+      color:white;
+      font-family:var(--font-body);
+      font-size:0.83rem;font-weight:600;cursor:pointer;
+      transition:background var(--transition);}
+    .btn-delete:hover{background:#dc2626;}
+
+    @media(max-width:768px){.sidebar{display:none;}
+    .main{margin-left:0;}
+    .content{padding:16px;}
+    .stats-grid{grid-template-columns:1fr 1fr;}}
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">Donny<em>Fix</em></div>
+      <div class="admin-badge">Admin Panel</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu</div>
+      <a class="nav-item active" href="/admin"><span>📋</span> All Bookings</a>
+      <a class="nav-item" href="/booking"><span>➕</span> New Booking</a>
+      <a class="nav-item" href="/"><span>🌐</span> View Site</a>
+    </nav>
+    <div class="sidebar-footer">
+      <a class="back-link" href="/">← Back to site</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Bookings Dashboard</span>
+      <span class="topbar-meta">
+        <strong id="visible-count">{{ bookings|length }}</strong> of {{ bookings|length }} records
+      </span>
+    </div>
+    <div class="content">
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total</div>
+      <div class="stat-value c-accent">{{ bookings|length }}</div>
+      <div class="stat-sub">All bookings</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Screens</div>
+      <div class="stat-value c-yellow">{{ bookings|selectattr('service','equalto','screen')|list|length }}</div>
+      <div class="stat-sub">Screen repairs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Batteries</div>
+      <div class="stat-value c-green">{{ bookings|selectattr('service','equalto','battery')|list|length }}</div>
+      <div class="stat-sub">Battery jobs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">iPhones</div>
+      <div class="stat-value c-text">{{ bookings|selectattr('device','equalto','iphone')|list|length }}</div>
+      <div class="stat-sub">vs other devices</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" class="search-input" placeholder="Search by name, email or phone..." />
+    </div>
+    <select id="filter-service" class="filter-select">
+      <option value="">All services</option>
+      <option value="screen">Screen replacement</option>
+      <option value="battery">Battery replacement</option>
+      <option value="water">Water damage</option>
+      <option value="camera">Camera repair</option>
+      <option value="charging">Charging port</option>
+      <option value="diagnostic">Diagnostic</option>
+    </select>
+    <select id="filter-device" class="filter-select">
+      <option value="">All devices</option>
+      <option value="iphone">iPhone</option>
+      <option value="samsung">Samsung</option>
+      <option value="pixel">Google Pixel</option>
+      <option value="other">Other</option>
+    </select>
+    <span class="result-count" id="result-label"></span>
+  </div>
+
+  <div class="table-wrap">
+    {% if bookings %}
+    <table id="bookings-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Device</th>
+          <th>Service</th>
+          <th>Date</th>
+          <th>Notes</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        <tr
+          data-name="{{ b['name']|lower }}"
+          data-email="{{ b['email']|lower }}"
+          data-phone="{{ b['phone'] }}"
+          data-service="{{ b['service'] }}"
+          data-device="{{ b['device'] }}"
+        >
+          <td><span class="id-pill">{{ b['id'] }}</span></td>
+          <td>
+            <div class="name-primary">{{ b['name'] }}</div>
+            <div class="name-secondary">{{ b['email'] }}</div>
+          </td>
+          <td>{{ b['phone'] }}</td>
+          <td><span class="badge">{{ b['device'] }}</span></td>
+          <td><span class="badge">{{ b['service'] }}</span></td>
+          <td class="date-cell">{{ b['date'] }}</td>
+          <td class="notes-cell" title="{{ b['notes'] or '' }}">{{ b['notes'] if b['notes'] else '—' }}</td>
+          <td>
+            <button class="delete-btn" data-id="{{ b['id'] }}" data-name="{{ b['name'] }}" onclick="openModal(this)">
+              🗑 Delete
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div id="no-results">No bookings match your search.</div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">No bookings yet</div>
+      <div class="empty-sub">Submit a booking from the site to see it here.</div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+ </div>
+</div>
+
+<div class="overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-icon">⚠️</div>
+    <h3>Delete this booking?</h3>
+    <p id="modal-text">This will permanently remove the booking from the database. This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <form id="delete-form" method="POST" action="" style="flex:1;display:flex;">
+        <button type="submit" class="btn-delete" style="width:100%;">Yes, delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  var searchEl  = document.getElementById('search-input');
+  var svcEl     = document.getElementById('filter-service');
+  var devEl     = document.getElementById('filter-device');
+  var countEl   = document.getElementById('visible-count');
+  var labelEl   = document.getElementById('result-label');
+  var noResults = document.getElementById('no-results');
+
+  searchEl.addEventListener('input',  filterTable);
+  svcEl.addEventListener('change',    filterTable);
+  devEl.addEventListener('change',    filterTable);
+
+  function filterTable() {
+    var query = searchEl.value.toLowerCase().trim();
+    var svc   = svcEl.value;
+    var dev   = devEl.value;
+    var rows  = document.querySelectorAll('#bookings-table tbody tr');
+    var visible = 0;
+
+    rows.forEach(function(row) {
+      var matchSearch = !query
+         (row.dataset.name  || '').includes(query)
+         (row.dataset.email || '').includes(query)
+         (row.dataset.phone || '').includes(query);
+      var matchSvc = !svc || row.dataset.service === svc;
+      var matchDev = !dev || row.dataset.device  === dev;
+
+      if (matchSearch && matchSvc && matchDev) {
+        row.classList.remove('hidden');
+        visible++;
+      } else {
+        row.classList.add('hidden');
+      }
+    });
+
+    countEl.textContent = visible;
+    noResults.style.display = (visible === 0 && rows.length > 0) ? 'block' : 'none';
+    labelEl.textContent = (query || svc || dev)
+      ? visible + ' result' + (visible !== 1 ? 's' : '') : '';
+  }
+
+  function openModal(btn) {
+    var id   = btn.dataset.id;
+    var name = btn.dataset.name;
+    document.getElementById('modal-text').textContent = 'This will permanently remove the booking for "' + name + '". This cannot be undone.';
+    document.getElementById('delete-form').action = '/admin/delete/' + id;
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  document.getElementById('modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
+</script>
+
+</body>
+</html>

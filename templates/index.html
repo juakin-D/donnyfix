@@ -1,0 +1,352 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Donnyfix - Fast, Honest Phone Repairs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+
+    <style>
+        :root {
+            --bg: #fafafa;
+            --bg2: #f5f4f0;
+            --text: #18181b;
+            --text2: #52525b;
+            --text3: #a1a1aa;
+            --accent: #0d9488;
+            --accent-lt:#ccfbf1;
+            --border: #e4e4e7;
+            --white: #ffffff;
+            --radius: 10px;
+            --font-head:playfair display, georgia, serif;
+            --font-body: Epilogue, system-ui, sans-serif;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
+            --transition: 0.18s ease;
+
+;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0;}
+        html {scroll-behavior: smooth;}
+
+        body{
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 16px;
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: inherit; text-decoration: none;}
+        .container {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 0 clamp(20px, 5vw, 48px);
+        }
+        /* animations */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .reveal { animation: fadeUp 0.55s ease both;}
+        .reveal-1 { animation-delay: 0.05s;}
+        .reveal-2 { animation-delay: 0.15s;}
+        .reveal-3 { animation-delay: 0.25s;}
+        .reveal-4 { animation-delay: 0.35s;}
+        .reveal-5 { animation-delay: 0.45s;}
+
+        /*NAVBAR*/
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(250, 250, 249, 0.88);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 40px;
+        }
+        .logo {
+            font-family: var(--font-head);
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        .logo em { font-style: normal; color: var(--accent);}
+        .nav-links{
+            display: flex; align-items: center; gap: 28px; list-style: none;
+        }
+        .nav-links a { font-size: 0.875rem; color: var(--text2); transition: color var(--transition);}
+        .nav-links a:hover{ color: var(--text);}
+        @media (max-width: 600px){ .nav-links li:not(:last-child){ display: none;}}
+
+        /*BUTTONS*/
+        .btn { 
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 11px 22px; border-radius: var(--radius);
+        font-family: var(--font-body); font-size: 0.875rem;
+        font-weight: 500; cursor: pointer; border: none;
+        transition: all var(--transition); white-space: nowrap;
+    }
+    .btn-primary{ background: var(--text); color: var(--white);}
+    .btn-primary:hover{ background: var(--accent);transform: translateY(-1px); box-shadow: var(--shadow-md);}
+    .btn-outline{ background: transparent; color: var(--text); border: 1px solid var(--border);}
+    .btn-outline:hover{ border-color: var(--text-2); background: var(--white);}
+    .btn-accent{ background: var(--accent); color: white;}
+    .btn-accent:hover{ background: #0f766e; transform: translateY(-1px); box-shadow: 0 4px rgba(13, 148, 136, 0.25);}
+    /* HERO*/
+    .hero {
+        padding: clamp(64px, 12vw, 120px) 0 clamp(48px, 8vw, 80px);
+      border-bottom: 1px solid var(--border);
+    }
+     .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.78rem; font-weight: 500; letter-spacing: 1.2px;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 24px;
+    }
+    .hero-eyebrow::before {
+      content: ''; display: block; width: 20px;
+      height: 1px; background: var(--accent);
+    }
+    .hero h1 {
+      font-family: var(--font-head);
+      font-size: clamp(2.4rem, 6vw, 4.2rem);
+      font-weight: 700; line-height: 1.1;
+      letter-spacing: -1.5px; max-width: 14ch;
+      margin-bottom: 24px;
+    }
+    .hero h1 .underline { position: relative; display: inline-block; }
+    .hero h1 .underline::after {
+      content: ''; position: absolute;
+      left: 0; bottom: 2px; width: 100%; height: 3px;
+      background: var(--accent); border-radius: 2px;
+    }
+    .hero-desc {
+      font-size: clamp(1rem, 2vw, 1.1rem); color: var(--text-2);
+      max-width: 44ch; margin-bottom: 36px;
+      font-weight: 300; line-height: 1.7;
+    }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 56px; }
+    .hero-stats {
+      display: flex; gap: clamp(24px, 5vw, 56px);
+      flex-wrap: wrap; padding-left: 60px; padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .stat-number {
+      font-family: var(--font-head); font-size: 1.9rem;
+      font-weight: 700; line-height: 1; margin-bottom: 8px;
+    }
+    .stat-label { font-size: 0.8rem; color: var(--text-3); }
+
+
+      /* TRUST BAR */
+    .trust-bar { background: var(--white); border-bottom: 1px solid var(--border); padding: 16px 0; }
+    .trust-inner { display: flex; align-items: center; gap: clamp(16px, 4vw, 40px); flex-wrap: wrap; }
+    .trust-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-2); white-space: nowrap; }
+    .trust-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+
+     /* SECTIONS */
+    section { padding: clamp(64px, 10vw, 100px) 0; }
+    section + section { border-top: 1px solid var(--border); }
+    .section-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 1.8px; text-transform: uppercase; color: var(--text-3); margin-bottom: 12px; }
+    .section-title { font-family: var(--font-head); font-size: clamp(1.7rem, 4vw, 2.5rem); font-weight: 700; letter-spacing: -0.8px; line-height: 1.15; margin-bottom: 12px; }
+    .section-sub { color: var(--text-2); font-size: 0.95rem; max-width: 46ch; font-weight: 300; }
+    .section-header { margin-bottom: clamp(40px, 6vw, 64px); }
+
+    /* SERVICES */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1px; background: var(--border);
+      border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    }
+    .service-card { background: var(--white); padding: 28px 32px; transition: background var(--transition); }
+    .service-card:hover { background: var(--bg); }
+    .service-icon-wrap {
+      width: 40px; height: 40px; background: var(--accent-lt);
+      border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; font-size: 1.1rem; margin-bottom: 16px;}
+    .service-card h3 { font-family: var(--font-head); font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+    .service-card p { font-size: 0.855rem; color: var(--text-2); line-height: 1.6; margin-bottom: 16px; font-weight: 300; }
+    .service-price { font-size: 0.9rem; font-weight: 600; color: var(--accent); }
+    .service-price span { font-weight: 300; color: var(--text-3); font-size: 0.8rem; }
+
+    .service-card h3 { font-family: var(--font-head); font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+    .service-card p { font-size: 0.855rem; color: var(--text-2); line-height: 1.6; margin-bottom: 16px; font-weight: 300; }
+    .service-price { font-size: 0.9rem; font-weight: 600; color: var(--accent); }
+    .service-price span { font-weight: 300; color: var(--text-3); font-size: 0.8rem; }
+
+    /* STEPS */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; position: relative; }
+    @media (min-width: 700px) {
+      .steps::before {
+        content: ''; position: absolute; top: 18px;
+        left: calc(12.5% + 20px); right: calc(12.5% + 20px);
+        height: 1px; background: var(--border); z-index: 0;
+      }
+    }
+    .step-num {
+      width: 36px; height: 36px; background: var(--white);
+      border: 1px solid var(--border); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.78rem; font-weight: 600; color: var(--accent);
+      margin-bottom: 20px; position: relative; z-index: 1;
+    }
+    .step h3 { font-family: var(--font-head); font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .step p { font-size: 0.845rem; color: var(--text-2); line-height: 1.6; font-weight: 300; }
+
+    /* REVIEWS */
+    .reviews-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .review-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow-sm); }
+    .review-stars { color: #f59e0b; font-size: 0.8rem; letter-spacing: 1px; margin-bottom: 12px; }
+    .review-text { font-size: 0.9rem; color: var(--text-2); line-height: 1.65; margin-bottom: 16px; font-weight: 300; font-style: italic; }
+    .review-author { display: flex; align-items: center; gap: 10px; }
+    .review-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-lt); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; color: var(--accent); flex-shrink: 0; }
+    .review-name { font-size: 0.82rem; font-weight: 500; }
+    .review-detail { font-size: 0.75rem; color: var(--text-3); }
+
+    /* CTA */
+    .cta-section {
+      background: var(--text); color: var(--white);
+      border-radius: 16px; padding: clamp(48px, 8vw, 80px) clamp(32px, 6vw, 80px);
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 32px;
+      flex-wrap: wrap; margin: 0 0 80px;
+    }
+    .cta-section h2 { font-family: var(--font-head); font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 700; letter-spacing: -0.8px; line-height: 1.15; max-width: 18ch; }
+    .cta-section p { color: #a1a1aa; font-size: 0.9rem; margin-top: 8px; font-weight: 300; }
+    .btn-cta-white { background: var(--white); color: var(--text); font-weight: 600; flex-shrink: 0; }
+    .btn-cta-white:hover { background: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+      /* FOOTER */
+    footer { border-top: 1px solid var(--border); padding: 32px 0; }
+    .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+    .footer-copy { font-size: 0.8rem; color: var(--text-3); }
+    .footer-links { display: flex; gap: 20px; list-style: none; }
+    .footer-links a { font-size: 0.8rem; color: var(--text-3); transition: color var(--transition); }
+    .footer-links a:hover { color: var(--text); }
+
+    @media (max-width: 480px) {
+      .hero-stats  { gap: 1px; }
+      .stat-number { font-size: 1.5rem; }
+      .cta-section { text-align: center; justify-content: center; }
+      .trust-inner { gap: 12px; }
+    }
+    </style>
+</head>
+<body>
+    <nav>
+    <div class="container nav-inner">
+      <a href="/" class="logo">Donny<em>Fix</em></a>
+      <ul class="nav-links">
+        <li><a href="#services">Services</a></li>
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#reviews">Reviews</a></li>
+        <li><a href="/booking" class="btn btn-primary" style="padding:8px 18px;font-size:0.82rem;">Book a repair</a></li>
+      </ul>
+    </div>
+  </nav>
+    <section class="hero">
+        <div class="container">
+            <p class="hero-eyebrow reveal reveal-1">Fast, Honest Phone Repairs</p>
+            <h1 class="reveal reveal-2">Get your phone fixed in a flash with Donny<em>Fix</em></h1>
+            <p class="hero-desc reveal reveal-3">From cracked screens to battery replacements, our expert technicians have you covered. Book your repair today and experience the DonnyFix difference!</p>
+            <div class="hero-actions reveal reveal-4">
+                <a href="/booking" class="btn btn-primary">Book a Repair</a>
+                <a href="#services" class="btn btn-outline">View Services</a>
+            </div>
+        </div>
+         <div class="hero-stats reveal reveal-5">
+        <div class="stat-item"><div class="stat-number">2,400+</div><div class="stat-label">Repairs completed</div></div>
+        <div class="stat-item"><div class="stat-number">4.9★</div><div class="stat-label">Average rating</div></div>
+        <div class="stat-item"><div class="stat-number">45 min</div><div class="stat-label">Average repair time</div></div>
+        <div class="stat-item"><div class="stat-number">30 days</div><div class="stat-label">Repair guarantee</div></div>
+      </div>
+    </div>
+    </section>
+    <div class="trust-bar">
+    <div class="container trust-inner">
+      <div class="trust-item"><span class="trust-dot"></span>Genuine parts only</div>
+      <div class="trust-item"><span class="trust-dot"></span>No fix, no fee</div>
+      <div class="trust-item"><span class="trust-dot"></span>30-day warranty</div>
+      <div class="trust-item"><span class="trust-dot"></span>Walk-in welcome</div>
+      <div class="trust-item"><span class="trust-dot"></span>Free diagnostics</div>
+    </div>
+  </div>
+   <main>
+    <section id="services">
+      <div class="container">
+        <div class="section-header">
+          <p class="section-label">What we fix</p>
+          <h2 class="section-title">Choose your repair</h2>
+          <p class="section-sub">From cracked screens to water damage — we fix it all, fast.</p>
+        </div>
+        <div class="services-grid">
+          <div class="service-card"><div class="service-icon-wrap">📱</div><h3>Screen Replacement</h3><p>Cracked or shattered display? We use original-quality screens with full touch and colour accuracy restored.</p><div class="service-price">From GH₵300 <span>· most models</span></div></div>
+          <div class="service-card"><div class="service-icon-wrap">🔋</div><h3>Battery Replacement</h3><p>Draining too fast or shutting down unexpectedly? A new battery gives you a full day's charge again.</p><div class="service-price">From GH₵250 <span>· all models</span></div></div>
+            <div class="service-card"><div class="service-icon-wrap">💧</div><h3>Water Damage Repair</h3><p>Dropped in water? Our technicians will clean and repair your device to get it working again.</p><div class="service-price">From GH₵150 <span>· diagnostic required</span></div></div>
+            <div class="service-card"><div class="service-icon-wrap">⚡</div><h3>Charging Port Repair</h3><p>Not charging properly? We can fix or replace your charging port to restore power flow.</p><div class="service-price">From GH₵200 <span>· all models</span></div></div>
+            <div class="service-card"><div class="service-icon-wrap">📷</div><h3>Camera Repair</h3><p>Blurry shots or a cracked lens? We replace front, rear, and ultra-wide cameras on all major brands.</p><div class="service-price">From GH₵400 <span>· parts + labour</span></div></div>
+             <div class="service-card"><div class="service-icon-wrap">🔍</div><h3>Free Diagnostic</h3><p>Not sure what's wrong? We'll run a full check and give you a detailed quote with zero obligation.</p><div class="service-price">Free <span>· no commitment</span></div></div>
+        </div>
+        </div>
+    </section>
+    <section id="how-it-works">
+  <div class="container">
+    <div class="section-header">
+      <p class="section-label">The process</p>
+      <h2 class="section-title">Done in 3 simple steps</h2>
+      <p class="section-sub">We've stripped out every unnecessary step so you spend less time waiting and more time using your phone.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-num">01</div><h3>Book online</h3><p>Pick your device, service, and a time slot. The whole thing takes under a minute.</p></div>
+      <div class="step"><div class="step-num">02</div><h3>Drop off</h3><p>Arrive at your booked time — no waiting. We verify the issue and confirm the price before starting.</p></div>
+      <div class="step"><div class="step-num">03</div><h3>Pick up</h3><p>Most repairs take 30–60 minutes. We text you when it's ready, backed by our 30-day guarantee.</p></div>
+      <div class="step"><div class="step-num">04</div><h3>Guaranteed</h3><p>If anything isn't right within 30 days, we fix it for free. No questions asked.</p></div>
+    </div>
+  </div>
+</section>
+<section id="reviews">
+  <div class="container">
+    <div class="section-header">
+      <p class="section-label">Customer reviews</p>
+      <h2 class="section-title">What people say</h2>
+      <p class="section-sub">Over 2,400 repairs and counting. Here's what some of our customers have shared.</p>
+    </div>
+    <div class="reviews-grid">
+      <div class="review-card"><div class="review-stars">★★★★★</div><p class="review-text">"Screen replaced in under 40 minutes. Looks brand new — honestly better than when I bought it. Absolutely worth it."</p><div class="review-author"><div class="review-avatar">SM</div><div><div class="review-name">Sarah M.</div><div class="review-detail">Screen replacement · iPhone 14</div></div></div></div>
+      <div class="review-card"><div class="review-stars">★★★★★</div><p class="review-text">"Dropped my phone in a puddle on a Friday. Brought it in Saturday, had it back by afternoon. They saved everything on it."</p><div class="review-author"><div class="review-avatar">JK</div><div><div class="review-name">James K.</div><div class="review-detail">Water damage · Samsung S23</div></div></div></div>
+      <div class="review-card"><div class="review-stars">★★★★★</div><p class="review-text">"Battery was dying by noon every day. Now I'm getting through the whole day with charge to spare. Great value."</p><div class="review-author"><div class="review-avatar">AL</div><div><div class="review-name">Ama L.</div><div class="review-detail">Battery replacement · Google Pixel 7</div></div></div></div>
+    </div>
+  </div>
+</section>
+
+
+  </main>
+
+  <div class="container">
+    <div class="cta-section">
+      <div>
+        <h2>Ready to get your phone back?</h2>
+        <p>Book online in 60 seconds. Same-day slots available.</p>
+      </div>
+      <a href="/booking" class="btn btn-cta-white">Book a repair →</a>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container footer-inner">
+      <span class="footer-copy">© 2026 DonnyFix. All rights reserved.</span>
+      <ul class="footer-links">
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Terms</a></li>
+        <li><a href="#">Contact: <span>0541057500</span></a></li>
+      </ul>
+    </div>
+  </footer>
+
+</body>
+</html>
