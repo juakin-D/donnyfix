@@ -2,8 +2,9 @@ from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 
 app = Flask(__name__)
+import os
 
-DATABASE = 'bookings.db'
+DATABASE = os.path.join(os.path.dirname(__file__), 'bookings.db')
 
 def init_db():
 
@@ -98,7 +99,6 @@ def delete_booking(booking_id):
 
     return redirect(url_for('admin'))
 
-
-if __name__ == '__main__':  
-    init_db() # initialize the database when the app starts.    
-    app.run(debug=True)
+init_db()   # initialize the database when the app starts.  
+if __name__ == '__main__':    
+    app.run(debug=False)
