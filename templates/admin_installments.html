@@ -369,16 +369,16 @@
                 <div class="action-cell">
                   {% if p.status == 'Active' %}
                   <button class="act-btn pay" onclick="openPayModal(
-                      {{ p.id }}, '{{ p.customer_name }}', '{{ p.device_name }}',
+                      {{ p.id }}, {{ p.customer_name|tojson }}, {{ p.device_name|tojson }},
                       {{ p.monthly_amount }}, {{ p.balance_remaining }},
-                      '{{ p.payment_method }}')">
+                      {{ p.payment_method|tojson }})">
                     + Record Payment
                   </button>
                   {% endif %}
                   {% if p.payments_made > 0 %}
                   <a class="act-btn" href="/receipt/payment/plan/{{ p.id }}/latest" target="_blank" title="Download latest payment receipt">🧾</a>
                   {% endif %}
-                  <button class="act-btn icon-only" title="Change status" onclick="openStatusModal({{ p.id }}, '{{ p.status }}')">⋯</button>
+                  <button class="act-btn icon-only" title="Change status" onclick="openStatusModal({{ p.id }}, {{ p.status|tojson }})">⋯</button>
                 </div>
               </td>
             </tr>

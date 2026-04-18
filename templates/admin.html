@@ -446,6 +446,10 @@
       <span class="nav-icon">👤</span>
       Members
     </a>
+    <a href="/admin/installments" class="nav-item">
+      <span class="nav-icon">💳</span>
+      Installments
+    </a>
 
     <div class="nav-section">Quick Links</div>
 
@@ -615,7 +619,7 @@
               <td>
                 <div style="font-size:13px; color:var(--text);">{{ b['date'] }}</div>
                 {% if b['notes'] %}
-                  <div style="font-size:11px; color:var(--text-muted); margin-top:2px; max-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ b['notes'] }}">{{ b['notes'] }}</div>
+                  <div style="font-size:11px; color:var(--text-muted); margin-top:2px; max-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ b['notes']|e }}">{{ b['notes'] }}</div>
                 {% endif %}
               </td>
               <td>

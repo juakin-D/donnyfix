@@ -35,7 +35,7 @@ else:
 app.secret_key = _secret_key
 del _secret_key
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1-hour token validity
 
 csrf    = CSRFProtect(app)
@@ -459,13 +459,13 @@ def generate_payment_receipt_pdf(plan, payment, customer_name):
 
 
 def _safe_redirect(fallback):
-    """Redirect to request.referrer only if it is same-origin."""
+    """Redirect to request.referrer only if it is same-origin and same-scheme."""
     ref = request.referrer
     if ref:
         from urllib.parse import urlparse
-        ref_host = urlparse(ref).netloc
-        own_host = urlparse(request.host_url).netloc
-        if ref_host == own_host:
+        ref_p  = urlparse(ref)
+        own_p  = urlparse(request.host_url)
+        if ref_p.netloc == own_p.netloc and ref_p.scheme == own_p.scheme:
             return redirect(ref)
     return redirect(fallback)
 
@@ -747,6 +747,10 @@ def installment_apply():
             flash(f'Minimum price for {cfg["label"]} plan is {fmt_ghs(cfg["min_price"])}.', 'error')
             return redirect(url_for('installment_apply'))
 
+        if payment_method not in ('MoMo', 'Bank'):
+            flash('Invalid payment method selected.', 'error')
+            return redirect(url_for('installment_apply'))
+
         if payment_method == 'MoMo' and not momo_number:
             flash('MoMo number is required when paying by Mobile Money.', 'error')
             return redirect(url_for('installment_apply'))
@@ -1007,12 +1011,16 @@ def record_payment(plan_id):
         return redirect(url_for('admin_installments'))
 
     method    = request.form.get('payment_method', '').strip()
-    if method not in ('Cash', 'MoMo', 'Bank Transfer', 'Card', 'Cheque'):
+    if method not in ('Cash', 'MTN MoMo', 'Vodafone Cash', 'AirtelTigo Money', 'Bank Transfer', 'Bank Deposit'):
         flash('Invalid payment method.', 'error')
         return redirect(url_for('admin_installments'))
     reference = request.form.get('reference', '').strip()
     notes     = request.form.get('notes', '').strip()
-    paid_on   = request.form.get('paid_on', datetime.today().strftime('%Y-%m-%d'))
+    _paid_on_raw = request.form.get('paid_on', '').strip()
+    try:
+        paid_on = datetime.strptime(_paid_on_raw, '%Y-%m-%d').strftime('%Y-%m-%d')
+    except ValueError:
+        paid_on = datetime.today().strftime('%Y-%m-%d')
 
     conn = get_db()
     plan = conn.execute('SELECT * FROM installment_plans WHERE id=?', (plan_id,)).fetchone()
