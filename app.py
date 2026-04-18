@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import smtplib
 import os
+import re
 import logging
 import requests as http_req
 from email.mime.text import MIMEText
@@ -27,9 +28,11 @@ ADMIN_SESSION_TIMEOUT = timedelta(minutes=int(os.environ.get('ADMIN_TIMEOUT_MINU
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
 logger = logging.getLogger(__name__)
 
-DATABASE       = os.path.join(os.path.dirname(__file__), 'bookings.db')
-ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'change-this-password')
+DATABASE              = os.path.join(os.path.dirname(__file__), 'bookings.db')
+ADMIN_USERNAME        = os.environ.get('ADMIN_USERNAME', 'admin')
+_admin_pw_raw         = os.environ.get('ADMIN_PASSWORD', 'change-this-password')
+ADMIN_PASSWORD_HASH   = generate_password_hash(_admin_pw_raw)
+del _admin_pw_raw
 
 # PhoneHub Ghana bank details — replace with your real account
 BANK_DETAILS = {
@@ -124,6 +127,12 @@ def hash_password(p):
 
 def verify_password(stored, supplied):
     return check_password_hash(stored, supplied)
+
+
+_GH_PHONE_RE = re.compile(r'^(?:\+233|0)[2-9]\d{8}$')
+
+def valid_gh_phone(phone):
+    return bool(_GH_PHONE_RE.match(phone.strip().replace(' ', '').replace('-', '')))
 
 
 def membership_status(expiry_str):
@@ -419,12 +428,22 @@ def admin_required(f):
     return w
 
 
+CUSTOMER_SESSION_TIMEOUT = timedelta(minutes=int(os.environ.get('CUSTOMER_TIMEOUT_MINUTES', 60)))
+
 def customer_required(f):
     @wraps(f)
     def w(*a, **kw):
         if not session.get('customer_id'):
             flash('Please log in to continue.', 'error')
             return redirect(url_for('customer_login'))
+        last = session.get('customer_last_activity')
+        if last:
+            elapsed = datetime.now(timezone.utc) - datetime.fromisoformat(last).replace(tzinfo=timezone.utc)
+            if elapsed > CUSTOMER_SESSION_TIMEOUT:
+                session.clear()
+                flash('Your session expired. Please log in again.', 'error')
+                return redirect(url_for('customer_login'))
+        session['customer_last_activity'] = datetime.now(timezone.utc).isoformat()
         return f(*a, **kw)
     return w
 
@@ -441,15 +460,41 @@ def home():
 @app.route('/booking', methods=['GET', 'POST'])
 def booking():
     if request.method == 'POST':
-        name    = request.form['name']
-        phone   = request.form['phone']
-        email   = request.form['email']
-        device  = request.form['device']
-        service = request.form['service']
-        date    = request.form['date']
-        notes   = request.form.get('notes', '')
+        name    = request.form.get('name', '').strip()
+        phone   = request.form.get('phone', '').strip()
+        email   = request.form.get('email', '').strip().lower()
+        device  = request.form.get('device', '').strip()
+        service = request.form.get('service', '').strip()
+        date    = request.form.get('date', '').strip()
+        notes   = request.form.get('notes', '').strip()
         cid     = session.get('customer_id')
-        conn    = get_db()
+
+        errors = []
+        if not name or len(name) > 100:
+            errors.append('Please enter your full name (max 100 characters).')
+        if not valid_gh_phone(phone):
+            errors.append('Enter a valid Ghanaian phone number (e.g. 024 000 0000).')
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+            errors.append('Enter a valid email address.')
+        if not device or len(device) > 100:
+            errors.append('Please enter your device (max 100 characters).')
+        if not service:
+            errors.append('Please select a service.')
+        try:
+            bdate = datetime.strptime(date, '%Y-%m-%d')
+            today = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+            if bdate < today:
+                errors.append('Booking date cannot be in the past.')
+            if (bdate - today).days > 365:
+                errors.append('Booking date cannot be more than a year away.')
+        except ValueError:
+            errors.append('Invalid date.')
+        if errors:
+            for e in errors:
+                flash(e, 'error')
+            return render_template('booking.html')
+
+        conn = get_db()
         conn.execute(
             'INSERT INTO bookings (name,phone,email,device,service,date,notes,customer_id) VALUES (?,?,?,?,?,?,?,?)',
             (name, phone, email, device, service, date, notes, cid))
@@ -487,6 +532,12 @@ def register():
         pw    = request.form['password']
         db    = request.form.get('device_brand', '').strip()
         dm    = request.form.get('device_model', '').strip()
+        if not name or len(name) > 100:
+            flash('Please enter your full name (max 100 characters).', 'error')
+            return render_template('register.html')
+        if not valid_gh_phone(phone):
+            flash('Enter a valid Ghanaian phone number (e.g. 024 000 0000).', 'error')
+            return render_template('register.html')
         if len(pw) < 6:
             flash('Password must be at least 6 characters.', 'error')
             return render_template('register.html')
@@ -587,9 +638,17 @@ def installment_apply():
             flash('Invalid plan selected.', 'error')
             return redirect(url_for('installment_apply'))
 
+        if device_price <= 0 or device_price > 100_000:
+            flash('Device price must be between GH₵1 and GH₵100,000.', 'error')
+            return redirect(url_for('installment_apply'))
+
         cfg = PLAN_CONFIG[plan_months]
         if device_price < cfg['min_price']:
             flash(f'Minimum price for {cfg["label"]} plan is {fmt_ghs(cfg["min_price"])}.', 'error')
+            return redirect(url_for('installment_apply'))
+
+        if payment_method == 'MoMo' and not momo_number:
+            flash('MoMo number is required when paying by Mobile Money.', 'error')
             return redirect(url_for('installment_apply'))
 
         p = calculate_plan(device_price, plan_months)
@@ -662,7 +721,7 @@ def admin_login():
     if request.method == 'POST':
         u = request.form.get('username', '').strip()
         p = request.form.get('password', '')
-        if u == ADMIN_USERNAME and p == ADMIN_PASSWORD:
+        if u == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, p):
             session['admin_logged_in']    = True
             session['admin_username']     = u
             session['admin_last_activity'] = datetime.now(timezone.utc).isoformat()
@@ -704,6 +763,7 @@ def delete_booking(booking_id):
     conn = get_db()
     conn.execute('DELETE FROM bookings WHERE id=?', (booking_id,))
     conn.commit(); conn.close()
+    logger.warning('Admin %s deleted booking #%d', session.get('admin_username'), booking_id)
     flash('Booking deleted.', 'success')
     return redirect(url_for('admin'))
 
@@ -761,6 +821,7 @@ def delete_member(customer_id):
     conn = get_db()
     conn.execute('DELETE FROM customers WHERE id=?', (customer_id,))
     conn.commit(); conn.close()
+    logger.warning('Admin %s deleted member #%d', session.get('admin_username'), customer_id)
     flash('Member deleted.', 'success')
     return redirect(url_for('admin_members'))
 
@@ -811,7 +872,12 @@ def admin_installments():
 @app.route('/admin/installments/<int:plan_id>/record-payment', methods=['POST'])
 @admin_required
 def record_payment(plan_id):
-    amount    = float(request.form['amount'])
+    try:
+        amount = float(request.form['amount'])
+    except (ValueError, KeyError):
+        flash('Invalid payment amount.', 'error')
+        return redirect(url_for('admin_installments'))
+
     method    = request.form['payment_method']
     reference = request.form.get('reference', '').strip()
     notes     = request.form.get('notes', '').strip()
@@ -822,6 +888,16 @@ def record_payment(plan_id):
     if not plan:
         conn.close()
         flash('Plan not found.', 'error')
+        return redirect(url_for('admin_installments'))
+
+    if amount <= 0:
+        conn.close()
+        flash('Payment amount must be greater than zero.', 'error')
+        return redirect(url_for('admin_installments'))
+    if amount > plan['balance_remaining'] + 0.01:
+        conn.close()
+        flash(f'Amount exceeds remaining balance of {fmt_ghs(plan["balance_remaining"])}. '
+              f'Use the exact balance to close the plan.', 'error')
         return redirect(url_for('admin_installments'))
 
     conn.execute(
@@ -837,10 +913,14 @@ def record_payment(plan_id):
         'UPDATE installment_plans SET balance_remaining=?,payments_made=?,next_due_date=?,status=? WHERE id=?',
         (new_balance, new_payments_made, new_next_due, new_status, plan_id))
     payment_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
-    conn.commit(); conn.close()
+    conn.commit()
+    logger.info('Admin %s recorded payment of %s for plan #%d (new balance: %s)',
+                session.get('admin_username'), fmt_ghs(amount), plan_id, fmt_ghs(new_balance))
+    conn.close()
 
     # SMS confirmation to customer
-    first = plan['customer_name'].split()[0] if 'customer_name' in plan.keys() else 'Customer'
+    _name_parts = plan['customer_name'].split() if 'customer_name' in plan.keys() else []
+    first = _name_parts[0] if _name_parts else 'Customer'
     if new_status == 'Completed':
         send_sms(plan['customer_phone'] if 'customer_phone' in plan.keys() else '',
                  f"Hi {first}, your PhoneHub Ghana installment for {plan['device_name']} "
@@ -857,10 +937,14 @@ def record_payment(plan_id):
 @app.route('/admin/installments/<int:plan_id>/update-status', methods=['POST'])
 @admin_required
 def update_plan_status(plan_id):
-    new_status = request.form['status']
+    new_status = request.form.get('status', '')
+    if new_status not in ('Active', 'Paused', 'Completed', 'Defaulted'):
+        flash('Invalid status value.', 'error')
+        return redirect(url_for('admin_installments'))
     conn = get_db()
     conn.execute('UPDATE installment_plans SET status=? WHERE id=?', (new_status, plan_id))
     conn.commit(); conn.close()
+    logger.info('Admin %s set plan #%d status to %s', session.get('admin_username'), plan_id, new_status)
     flash(f'Plan #{plan_id} updated to {new_status}.', 'success')
     return redirect(url_for('admin_installments'))
 
@@ -952,7 +1036,7 @@ def send_payment_reminders():
     sent = skipped = 0
     for p in plans:
         overdue = p['next_due_date'] < today_s
-        first   = p['customer_name'].split()[0]
+        first   = (p['customer_name'].split() or ['Customer'])[0]
         if overdue:
             msg = (f"Hi {first}, your PhoneHub Ghana installment of "
                    f"{fmt_ghs(p['monthly_amount'])} for {p['device_name']} "
