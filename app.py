@@ -572,6 +572,8 @@ def booking():
         conn.commit()
         booking_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
         conn.close()
+        # Allow guests to download their own receipt during this browser session
+        session['guest_booking_ids'] = session.get('guest_booking_ids', []) + [booking_id]
         send_email(email, 'Booking Confirmed — PhoneHub Ghana', f"""
         <p>Hi {_he(name)},</p>
         <p>Your repair booking is confirmed.</p>
@@ -823,7 +825,10 @@ def admin_logout():
 def admin():
     search  = request.args.get('search', '').strip()
     service = request.args.get('service', '').strip()
-    page    = max(1, int(request.args.get('page', 1)))
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except ValueError:
+        page = 1
     conn    = get_db()
     q = 'SELECT * FROM bookings WHERE 1=1'
     params = []
@@ -879,7 +884,10 @@ def update_booking_status(booking_id):
 def admin_members():
     search = request.args.get('search', '').strip()
     tier   = request.args.get('tier', '').strip()
-    page   = max(1, int(request.args.get('page', 1)))
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except ValueError:
+        page = 1
     conn   = get_db()
     q = 'SELECT * FROM customers WHERE 1=1'
     params = []
@@ -919,7 +927,10 @@ def delete_member(customer_id):
 def admin_installments():
     status_filter = request.args.get('status', '').strip()
     search        = request.args.get('search', '').strip()
-    page          = max(1, int(request.args.get('page', 1)))
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except ValueError:
+        page = 1
     conn          = get_db()
     q = '''SELECT ip.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email
            FROM installment_plans ip JOIN customers c ON c.id=ip.customer_id WHERE 1=1'''
@@ -1067,10 +1078,11 @@ def booking_receipt(booking_id):
     conn.close()
     if not booking:
         return render_template('404.html'), 404
-    is_admin = session.get('admin_logged_in')
-    is_owner = (session.get('customer_id') and
-                booking['customer_id'] == session['customer_id'])
-    if not is_admin and not is_owner:
+    is_admin  = session.get('admin_logged_in')
+    is_owner  = (session.get('customer_id') and
+                 booking['customer_id'] == session['customer_id'])
+    is_guest  = booking_id in session.get('guest_booking_ids', [])
+    if not is_admin and not is_owner and not is_guest:
         flash('Please log in to download your receipt.', 'error')
         return redirect(url_for('customer_login'))
     buf  = generate_booking_receipt_pdf(dict(booking))
@@ -1202,6 +1214,7 @@ def verify_email(token):
 
 @app.route('/resend-verification', methods=['POST'])
 @customer_required
+@limiter.limit('3 per hour')
 def resend_verification():
     conn     = get_db()
     customer = conn.execute('SELECT * FROM customers WHERE id=?', (session['customer_id'],)).fetchone()
@@ -1350,8 +1363,12 @@ def csrf_error(_e):
 
 @app.errorhandler(429)
 def too_many_requests(_e):
-    flash('Too many login attempts. Please wait a minute and try again.', 'error')
-    return render_template('admin_login.html'), 429
+    path = request.path
+    if path.startswith('/admin'):
+        flash('Too many attempts. Please wait a minute and try again.', 'error')
+        return render_template('admin_login.html'), 429
+    flash('Too many attempts. Please wait a while and try again.', 'error')
+    return redirect(request.referrer or url_for('home'))
 
 
 # ─── RUN ──────────────────────────────────────────────────────────────────────
