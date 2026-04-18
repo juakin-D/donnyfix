@@ -454,6 +454,9 @@
       <!-- Action Buttons -->
       <div class="actions">
         <a href="/" class="action-btn action-primary">Back to Home</a>
+        {% if booking_id %}
+          <a href="/receipt/booking/{{ booking_id }}" target="_blank" class="action-btn action-outline">⬇ Download Receipt</a>
+        {% endif %}
         <a href="/booking" class="action-btn action-outline">Book Another Repair</a>
         {% if session.get('customer_id') %}
           <a href="/dashboard" class="action-btn action-outline">My Account</a>

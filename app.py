@@ -1,9 +1,20 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
 from functools import wraps
 from datetime import datetime, timedelta
+from io import BytesIO
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
-import hashlib
+import smtplib
 import os
+import requests as http_req
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key')
@@ -102,7 +113,11 @@ def get_db():
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 def hash_password(p):
-    return hashlib.sha256(p.encode()).hexdigest()
+    return generate_password_hash(p)
+
+
+def verify_password(stored, supplied):
+    return check_password_hash(stored, supplied)
 
 
 def membership_status(expiry_str):
@@ -152,6 +167,214 @@ def fmt_ghs(amount):
         return f"GH\u20B5{float(amount):,.2f}"
     except (TypeError, ValueError):
         return "GH\u20B50.00"
+
+
+# ─── EMAIL ────────────────────────────────────────────────────────────────────
+
+MAIL_HOST = os.environ.get('MAIL_HOST', 'smtp.gmail.com')
+MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+MAIL_USER = os.environ.get('MAIL_USER', '')
+MAIL_PASS = os.environ.get('MAIL_PASS', '')
+MAIL_FROM = os.environ.get('MAIL_FROM', 'noreply@phonehubghana.com')
+
+
+def send_email(to, subject, html_body):
+    if not MAIL_USER or not MAIL_PASS:
+        return
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From']    = f'PhoneHub Ghana <{MAIL_FROM}>'
+        msg['To']      = to
+        msg.attach(MIMEText(html_body, 'html'))
+        with smtplib.SMTP(MAIL_HOST, MAIL_PORT) as s:
+            s.starttls()
+            s.login(MAIL_USER, MAIL_PASS)
+            s.sendmail(MAIL_FROM, to, msg.as_string())
+    except Exception:
+        pass  # never crash the app on email failure
+
+
+# ─── SMS (Africa's Talking) ───────────────────────────────────────────────────
+
+AT_API_KEY   = os.environ.get('AT_API_KEY', '')
+AT_USERNAME  = os.environ.get('AT_USERNAME', 'sandbox')
+AT_SENDER_ID = os.environ.get('AT_SENDER_ID', 'PhoneHub')
+
+
+def _normalize_gh_phone(phone):
+    p = phone.strip().replace(' ', '').replace('-', '')
+    if p.startswith('0'):
+        return '+233' + p[1:]
+    if not p.startswith('+'):
+        return '+233' + p
+    return p
+
+
+def send_sms(phone, message):
+    if not AT_API_KEY:
+        return False
+    try:
+        resp = http_req.post(
+            'https://api.africastalking.com/version1/messaging',
+            headers={'apiKey': AT_API_KEY, 'Accept': 'application/json'},
+            data={'username': AT_USERNAME, 'to': _normalize_gh_phone(phone),
+                  'message': message, 'from': AT_SENDER_ID},
+            timeout=10,
+        )
+        return resp.status_code == 201
+    except Exception:
+        return False
+
+
+# ─── PDF RECEIPTS ─────────────────────────────────────────────────────────────
+
+_C_GREEN = colors.HexColor('#006B3F')
+_C_GOLD  = colors.HexColor('#FCD116')
+_C_DARK  = colors.HexColor('#111008')
+_C_GRAY  = colors.HexColor('#4A4740')
+_C_LGRAY = colors.HexColor('#E8E4DC')
+_C_BG    = colors.HexColor('#F7F5F0')
+
+
+def _pdf_header(styles):
+    return [
+        Paragraph('PhoneHub Ghana',
+                  ParagraphStyle('ph', parent=styles['Normal'], fontSize=20,
+                                 fontName='Helvetica-Bold', textColor=_C_GREEN)),
+        Paragraph('Osu Oxford Street, Accra · +233 (0) 302 000 000 · hello@phonehubghana.com',
+                  ParagraphStyle('phs', parent=styles['Normal'], fontSize=8, textColor=_C_GRAY)),
+        Spacer(1, 3*mm),
+        HRFlowable(width='100%', thickness=2, color=_C_GOLD, spaceAfter=8),
+    ]
+
+
+def _kv_table(rows, col_w=(45*mm, 115*mm)):
+    t = Table(rows, colWidths=list(col_w))
+    t.setStyle(TableStyle([
+        ('FONTNAME',     (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE',     (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR',    (0, 0), (0, -1), _C_GRAY),
+        ('TEXTCOLOR',    (1, 0), (1, -1), _C_DARK),
+        ('BOTTOMPADDING',(0, 0), (-1, -1), 5),
+        ('TOPPADDING',   (0, 0), (-1, -1), 2),
+    ]))
+    return t
+
+
+def _section_label(text, styles):
+    return Paragraph(text, ParagraphStyle('sl', parent=styles['Normal'],
+        fontSize=8, fontName='Helvetica-Bold', textColor=_C_GREEN,
+        textTransform='uppercase', spaceBefore=6, spaceAfter=4))
+
+
+def generate_booking_receipt_pdf(booking):
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            rightMargin=20*mm, leftMargin=20*mm,
+                            topMargin=20*mm, bottomMargin=20*mm)
+    styles = getSampleStyleSheet()
+    story  = _pdf_header(styles)
+
+    story.append(Paragraph(f'Booking Receipt — BK-{booking["id"]:05d}',
+                           ParagraphStyle('title', parent=styles['Normal'],
+                               fontSize=16, fontName='Helvetica-Bold',
+                               textColor=_C_DARK, spaceAfter=6)))
+    story.append(_kv_table([
+        ['Issued',       datetime.today().strftime('%d %B %Y')],
+        ['Booking Date', booking['date']],
+        ['Status',       booking['status'] or 'Pending'],
+    ]))
+    story.append(Spacer(1, 5*mm))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=_C_LGRAY, spaceAfter=4))
+
+    story.append(_section_label('Customer', styles))
+    story.append(_kv_table([
+        ['Name',  booking['name']],
+        ['Phone', booking['phone']],
+        ['Email', booking['email']],
+    ]))
+    story.append(Spacer(1, 4*mm))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=_C_LGRAY, spaceAfter=4))
+
+    story.append(_section_label('Service Details', styles))
+    story.append(_kv_table([
+        ['Device',  booking['device']],
+        ['Service', booking['service']],
+        ['Notes',   booking['notes'] or '—'],
+    ]))
+    story.append(Spacer(1, 12*mm))
+    story.append(HRFlowable(width='100%', thickness=1.5, color=_C_GOLD, spaceAfter=6))
+    story.append(Paragraph('Thank you for choosing PhoneHub Ghana. Please keep this receipt.',
+                           ParagraphStyle('ft', parent=styles['Normal'],
+                               fontSize=8, textColor=_C_GRAY, alignment=TA_CENTER)))
+    doc.build(story)
+    buf.seek(0)
+    return buf
+
+
+def generate_payment_receipt_pdf(plan, payment, customer_name):
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            rightMargin=20*mm, leftMargin=20*mm,
+                            topMargin=20*mm, bottomMargin=20*mm)
+    styles = getSampleStyleSheet()
+    story  = _pdf_header(styles)
+
+    story.append(Paragraph(f'Payment Receipt — PAY-{payment["id"]:05d}',
+                           ParagraphStyle('title', parent=styles['Normal'],
+                               fontSize=16, fontName='Helvetica-Bold',
+                               textColor=_C_DARK, spaceAfter=6)))
+    story.append(_kv_table([
+        ['Plan #',      f'IP-{plan["id"]:04d}'],
+        ['Customer',    customer_name],
+        ['Date Paid',   payment['paid_on']],
+        ['Issued',      datetime.today().strftime('%d %B %Y')],
+    ]))
+    story.append(Spacer(1, 5*mm))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=_C_LGRAY, spaceAfter=4))
+
+    story.append(_section_label('Installment Plan', styles))
+    story.append(_kv_table([
+        ['Device',            plan['device_name']],
+        ['Total Payable',     fmt_ghs(plan['total_payable'])],
+        ['Plan Duration',     f'{plan["plan_months"]} months'],
+        ['Payments Made',     f'{plan["payments_made"]} of {plan["plan_months"]}'],
+        ['Balance Remaining', fmt_ghs(plan['balance_remaining'])],
+    ]))
+    story.append(Spacer(1, 4*mm))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=_C_LGRAY, spaceAfter=4))
+
+    # Highlighted amount box
+    story.append(_section_label('Payment', styles))
+    amt_table = Table([['Amount Paid', fmt_ghs(payment['amount'])]], colWidths=[45*mm, 115*mm])
+    amt_table.setStyle(TableStyle([
+        ('FONTNAME',      (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE',      (0, 0), (0, 0),  10),
+        ('FONTSIZE',      (1, 0), (1, 0),  16),
+        ('TEXTCOLOR',     (0, 0), (0, 0),  _C_GRAY),
+        ('TEXTCOLOR',     (1, 0), (1, 0),  _C_GREEN),
+        ('BACKGROUND',    (0, 0), (-1, -1), _C_BG),
+        ('TOPPADDING',    (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 10),
+        ('BOX',           (0, 0), (-1, -1), 0.5, _C_LGRAY),
+    ]))
+    story.append(amt_table)
+    story.append(Spacer(1, 4*mm))
+    story.append(_kv_table([
+        ['Method',    payment['payment_method']],
+        ['Reference', payment['reference'] or '—'],
+        ['Notes',     payment['notes'] or '—'],
+    ]))
+    story.append(Spacer(1, 12*mm))
+    story.append(HRFlowable(width='100%', thickness=1.5, color=_C_GOLD, spaceAfter=6))
+    story.append(Paragraph('This receipt confirms your installment payment. Thank you for being a PhoneHub member.',
+                           ParagraphStyle('ft', parent=styles['Normal'],
+                               fontSize=8, textColor=_C_GRAY, alignment=TA_CENTER)))
+    doc.build(story)
+    buf.seek(0)
+    return buf
 
 
 @app.context_processor
@@ -205,10 +428,24 @@ def booking():
         conn.execute(
             'INSERT INTO bookings (name,phone,email,device,service,date,notes,customer_id) VALUES (?,?,?,?,?,?,?,?)',
             (name, phone, email, device, service, date, notes, cid))
-        conn.commit(); conn.close()
+        conn.commit()
+        booking_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+        conn.close()
+        send_email(email, 'Booking Confirmed — PhoneHub Ghana', f"""
+        <p>Hi {name},</p>
+        <p>Your repair booking is confirmed.</p>
+        <ul>
+          <li><b>Device:</b> {device}</li>
+          <li><b>Service:</b> {service}</li>
+          <li><b>Date:</b> {date}</li>
+        </ul>
+        <p>We'll see you at our Osu Oxford Street location. Call us on +233 (0) 302 000 000 with any questions.</p>
+        <p>— PhoneHub Ghana Team</p>
+        """)
         return render_template('confirmation.html',
             name=name, phone=phone, email=email,
-            device=device, service=service, date=date, notes=notes)
+            device=device, service=service, date=date, notes=notes,
+            booking_id=booking_id)
     return render_template('booking.html')
 
 
@@ -243,6 +480,13 @@ def register():
         conn.close()
         session['customer_id']   = customer['id']
         session['customer_name'] = customer['name']
+        send_email(email, 'Welcome to PhoneHub Ghana!', f"""
+        <p>Hi {name},</p>
+        <p>Your PhoneHub Ghana account is live and your <b>12-month Standard Membership</b> starts today.</p>
+        <p>You can now book repairs, apply for installment plans, and track your device history from your dashboard.</p>
+        <p>Membership expires: <b>{expiry}</b></p>
+        <p>— PhoneHub Ghana Team</p>
+        """)
         flash(f'Welcome, {name}! Your 12-month membership is now active.', 'success')
         return redirect(url_for('dashboard'))
     return render_template('register.html')
@@ -256,10 +500,9 @@ def customer_login():
         email = request.form['email'].strip().lower()
         pw    = request.form['password']
         conn  = get_db()
-        c     = conn.execute('SELECT * FROM customers WHERE email=? AND password_hash=?',
-                             (email, hash_password(pw))).fetchone()
+        c = conn.execute('SELECT * FROM customers WHERE email=?', (email,)).fetchone()
         conn.close()
-        if c:
+        if c and verify_password(c['password_hash'], pw):
             session['customer_id']   = c['id']
             session['customer_name'] = c['name']
             flash(f'Welcome back, {c["name"]}!', 'success')
@@ -439,6 +682,28 @@ def delete_booking(booking_id):
     return redirect(url_for('admin'))
 
 
+@app.route('/admin/bookings/<int:booking_id>/status', methods=['POST'])
+@admin_required
+def update_booking_status(booking_id):
+    new_status = request.form.get('status', '')
+    if new_status not in ('Pending', 'In Progress', 'Complete', 'Cancelled'):
+        flash('Invalid status.', 'error')
+        return redirect(url_for('admin'))
+    conn = get_db()
+    booking = conn.execute('SELECT * FROM bookings WHERE id=?', (booking_id,)).fetchone()
+    conn.execute('UPDATE bookings SET status=? WHERE id=?', (new_status, booking_id))
+    conn.commit(); conn.close()
+    if booking and new_status == 'Complete':
+        send_email(booking['email'], 'Your repair is ready — PhoneHub Ghana', f"""
+        <p>Hi {booking['name']},</p>
+        <p>Great news — your <b>{booking['device']}</b> ({booking['service']}) is complete and ready for collection.</p>
+        <p>Visit us at Osu Oxford Street or call +233 (0) 302 000 000 to arrange pickup.</p>
+        <p>— PhoneHub Ghana Team</p>
+        """)
+    flash(f'Booking #{booking_id} marked as {new_status}.', 'success')
+    return redirect(url_for('admin'))
+
+
 @app.route('/admin/members')
 @admin_required
 def admin_members():
@@ -544,13 +809,22 @@ def record_payment(plan_id):
     conn.execute(
         'UPDATE installment_plans SET balance_remaining=?,payments_made=?,next_due_date=?,status=? WHERE id=?',
         (new_balance, new_payments_made, new_next_due, new_status, plan_id))
+    payment_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
     conn.commit(); conn.close()
 
+    # SMS confirmation to customer
+    first = plan['customer_name'].split()[0] if 'customer_name' in plan.keys() else 'Customer'
     if new_status == 'Completed':
-        flash(f'Plan #{plan_id} is now FULLY PAID and marked Completed!', 'success')
+        send_sms(plan['customer_phone'] if 'customer_phone' in plan.keys() else '',
+                 f"Hi {first}, your PhoneHub Ghana installment for {plan['device_name']} "
+                 f"is now FULLY PAID! Thank you. Call 0302000000 for your receipt.")
+        flash(f'Plan #{plan_id} fully paid — marked Completed. Receipt: /receipt/payment/{payment_id}', 'success')
     else:
+        send_sms(plan['customer_phone'] if 'customer_phone' in plan.keys() else '',
+                 f"Hi {first}, payment of {fmt_ghs(amount)} received for your {plan['device_name']} plan. "
+                 f"Balance: {fmt_ghs(new_balance)}. Next due: {new_next_due}. -PhoneHub Ghana")
         flash(f'Payment of {fmt_ghs(amount)} recorded for plan #{plan_id}.', 'success')
-    return redirect(url_for('admin_installments'))
+    return redirect(url_for('admin_installments', last_payment=payment_id))
 
 
 @app.route('/admin/installments/<int:plan_id>/update-status', methods=['POST'])
@@ -562,6 +836,131 @@ def update_plan_status(plan_id):
     conn.commit(); conn.close()
     flash(f'Plan #{plan_id} updated to {new_status}.', 'success')
     return redirect(url_for('admin_installments'))
+
+
+# ─── PDF RECEIPT ROUTES ───────────────────────────────────────────────────────
+
+@app.route('/receipt/booking/<int:booking_id>')
+def booking_receipt(booking_id):
+    conn    = get_db()
+    booking = conn.execute('SELECT * FROM bookings WHERE id=?', (booking_id,)).fetchone()
+    conn.close()
+    if not booking:
+        return render_template('404.html'), 404
+    buf  = generate_booking_receipt_pdf(dict(booking))
+    resp = make_response(buf.read())
+    resp.headers['Content-Type']        = 'application/pdf'
+    resp.headers['Content-Disposition'] = f'inline; filename=phonehub-booking-{booking_id:05d}.pdf'
+    return resp
+
+
+@app.route('/receipt/payment/<int:payment_id>')
+@admin_required
+def payment_receipt(payment_id):
+    conn    = get_db()
+    payment = conn.execute('SELECT * FROM payments WHERE id=?', (payment_id,)).fetchone()
+    if not payment:
+        conn.close()
+        flash('Payment not found.', 'error')
+        return redirect(url_for('admin_installments'))
+    plan = conn.execute(
+        '''SELECT ip.*, c.name as customer_name
+           FROM installment_plans ip
+           JOIN customers c ON c.id = ip.customer_id
+           WHERE ip.id=?''',
+        (payment['plan_id'],)).fetchone()
+    conn.close()
+    if not plan:
+        flash('Plan not found.', 'error')
+        return redirect(url_for('admin_installments'))
+    buf  = generate_payment_receipt_pdf(dict(plan), dict(payment), plan['customer_name'])
+    resp = make_response(buf.read())
+    resp.headers['Content-Type']        = 'application/pdf'
+    resp.headers['Content-Disposition'] = f'inline; filename=phonehub-payment-{payment_id:05d}.pdf'
+    return resp
+
+
+@app.route('/receipt/payment/plan/<int:plan_id>/latest')
+@admin_required
+def latest_payment_receipt(plan_id):
+    conn    = get_db()
+    payment = conn.execute(
+        'SELECT * FROM payments WHERE plan_id=? ORDER BY created_at DESC LIMIT 1', (plan_id,)).fetchone()
+    if not payment:
+        conn.close()
+        flash('No payments recorded for this plan yet.', 'error')
+        return redirect(url_for('admin_installments'))
+    plan = conn.execute(
+        '''SELECT ip.*, c.name as customer_name
+           FROM installment_plans ip JOIN customers c ON c.id=ip.customer_id
+           WHERE ip.id=?''', (plan_id,)).fetchone()
+    conn.close()
+    buf  = generate_payment_receipt_pdf(dict(plan), dict(payment), plan['customer_name'])
+    resp = make_response(buf.read())
+    resp.headers['Content-Type']        = 'application/pdf'
+    resp.headers['Content-Disposition'] = f'inline; filename=phonehub-plan-{plan_id}-receipt.pdf'
+    return resp
+
+
+# ─── SMS REMINDERS ────────────────────────────────────────────────────────────
+
+@app.route('/admin/installments/send-reminders', methods=['POST'])
+@admin_required
+def send_payment_reminders():
+    days    = int(request.form.get('days', 3))
+    today   = datetime.today()
+    cutoff  = (today + timedelta(days=days)).strftime('%Y-%m-%d')
+    today_s = today.strftime('%Y-%m-%d')
+
+    conn  = get_db()
+    plans = conn.execute(
+        '''SELECT ip.*, c.name as customer_name, c.phone as customer_phone
+           FROM installment_plans ip
+           JOIN customers c ON c.id = ip.customer_id
+           WHERE ip.status = 'Active' AND ip.next_due_date <= ?
+           ORDER BY ip.next_due_date''',
+        (cutoff,)).fetchall()
+    conn.close()
+
+    sent = skipped = 0
+    for p in plans:
+        overdue = p['next_due_date'] < today_s
+        first   = p['customer_name'].split()[0]
+        if overdue:
+            msg = (f"Hi {first}, your PhoneHub Ghana installment of "
+                   f"{fmt_ghs(p['monthly_amount'])} for {p['device_name']} "
+                   f"was DUE {p['next_due_date']}. Please pay now via "
+                   f"{p['payment_method']} & call 0302000000. "
+                   f"Balance: {fmt_ghs(p['balance_remaining'])}.")
+        else:
+            msg = (f"Hi {first}, your PhoneHub Ghana installment of "
+                   f"{fmt_ghs(p['monthly_amount'])} for {p['device_name']} "
+                   f"is due {p['next_due_date']}. Pay via "
+                   f"{p['payment_method']}. Balance: {fmt_ghs(p['balance_remaining'])}. "
+                   f"Questions? Call 0302000000.")
+        if send_sms(p['customer_phone'], msg):
+            sent += 1
+        else:
+            skipped += 1
+
+    total = len(plans)
+    if not AT_API_KEY:
+        flash(f'SMS not configured — set AT_API_KEY env var. Would have sent {total} reminder(s).', 'error')
+    else:
+        flash(f'Sent {sent} SMS reminder(s). {skipped} failed (check AT_API_KEY / phone numbers).', 'success')
+    return redirect(url_for('admin_installments'))
+
+
+# ─── ERROR HANDLERS ───────────────────────────────────────────────────────────
+
+@app.errorhandler(404)
+def not_found(_e):
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(500)
+def server_error(_e):
+    return render_template('500.html'), 500
 
 
 # ─── RUN ──────────────────────────────────────────────────────────────────────

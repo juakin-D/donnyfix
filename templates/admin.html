@@ -618,14 +618,15 @@
                 {% endif %}
               </td>
               <td>
-                {% set s = b['status'] if b['status'] else 'Pending' %}
-                {% if s == 'Complete' %}
-                  <span class="badge badge-complete">Complete</span>
-                {% elif s == 'Cancelled' %}
-                  <span class="badge badge-cancel">Cancelled</span>
-                {% else %}
-                  <span class="badge badge-pending">Pending</span>
-                {% endif %}
+                <form method="POST" action="/admin/bookings/{{ b['id'] }}/status">
+                  <select name="status" class="status-select" onchange="this.form.submit()" title="Change status">
+                    {% set s = b['status'] or 'Pending' %}
+                    <option value="Pending"     {% if s == 'Pending'     %}selected{% endif %}>Pending</option>
+                    <option value="In Progress" {% if s == 'In Progress' %}selected{% endif %}>In Progress</option>
+                    <option value="Complete"    {% if s == 'Complete'    %}selected{% endif %}>Complete</option>
+                    <option value="Cancelled"   {% if s == 'Cancelled'   %}selected{% endif %}>Cancelled</option>
+                  </select>
+                </form>
               </td>
               <td>
                 <div class="action-cell">
@@ -633,6 +634,7 @@
                     onclick="showNotes('{{ b['id'] }}', '{{ b['name'] }}', '{{ b['notes']|replace("'", "\\'") if b['notes'] else 'No notes.' }}')">
                     👁
                   </button>
+                  <a class="act-btn" href="/receipt/booking/{{ b['id'] }}" target="_blank" title="Download receipt">🧾</a>
                   <form method="POST" action="/admin/delete/{{ b['id'] }}"
                         onsubmit="return confirm('Delete booking #{{ b['id'] }} for {{ b['name'] }}?')"
                         style="display:inline;">

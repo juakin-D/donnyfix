@@ -270,6 +270,17 @@
           All Plans
           <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px">{{ plans|length }} records</span>
         </div>
+        <form method="POST" action="/admin/installments/send-reminders" style="display:flex;align-items:center;gap:8px">
+          <select name="days" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-soft);font-size:13px;outline:none">
+            <option value="1">Due tomorrow</option>
+            <option value="3" selected>Due in 3 days</option>
+            <option value="7">Due in 7 days</option>
+            <option value="0">Overdue only</option>
+          </select>
+          <button type="submit" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(245,158,11,0.3);background:var(--amber-dim);color:var(--amber);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
+            📲 Send SMS Reminders
+          </button>
+        </form>
       </div>
 
       <div class="table-wrap">
@@ -361,6 +372,9 @@
                       '{{ p.payment_method }}')">
                     + Record Payment
                   </button>
+                  {% endif %}
+                  {% if p.payments_made > 0 %}
+                  <a class="act-btn" href="/receipt/payment/plan/{{ p.id }}/latest" target="_blank" title="Download latest payment receipt">🧾</a>
                   {% endif %}
                   <button class="act-btn icon-only" title="Change status" onclick="openStatusModal({{ p.id }}, '{{ p.status }}')">⋯</button>
                 </div>
