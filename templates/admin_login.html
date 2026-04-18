@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login - DonnyFix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#0c0c0e; --surface:#18181d; --border:#2a2a35; --text:#e8e8f0;
+      --text-2:#a1a1b5; --accent:#0d9488; --danger:#ef4444;
+      --radius:12px; --font-head:'Playfair Display', Georgia, serif; --font-body:'Epilogue', system-ui, sans-serif;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg, #0c0c0e, #121218); color:var(--text);
+      font-family:var(--font-body); padding:20px;
+    }
+    .card {
+      width:100%; max-width:420px; background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); padding:28px; box-shadow:0 12px 30px rgba(0,0,0,0.25);
+    }
+    .title { font-family:var(--font-head); font-size:1.6rem; margin-bottom:8px; }
+    .title em { color:var(--accent); font-style:normal; }
+    .subtitle { color:var(--text-2); font-size:0.92rem; margin-bottom:18px; }
+    .flash { padding:10px 12px; border-radius:8px; margin-bottom:14px; font-size:0.88rem; }
+    .flash.error { background:rgba(239,68,68,0.12); color:#fecaca; border:1px solid rgba(239,68,68,0.25); }
+    .flash.success { background:rgba(13,148,136,0.12); color:#ccfbf1; border:1px solid rgba(13,148,136,0.25); }
+    label { display:block; margin:12px 0 6px; font-size:0.85rem; color:var(--text-2); }
+    input {
+      width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--border);
+      background:#101016; color:var(--text); outline:none; font-family:var(--font-body);
+    }
+    input:focus { border-color:var(--accent); }
+    button {
+      width:100%; margin-top:16px; padding:12px; border:none; border-radius:8px;
+      background:var(--accent); color:white; font-weight:600; cursor:pointer;
+    }
+    button:hover { opacity:0.95; }
+    .back-link { display:inline-block; margin-top:14px; color:var(--text-2); font-size:0.85rem; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="title">Donny<em>Fix</em> Admin</div>
+    <div class="subtitle">Sign in to view and manage repair bookings.</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/admin/login">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" required />
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required />
+
+      <button type="submit">Log in</button>
+    </form>
+
+    <a class="back-link" href="/">← Back to website</a>
+  </div>
+</body>
+</html>

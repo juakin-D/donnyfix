@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Apply for Installment Plan — PhoneHub Ghana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --green:#006B3F;--green-dark:#004D2D;--green-deep:#002D1A;
+      --gold:#FCD116;--off-white:#F7F5F0;--warm-gray:#E8E4DC;
+      --mid-gray:#8C8880;--text:#111008;--text-soft:#4A4740;
+      --surface:white;--red:#CE1126;
+    }
+    body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
+
+    /* NAV */
+    nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:68px;background:rgba(247,245,240,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--warm-gray)}
+    .nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--green);text-decoration:none}
+    .nav-logo span{color:var(--gold)}
+    .nav-right{display:flex;align-items:center;gap:8px}
+    .nav-right a{color:var(--text-soft);text-decoration:none;font-size:14px;padding:8px 14px;border-radius:8px;transition:all .2s}
+    .nav-right a:hover{background:var(--warm-gray);color:var(--text)}
+    .nav-right a.cta{background:var(--green);color:white;font-weight:500}
+
+    /* PAGE */
+    .page{max-width:1060px;margin:0 auto;padding:52px 48px 100px;display:grid;grid-template-columns:1fr 360px;gap:48px;align-items:start}
+
+    .page-header{margin-bottom:36px}
+    .breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mid-gray);margin-bottom:14px}
+    .breadcrumb a{color:var(--mid-gray);text-decoration:none}
+    .breadcrumb a:hover{color:var(--green)}
+    h1{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;letter-spacing:-1px;line-height:1.1;margin-bottom:8px}
+    h1 em{color:var(--green);font-style:normal}
+    .page-sub{font-size:16px;color:var(--text-soft);font-weight:300;line-height:1.6}
+
+    /* FORM CARD */
+    .form-card{background:white;border:1px solid var(--warm-gray);border-radius:20px;padding:36px;animation:fadeUp .4s ease both}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+    .fsection{margin-bottom:32px}
+    .fsection-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--green);padding-bottom:10px;border-bottom:1px solid var(--warm-gray);margin-bottom:20px}
+
+    .frow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .fgroup{margin-bottom:18px}
+    .fgroup:last-child{margin-bottom:0}
+    label{display:block;font-size:13px;font-weight:500;color:var(--text);margin-bottom:7px}
+    label .req{color:var(--green)}
+    input[type=text],input[type=number],input[type=tel],select,textarea{
+      width:100%;padding:11px 14px;border:1.5px solid var(--warm-gray);border-radius:10px;
+      font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);
+      background:var(--off-white);outline:none;transition:all .2s;-webkit-appearance:none}
+    input:focus,select:focus,textarea:focus{border-color:var(--green);background:white;box-shadow:0 0 0 4px rgba(0,107,63,.07)}
+    input::placeholder,textarea::placeholder{color:var(--mid-gray);font-weight:300}
+    .select-wrap{position:relative}
+    .select-wrap::after{content:'';position:absolute;right:14px;top:50%;transform:translateY(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--mid-gray);pointer-events:none}
+
+    /* PLAN CARDS */
+    .plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .plan-option{position:relative}
+    .plan-option input{position:absolute;opacity:0;width:0;height:0}
+    .plan-label{
+      display:block;padding:16px 14px;border-radius:12px;
+      border:1.5px solid var(--warm-gray);cursor:pointer;
+      background:var(--off-white);transition:all .2s;text-align:center;
+    }
+    .plan-label:hover{border-color:var(--green);background:white}
+    .plan-option input:checked+.plan-label{
+      border-color:var(--green);background:rgba(0,107,63,.05);
+      box-shadow:0 0 0 3px rgba(0,107,63,.08)}
+    .pl-months{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--green);display:block;margin-bottom:4px}
+    .pl-deposit{font-size:12px;color:var(--mid-gray);font-weight:300}
+    .pl-fee{font-size:11px;color:var(--mid-gray);margin-top:3px}
+
+    /* PAYMENT METHOD TABS */
+    .method-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+    .method-tab{position:relative}
+    .method-tab input{position:absolute;opacity:0;width:0;height:0}
+    .method-tab-label{
+      display:flex;align-items:center;gap:12px;
+      padding:14px 16px;border-radius:12px;
+      border:1.5px solid var(--warm-gray);cursor:pointer;
+      background:var(--off-white);transition:all .2s;
+    }
+    .method-tab-label:hover{border-color:var(--green);background:white}
+    .method-tab input:checked+.method-tab-label{
+      border-color:var(--green);background:rgba(0,107,63,.05);
+      box-shadow:0 0 0 3px rgba(0,107,63,.08)}
+    .mt-icon{width:36px;height:36px;border-radius:10px;background:rgba(0,107,63,.08);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .mt-info{flex:1}
+    .mt-name{font-size:13px;font-weight:500;color:var(--text)}
+    .mt-sub{font-size:11px;color:var(--mid-gray);font-weight:300}
+
+    /* MoMo network sub-selector */
+    .momo-network-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .net-option{position:relative}
+    .net-option input{position:absolute;opacity:0;width:0;height:0}
+    .net-label{
+      display:block;padding:10px 8px;border-radius:10px;text-align:center;
+      border:1.5px solid var(--warm-gray);cursor:pointer;
+      background:var(--off-white);transition:all .2s;
+    }
+    .net-label:hover{border-color:var(--green)}
+    .net-option input:checked+.net-label{border-color:var(--green);background:rgba(0,107,63,.05)}
+    .net-logo{font-size:20px;display:block;margin-bottom:3px}
+    .net-name{font-size:11px;font-weight:500;color:var(--text-soft)}
+
+    /* conditional sections */
+    .payment-section{display:none}
+    .payment-section.visible{display:block;animation:fadeUp .25s ease both}
+
+    /* submit */
+    .submit-btn{
+      width:100%;padding:15px;background:var(--green);color:white;
+      border:none;border-radius:12px;font-family:'Syne',sans-serif;
+      font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;
+      display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px}
+    .submit-btn:hover{background:var(--green-dark);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,107,63,.25)}
+    .submit-note{text-align:center;font-size:13px;color:var(--mid-gray);margin-top:10px;font-weight:300}
+
+    /* flash */
+    .flash{padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:14px}
+    .flash.error{background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5}
+    .flash.success{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
+
+    /* SIDEBAR */
+    .sidebar{position:sticky;top:88px}
+    .sidebar-card{background:white;border:1px solid var(--warm-gray);border-radius:16px;padding:24px;margin-bottom:14px;animation:fadeUp .4s .1s ease both}
+    .sc-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--warm-gray)}
+
+    /* live calculator */
+    .calc-result{display:flex;flex-direction:column;gap:0}
+    .calc-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--warm-gray);font-size:14px}
+    .calc-row:last-child{border-bottom:none}
+    .calc-label{color:var(--text-soft);font-weight:300}
+    .calc-val{font-weight:500;color:var(--text);font-family:'DM Mono',monospace;font-size:13px}
+    .calc-row.highlight .calc-label{font-weight:500;color:var(--green)}
+    .calc-row.highlight .calc-val{color:var(--green);font-size:15px}
+    .calc-row.total .calc-label{font-family:'Syne',sans-serif;font-weight:700}
+    .calc-row.total .calc-val{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--green)}
+
+    /* bank details */
+    .bank-row{display:flex;flex-direction:column;gap:10px}
+    .bank-item{background:var(--off-white);border-radius:8px;padding:10px 12px}
+    .bank-item-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--mid-gray);margin-bottom:3px}
+    .bank-item-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--text);font-weight:500}
+
+    /* guarantee */
+    .glist{list-style:none}
+    .glist li{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--text-soft);padding:7px 0;border-bottom:1px solid var(--warm-gray);font-weight:300;line-height:1.4}
+    .glist li:last-child{border-bottom:none}
+    .gi{width:18px;height:18px;border-radius:50%;background:rgba(0,107,63,.1);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:1px}
+
+    @media(max-width:900px){
+      .page{grid-template-columns:1fr;gap:28px;padding:28px 20px 60px}
+      nav{padding:0 20px}
+      .plan-grid{grid-template-columns:repeat(3,1fr)}
+      .frow{grid-template-columns:1fr}
+      .sidebar{position:static}
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="nav-logo">Phone<span>Hub</span> Ghana</a>
+    <div class="nav-right">
+      <a href="/dashboard">My Account</a>
+      <a href="/booking">Book Repair</a>
+      <a href="/logout">Log Out</a>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div>
+      <div class="page-header">
+        <div class="breadcrumb">
+          <a href="/">Home</a><span>›</span>
+          <a href="/dashboard">My Account</a><span>›</span>
+          <span>Installment Plan</span>
+        </div>
+        <h1>Buy now,<br><em>pay in parts.</em></h1>
+        <p class="page-sub">Choose a phone, pick your plan length, and pay a deposit today. The rest splits into equal monthly payments — via MoMo or Bank.</p>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="flash {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <div class="form-card">
+        <form method="POST" id="install-form">
+
+          <!-- Device -->
+          <div class="fsection">
+            <div class="fsection-title">Device Details</div>
+            <div class="frow">
+              <div class="fgroup">
+                <label>Device Name <span class="req">*</span></label>
+                <input type="text" name="device_name" placeholder="e.g. Tecno Spark 20 Pro" required/>
+              </div>
+              <div class="fgroup">
+                <label>Device Price (GH₵) <span class="req">*</span></label>
+                <input type="number" name="device_price" id="price-input" placeholder="e.g. 2500" min="500" step="50" required/>
+              </div>
+            </div>
+          </div>
+
+          <!-- Plan -->
+          <div class="fsection">
+            <div class="fsection-title">Choose Your Plan</div>
+            <div class="plan-grid">
+              <div class="plan-option">
+                <input type="radio" name="plan_months" id="p3" value="3" required/>
+                <label class="plan-label" for="p3">
+                  <span class="pl-months">3 mo.</span>
+                  <span class="pl-deposit">40% deposit</span>
+                  <span class="pl-fee">Min GH₵500</span>
+                </label>
+              </div>
+              <div class="plan-option">
+                <input type="radio" name="plan_months" id="p6" value="6"/>
+                <label class="plan-label" for="p6">
+                  <span class="pl-months">6 mo.</span>
+                  <span class="pl-deposit">30% deposit</span>
+                  <span class="pl-fee">Min GH₵1,500</span>
+                </label>
+              </div>
+              <div class="plan-option">
+                <input type="radio" name="plan_months" id="p12" value="12"/>
+                <label class="plan-label" for="p12">
+                  <span class="pl-months">12 mo.</span>
+                  <span class="pl-deposit">20% deposit</span>
+                  <span class="pl-fee">Min GH₵3,000</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Method -->
+          <div class="fsection">
+            <div class="fsection-title">Payment Method</div>
+            <div class="method-tabs">
+              <div class="method-tab">
+                <input type="radio" name="payment_method" id="pm-momo" value="MoMo" required/>
+                <label class="method-tab-label" for="pm-momo">
+                  <div class="mt-icon">📲</div>
+                  <div class="mt-info">
+                    <div class="mt-name">Mobile Money</div>
+                    <div class="mt-sub">MTN, Vodafone, AirtelTigo</div>
+                  </div>
+                </label>
+              </div>
+              <div class="method-tab">
+                <input type="radio" name="payment_method" id="pm-bank" value="Bank"/>
+                <label class="method-tab-label" for="pm-bank">
+                  <div class="mt-icon">🏦</div>
+                  <div class="mt-info">
+                    <div class="mt-name">Bank Transfer</div>
+                    <div class="mt-sub">GCB, Ecobank, Absa & more</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- MoMo fields -->
+            <div class="payment-section" id="momo-section">
+              <div class="fgroup" style="margin-bottom:14px">
+                <label>Select Your Network</label>
+                <div class="momo-network-grid">
+                  <div class="net-option">
+                    <input type="radio" name="momo_network" id="mtn" value="MTN MoMo"/>
+                    <label class="net-label" for="mtn">
+                      <span class="net-logo">🟡</span>
+                      <span class="net-name">MTN MoMo</span>
+                    </label>
+                  </div>
+                  <div class="net-option">
+                    <input type="radio" name="momo_network" id="voda" value="Vodafone Cash"/>
+                    <label class="net-label" for="voda">
+                      <span class="net-logo">🔴</span>
+                      <span class="net-name">Vodafone</span>
+                    </label>
+                  </div>
+                  <div class="net-option">
+                    <input type="radio" name="momo_network" id="at" value="AirtelTigo"/>
+                    <label class="net-label" for="at">
+                      <span class="net-logo">🔵</span>
+                      <span class="net-name">AirtelTigo</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div class="fgroup">
+                <label>MoMo Number <span class="req">*</span></label>
+                <input type="tel" name="momo_number" placeholder="024 000 0000"/>
+              </div>
+            </div>
+
+            <!-- Bank fields -->
+            <div class="payment-section" id="bank-section">
+              <div style="background:rgba(0,107,63,.05);border:1px solid rgba(0,107,63,.15);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+                <div style="font-size:13px;font-weight:500;color:var(--green);margin-bottom:10px">PhoneHub Ghana Bank Details</div>
+                <div style="display:grid;gap:6px;font-size:13px;font-family:'DM Mono',monospace;color:var(--text-soft)">
+                  <div><span style="color:var(--mid-gray)">Bank: </span>{{ bank_details.bank_name }}</div>
+                  <div><span style="color:var(--mid-gray)">Name: </span>{{ bank_details.account_name }}</div>
+                  <div><span style="color:var(--mid-gray)">Acct: </span>{{ bank_details.account_no }}</div>
+                  <div><span style="color:var(--mid-gray)">Branch: </span>{{ bank_details.branch }}</div>
+                </div>
+                <div style="margin-top:10px;font-size:12px;color:var(--mid-gray);font-weight:300">Use your full name as the transfer reference.</div>
+              </div>
+              <div class="frow">
+                <div class="fgroup">
+                  <label>Your Bank Name</label>
+                  <input type="text" name="bank_name" placeholder="e.g. Ecobank Ghana"/>
+                </div>
+                <div class="fgroup">
+                  <label>Transfer Reference / Receipt No.</label>
+                  <input type="text" name="bank_reference" placeholder="e.g. TXN12345678"/>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="fsection" style="margin-bottom:24px">
+            <div class="fsection-title">Additional Notes</div>
+            <div class="fgroup" style="margin-bottom:0">
+              <label>Any questions or special requests?</label>
+              <textarea name="notes" placeholder="e.g. I've already picked the phone in-store, ref. booking #PH-00123..." style="min-height:80px"></textarea>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn">Submit Plan Application →</button>
+          <p class="submit-note">Our team will confirm your plan within 1 business day and collect the deposit.</p>
+        </form>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- Live Calculator -->
+      <div class="sidebar-card">
+        <div class="sc-title">Live Plan Calculator</div>
+        <div id="calc-placeholder" style="text-align:center;padding:20px 0;color:var(--mid-gray);font-size:14px;font-weight:300">
+          Enter a device price and select a plan to see your breakdown.
+        </div>
+        <div class="calc-result" id="calc-result" style="display:none">
+          <div class="calc-row">
+            <span class="calc-label">Device Price</span>
+            <span class="calc-val" id="c-price">—</span>
+          </div>
+          <div class="calc-row">
+            <span class="calc-label">Service Fee (4%)</span>
+            <span class="calc-val" id="c-fee">—</span>
+          </div>
+          <div class="calc-row total">
+            <span class="calc-label">Total Payable</span>
+            <span class="calc-val" id="c-total">—</span>
+          </div>
+          <div class="calc-row highlight">
+            <span class="calc-label">Deposit Due Now</span>
+            <span class="calc-val" id="c-deposit">—</span>
+          </div>
+          <div class="calc-row">
+            <span class="calc-label">Balance After Deposit</span>
+            <span class="calc-val" id="c-balance">—</span>
+          </div>
+          <div class="calc-row highlight">
+            <span class="calc-label">Monthly Payment</span>
+            <span class="calc-val" id="c-monthly">—</span>
+          </div>
+          <div class="calc-row">
+            <span class="calc-label">Plan Duration</span>
+            <span class="calc-val" id="c-months">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plan summary -->
+      <div class="sidebar-card">
+        <div class="sc-title">Plan Comparison</div>
+        <div style="display:flex;flex-direction:column;gap:0">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--mid-gray);padding:0 0 8px;border-bottom:1px solid var(--warm-gray)">
+            <span>Plan</span><span>Deposit</span><span>Months</span><span>Fee</span>
+          </div>
+          {% for months, cfg in plan_config.items() %}
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;font-size:13px;padding:9px 0;border-bottom:1px solid var(--warm-gray);color:var(--text-soft)">
+            <span style="font-weight:500;color:var(--text)">{{ cfg.label }}</span>
+            <span>{{ cfg.deposit_pct }}%</span>
+            <span>{{ months }}x</span>
+            <span>4%</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Guarantee -->
+      <div class="sidebar-card">
+        <div class="sc-title">Our Installment Promise</div>
+        <ul class="glist">
+          <li><span class="gi">✓</span>No hidden charges — fixed 4% service fee only</li>
+          <li><span class="gi">✓</span>Pay by MoMo or bank transfer every month</li>
+          <li><span class="gi">✓</span>Take your device home after deposit is paid</li>
+          <li><span class="gi">✓</span>No credit checks — open to all PhoneHub members</li>
+          <li><span class="gi">✓</span>Early full payment accepted, no penalty</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const FEE = 0.04;
+    const PLANS = { 3: 40, 6: 30, 12: 20 };
+
+    function fmtGHS(n) {
+      return 'GH\u20B5' + Number(n).toLocaleString('en-GH', {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+
+    function updateCalc() {
+      const price = parseFloat(document.getElementById('price-input').value) || 0;
+      const monthsEl = document.querySelector('input[name=plan_months]:checked');
+      const months = monthsEl ? parseInt(monthsEl.value) : 0;
+      const placeholder = document.getElementById('calc-placeholder');
+      const result = document.getElementById('calc-result');
+
+      if (!price || !months) { placeholder.style.display='block'; result.style.display='none'; return; }
+
+      const fee     = Math.round(price * FEE * 100) / 100;
+      const total   = Math.round((price + fee) * 100) / 100;
+      const depPct  = PLANS[months];
+      const deposit = Math.round(total * depPct / 100 * 100) / 100;
+      const balance = Math.round((total - deposit) * 100) / 100;
+      const monthly = Math.round(balance / months * 100) / 100;
+
+      document.getElementById('c-price').textContent   = fmtGHS(price);
+      document.getElementById('c-fee').textContent     = fmtGHS(fee);
+      document.getElementById('c-total').textContent   = fmtGHS(total);
+      document.getElementById('c-deposit').textContent = fmtGHS(deposit);
+      document.getElementById('c-balance').textContent = fmtGHS(balance);
+      document.getElementById('c-monthly').textContent = fmtGHS(monthly) + '/mo';
+      document.getElementById('c-months').textContent  = months + ' months';
+
+      placeholder.style.display = 'none';
+      result.style.display = 'flex';
+    }
+
+    document.getElementById('price-input').addEventListener('input', updateCalc);
+    document.querySelectorAll('input[name=plan_months]').forEach(r => r.addEventListener('change', updateCalc));
+
+    // Show/hide payment sections
+    function togglePayment() {
+      const momo = document.getElementById('pm-momo').checked;
+      document.getElementById('momo-section').classList.toggle('visible', momo);
+      document.getElementById('bank-section').classList.toggle('visible', !momo && document.getElementById('pm-bank').checked);
+    }
+    document.querySelectorAll('input[name=payment_method]').forEach(r => r.addEventListener('change', togglePayment));
+  </script>
+</body>
+</html>

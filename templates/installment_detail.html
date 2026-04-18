@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Installment Plan — PhoneHub Ghana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --green:#006B3F;--green-dark:#004D2D;--green-deep:#002D1A;
+      --gold:#FCD116;--off-white:#F7F5F0;--warm-gray:#E8E4DC;
+      --mid-gray:#8C8880;--text:#111008;--text-soft:#4A4740;
+    }
+    body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
+
+    nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:68px;background:rgba(247,245,240,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--warm-gray)}
+    .nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--green);text-decoration:none}
+    .nav-logo span{color:var(--gold)}
+    .nav-right{display:flex;align-items:center;gap:8px}
+    .nav-right a{color:var(--text-soft);text-decoration:none;font-size:14px;padding:8px 14px;border-radius:8px;transition:all .2s}
+    .nav-right a:hover{background:var(--warm-gray);color:var(--text)}
+    .nav-right a.cta{background:var(--green);color:white;font-weight:500}
+
+    .page{max-width:800px;margin:0 auto;padding:48px 48px 80px}
+
+    .breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mid-gray);margin-bottom:20px}
+    .breadcrumb a{color:var(--mid-gray);text-decoration:none}
+    .breadcrumb a:hover{color:var(--green)}
+
+    /* PLAN HERO CARD */
+    .plan-hero{background:var(--green-deep);border-radius:20px;padding:28px 32px;margin-bottom:20px;position:relative;overflow:hidden}
+    .plan-hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(252,209,22,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(252,209,22,.04) 1px,transparent 1px);background-size:50px 50px}
+    .ph-inner{position:relative;z-index:1}
+    .ph-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px}
+    .ph-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,.4);margin-bottom:6px}
+    .ph-device{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:white;letter-spacing:-.3px}
+    .ph-plan-label{font-size:14px;color:rgba(255,255,255,.5);margin-top:4px;font-weight:300}
+    .status-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600}
+    .status-active{background:rgba(0,196,106,.15);color:#00C46A;border:1px solid rgba(0,196,106,.3)}
+    .status-completed{background:rgba(59,158,232,.15);color:#3B9EE8;border:1px solid rgba(59,158,232,.3)}
+    .status-other{background:rgba(245,158,11,.15);color:#F59E0B;border:1px solid rgba(245,158,11,.3)}
+
+    .ph-amounts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+    .ph-amount-item{}
+    .ph-amount-label{font-size:11px;color:rgba(255,255,255,.4);margin-bottom:5px;font-weight:300}
+    .ph-amount-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:white}
+    .ph-amount-val.gold{color:var(--gold)}
+    .ph-amount-val.green{color:#00C46A}
+
+    /* progress */
+    .ph-progress{}
+    .ph-prog-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .ph-prog-label{font-size:13px;color:rgba(255,255,255,.6);font-weight:300}
+    .ph-prog-pct{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--gold)}
+    .progress-track{height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden}
+    .progress-fill{height:100%;border-radius:4px;background:var(--gold);transition:width .5s ease}
+
+    /* DETAIL GRID */
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+    .detail-card{background:white;border:1px solid var(--warm-gray);border-radius:14px;padding:20px}
+    .dc-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mid-gray);margin-bottom:6px}
+    .dc-val{font-size:16px;font-weight:500;color:var(--text)}
+    .dc-val.mono{font-family:'DM Mono',monospace}
+    .dc-sub{font-size:12px;color:var(--mid-gray);margin-top:3px;font-weight:300}
+
+    /* PAYMENT METHOD CARD */
+    .method-card{background:white;border:1px solid var(--warm-gray);border-radius:14px;padding:20px;margin-bottom:20px}
+    .mc-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--warm-gray)}
+    .mc-method{display:flex;align-items:center;gap:12px}
+    .mc-icon{width:44px;height:44px;border-radius:12px;background:rgba(0,107,63,.08);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+    .mc-info .mc-name{font-size:15px;font-weight:500;color:var(--text)}
+    .mc-info .mc-detail{font-size:13px;color:var(--mid-gray);font-weight:300;margin-top:2px}
+    .bank-detail-box{background:var(--off-white);border-radius:10px;padding:14px 16px;margin-top:14px}
+    .bank-detail-box .bdb-title{font-size:12px;font-weight:500;color:var(--green);margin-bottom:8px}
+    .bdb-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+    .bdb-label{color:var(--mid-gray);font-weight:300}
+    .bdb-val{font-family:'DM Mono',monospace;color:var(--text);font-size:12px}
+    .ref-note{font-size:12px;color:var(--mid-gray);margin-top:8px;font-weight:300;font-style:italic}
+
+    /* PAYMENT HISTORY */
+    .history-card{background:white;border:1px solid var(--warm-gray);border-radius:14px;overflow:hidden;margin-bottom:20px}
+    .history-header{padding:18px 20px;border-bottom:1px solid var(--warm-gray);display:flex;align-items:center;justify-content:space-between}
+    .history-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text)}
+    .history-count{font-family:'DM Mono',monospace;font-size:12px;color:var(--mid-gray)}
+    table{width:100%;border-collapse:collapse}
+    th{padding:10px 20px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:var(--mid-gray);text-transform:uppercase;letter-spacing:1px;background:var(--off-white);border-bottom:1px solid var(--warm-gray)}
+    td{padding:13px 20px;font-size:14px;color:var(--text-soft);border-bottom:1px solid var(--warm-gray)}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:rgba(0,107,63,.02)}
+    .pay-amount{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--green)}
+    .pay-method{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;font-size:11px;background:var(--off-white);color:var(--text-soft);border:1px solid var(--warm-gray)}
+    .no-payments{text-align:center;padding:32px;color:var(--mid-gray);font-size:14px;font-weight:300}
+
+    /* ACTIONS */
+    .action-card{background:var(--green-deep);border-radius:14px;padding:22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+    .action-card .ac-text strong{display:block;font-size:15px;font-weight:500;color:white;margin-bottom:3px}
+    .action-card .ac-text span{font-size:13px;color:rgba(255,255,255,.5);font-weight:300}
+    .action-card .ac-btn{display:inline-block;padding:11px 24px;background:var(--gold);color:var(--green-deep);font-family:'Syne',sans-serif;font-weight:700;font-size:14px;border-radius:9px;text-decoration:none;transition:all .2s;white-space:nowrap}
+    .action-card .ac-btn:hover{transform:translateY(-1px)}
+
+    .flash{padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:14px}
+    .flash.success{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
+    .flash.error{background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5}
+
+    @media(max-width:640px){
+      nav{padding:0 20px}
+      .page{padding:28px 20px 60px}
+      .detail-grid{grid-template-columns:1fr}
+      .ph-amounts{grid-template-columns:1fr 1fr}
+      .plan-hero{padding:20px}
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="nav-logo">Phone<span>Hub</span> Ghana</a>
+    <div class="nav-right">
+      <a href="/dashboard">My Account</a>
+      <a href="/booking">Book Repair</a>
+      <a href="/logout">Log Out</a>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="breadcrumb">
+      <a href="/">Home</a><span>›</span>
+      <a href="/dashboard">My Account</a><span>›</span>
+      <span>Plan #{{ plan['id'] }}</span>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash {{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- HERO CARD -->
+    <div class="plan-hero">
+      <div class="ph-inner">
+        <div class="ph-top">
+          <div>
+            <div class="ph-label">Installment Plan #{{ plan['id'] }}</div>
+            <div class="ph-device">{{ plan['device_name'] }}</div>
+            <div class="ph-plan-label">{{ plan['plan_months'] }}-month plan · Started {{ plan['created_at'][:10] }}</div>
+          </div>
+          <div>
+            {% if plan['status'] == 'Active' %}
+              <span class="status-badge status-active">● Active</span>
+            {% elif plan['status'] == 'Completed' %}
+              <span class="status-badge status-completed">✓ Completed</span>
+            {% else %}
+              <span class="status-badge status-other">{{ plan['status'] }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="ph-amounts">
+          <div class="ph-amount-item">
+            <div class="ph-amount-label">Total Payable</div>
+            <div class="ph-amount-val">{{ fmt_ghs(plan['total_payable']) }}</div>
+          </div>
+          <div class="ph-amount-item">
+            <div class="ph-amount-label">Balance Remaining</div>
+            <div class="ph-amount-val gold">{{ fmt_ghs(plan['balance_remaining']) }}</div>
+          </div>
+          <div class="ph-amount-item">
+            <div class="ph-amount-label">Monthly Payment</div>
+            <div class="ph-amount-val green">{{ fmt_ghs(plan['monthly_amount']) }}</div>
+          </div>
+        </div>
+
+        <div class="ph-progress">
+          <div class="ph-prog-row">
+            <span class="ph-prog-label">{{ plan['payments_made'] }} of {{ plan['plan_months'] }} payments made</span>
+            <span class="ph-prog-pct">{{ progress }}%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:{{ progress }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DETAIL GRID -->
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="dc-label">Device Price</div>
+        <div class="dc-val mono">{{ fmt_ghs(plan['device_price']) }}</div>
+        <div class="dc-sub">Before service fee</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-label">Service Fee (4%)</div>
+        <div class="dc-val mono">{{ fmt_ghs(plan['service_fee']) }}</div>
+        <div class="dc-sub">One-time financing fee</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-label">Deposit Paid</div>
+        <div class="dc-val mono" style="color:var(--green)">{{ fmt_ghs(plan['deposit_amount']) }}</div>
+        <div class="dc-sub">Paid at time of purchase</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-label">Next Payment Due</div>
+        <div class="dc-val">{{ plan['next_due_date'] }}</div>
+        <div class="dc-sub">{{ fmt_ghs(plan['monthly_amount']) }} due on this date</div>
+      </div>
+    </div>
+
+    <!-- PAYMENT METHOD -->
+    <div class="method-card">
+      <div class="mc-title">Your Payment Method</div>
+      <div class="mc-method">
+        <div class="mc-icon">{% if plan['payment_method'] == 'MoMo' %}📲{% else %}🏦{% endif %}</div>
+        <div class="mc-info">
+          <div class="mc-name">{{ plan['payment_method'] }}</div>
+          {% if plan['momo_network'] %}
+            <div class="mc-detail">{{ plan['momo_network'] }} · {{ plan['momo_number'] or 'Number on file' }}</div>
+          {% elif plan['bank_name'] %}
+            <div class="mc-detail">{{ plan['bank_name'] }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if plan['payment_method'] == 'Bank' %}
+      <div class="bank-detail-box">
+        <div class="bdb-title">Pay to PhoneHub Ghana</div>
+        <div class="bdb-row"><span class="bdb-label">Bank</span><span class="bdb-val">{{ bank_details.bank_name }}</span></div>
+        <div class="bdb-row"><span class="bdb-label">Account Name</span><span class="bdb-val">{{ bank_details.account_name }}</span></div>
+        <div class="bdb-row"><span class="bdb-label">Account No.</span><span class="bdb-val">{{ bank_details.account_no }}</span></div>
+        <div class="bdb-row"><span class="bdb-label">Branch</span><span class="bdb-val">{{ bank_details.branch }}</span></div>
+        <div class="ref-note">Use "Plan #{{ plan['id'] }}" as your transfer reference so we can match your payment.</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- PAYMENT HISTORY -->
+    <div class="history-card">
+      <div class="history-header">
+        <div class="history-title">Payment History</div>
+        <div class="history-count">{{ payments|length }} payment{% if payments|length != 1 %}s{% endif %} · {{ fmt_ghs(paid_total) }} paid</div>
+      </div>
+      {% if payments %}
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Reference</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in payments %}
+          <tr>
+            <td>{{ p['paid_on'] }}</td>
+            <td><span class="pay-amount">{{ fmt_ghs(p['amount']) }}</span></td>
+            <td><span class="pay-method">{% if 'MoMo' in p['payment_method'] or 'Mobile' in p['payment_method'] %}📲{% else %}🏦{% endif %} {{ p['payment_method'] }}</span></td>
+            <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--mid-gray)">{{ p['reference'] or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="no-payments">No payments recorded yet. Your first payment is due on {{ plan['next_due_date'] }}.</div>
+      {% endif %}
+    </div>
+
+    <!-- ACTION -->
+    {% if plan['status'] == 'Active' %}
+    <div class="action-card">
+      <div class="ac-text">
+        <strong>Next payment: {{ fmt_ghs(plan['monthly_amount']) }} due {{ plan['next_due_date'] }}</strong>
+        <span>Pay via {{ plan['payment_method'] }} and contact us with your reference to confirm.</span>
+      </div>
+      <a href="tel:+233302000000" class="ac-btn">📞 Call to Confirm Payment</a>
+    </div>
+    {% elif plan['status'] == 'Completed' %}
+    <div class="action-card" style="background:rgba(0,107,63,.08);border:1px solid rgba(0,107,63,.15)">
+      <div class="ac-text">
+        <strong style="color:var(--green-deep)">🎉 Plan fully paid — congratulations!</strong>
+        <span style="color:var(--text-soft)">Your {{ plan['device_name'] }} is completely yours. Thank you for being a PhoneHub member.</span>
+      </div>
+      <a href="/dashboard" class="ac-btn" style="background:var(--green);color:white">Back to Dashboard</a>
+    </div>
+    {% endif %}
+
+  </div>
+</body>
+</html>

@@ -1,160 +1,509 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF8" />
-    <title>Booking Confirmed- Donnyfix</title>
-    <link href="https//fonts.googlapis.com/css2?family=Syne:wght@40;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
-    <style>
-        :root {
-            --bg: #fafafa;
-            --bg2: #f5f4f0;
-            --text: #18181b;
-            --text2: #52525b;
-            --text3: #a1a1aa;
-            --accent: #0d9488;
-            --accent-lt:#1db090;
-            --border: #e4e4e7;
-            --white: #ffffff;
-            --radius: 10px;
-            --font-head:playfair display, georgia, serif;
-            --font-body: Epilogue, system-ui, sans-serif;
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
-            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
-            --transition: 0.18s ease;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Booking Confirmed — PhoneHub Ghana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --green:       #006B3F;
+      --green-dark:  #004D2D;
+      --green-deep:  #002D1A;
+      --gold:        #FCD116;
+      --off-white:   #F7F5F0;
+      --warm-gray:   #E8E4DC;
+      --mid-gray:    #8C8880;
+      --text:        #111008;
+      --text-soft:   #4A4740;
+    }
 
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--green-deep);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
 
-          
-            --color-surface: #161616;
-            --color-border: #2a2a2a;
-            --color-text: #f5f5f5;
-            --color-muted: #888;
-            --font-display: 'Syns', sans-serif;
-            --font-body: 'DM sans', sans-serif;
-        }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0;}
-        body{
-            background: var(--bg);
-            color: var(--text);
-            font-family: var(--font-body);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 24px;
-        }
-        .card {
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-radius: 16px;
-            padding: 48px;
-            max-width: 560px;
-            width: 100%;
-            text-align: center;
-        }
-        .check {
-            font-size: 3rem;
-            margin-bottom: 20px;
-        }
-        h1 {
-            font-family: var(--font-display);
-            color: var(--color-text);
-            font-size: 1.9rem;
-            font-weight: 800;
-            letter-spacing: -1px;
-            margin-bottom: 8px;
-        }
-        h1 span { color: var(--accent);}
-        .subtitle {
-            color: var(--text2);
-            margin-bottom: 36px;
-            font-size: 0.95rem;
-        }
-        /* summary table*/
-        .summary {
-            background: var(--bg);
-            border: 1px solid var(--color-border);
-            border-radius: 12px;
-            overflow: hidden;
-            text-align: left;
-            margin-bottom: 32px;
-        }
-        .summary-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 40px 20px;
-            font-size: 0.9rem;
-            border-bottom: 1px solid var(--text3);
-        }
-        .summary-row:last-child { border-bottom: none;}
-        .summary-label { color: var(--text);}
-        .summary-value { 
-            font-weight: 500;
-            text-transform: capitalize; /* turn iphon into Iphone*/
-        }
-        .btn {
-            display: inline-block;
-            padding: 13px 28px;
-            border-radius: 10px;
-            font-family: var(--font-display);
-            font-weight: 700;
-            font-size: 0.95rem;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-        }
-        .btn-primary:hover {
-            background: var(--accent-lt);
-            transform: translateY(-2px);
-        }
-    </style>
+    /* animated background */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(252,209,22,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(252,209,22,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: drift 25s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes drift {
+      from { background-position: 0 0; }
+      to   { background-position: 60px 60px; }
+    }
+
+    /* ── NAV ─────────────────────────────────────────────── */
+    nav {
+      position: relative; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 68px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px;
+      color: white; text-decoration: none; letter-spacing: -0.3px;
+    }
+    .nav-logo span { color: var(--gold); }
+    .nav-right { display: flex; gap: 8px; }
+    .nav-right a {
+      color: rgba(255,255,255,0.55); text-decoration: none; font-size: 14px;
+      padding: 8px 14px; border-radius: 8px; transition: all 0.2s;
+    }
+    .nav-right a:hover { color: white; background: rgba(255,255,255,0.08); }
+
+    /* ── MAIN CONTENT ────────────────────────────────────── */
+    main {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 60px 24px;
+      position: relative; z-index: 1;
+    }
+
+    .confirm-wrap {
+      width: 100%; max-width: 640px;
+    }
+
+    /* success animation */
+    .success-ring {
+      width: 96px; height: 96px;
+      margin: 0 auto 32px;
+      position: relative;
+    }
+    .ring-circle {
+      width: 96px; height: 96px; border-radius: 50%;
+      border: 3px solid rgba(252,209,22,0.2);
+      display: flex; align-items: center; justify-content: center;
+      animation: ringPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes ringPop {
+      from { transform: scale(0.5); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    .ring-inner {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      animation: innerPop 0.4s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes innerPop {
+      from { transform: scale(0); }
+      to   { transform: scale(1); }
+    }
+    .checkmark {
+      width: 28px; height: 20px;
+      border-left: 3.5px solid var(--green-deep);
+      border-bottom: 3.5px solid var(--green-deep);
+      transform: rotate(-45deg) translate(3px, -3px);
+      animation: checkDraw 0.35s 0.45s ease both;
+    }
+    @keyframes checkDraw {
+      from { width: 0; height: 0; opacity: 0; }
+      to   { width: 28px; height: 20px; opacity: 1; }
+    }
+
+    .confirm-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 36px; font-weight: 800;
+      color: white; text-align: center;
+      letter-spacing: -0.8px; margin-bottom: 10px;
+      animation: fadeUp 0.5s 0.3s ease both;
+    }
+    .confirm-title span { color: var(--gold); }
+    .confirm-sub {
+      text-align: center; font-size: 16px; font-weight: 300;
+      color: rgba(255,255,255,0.55); margin-bottom: 40px;
+      line-height: 1.6;
+      animation: fadeUp 0.5s 0.4s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── BOOKING CARD ────────────────────────────────────── */
+    .booking-card {
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      animation: fadeUp 0.5s 0.5s ease both;
+      margin-bottom: 20px;
+    }
+
+    /* card header */
+    .card-header {
+      background: var(--green);
+      padding: 24px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .card-header-left .ch-label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+      color: rgba(255,255,255,0.55); margin-bottom: 4px;
+    }
+    .card-header-left .ch-val {
+      font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800;
+      color: white;
+    }
+    .booking-ref {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px; padding: 8px 16px;
+      text-align: center;
+    }
+    .ref-label { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 1px; text-transform: uppercase; }
+    .ref-val {
+      font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800;
+      color: var(--gold); letter-spacing: 2px;
+    }
+
+    /* card body */
+    .card-body { padding: 28px 32px; }
+
+    .details-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .detail-row {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--warm-gray);
+    }
+    .detail-row:nth-child(odd)  { padding-right: 24px; }
+    .detail-row:nth-child(even) { padding-left: 24px; border-left: 1px solid var(--warm-gray); }
+    .detail-row:nth-last-child(-n+2) { border-bottom: none; }
+    .detail-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--mid-gray); margin-bottom: 4px;
+    }
+    .detail-val {
+      font-size: 15px; font-weight: 500; color: var(--text);
+    }
+    .detail-val.service-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(0,107,63,0.08);
+      color: var(--green); padding: 4px 12px; border-radius: 20px;
+      font-size: 13px; border: 1px solid rgba(0,107,63,0.15);
+    }
+
+    /* status bar */
+    .status-bar {
+      background: var(--off-white);
+      padding: 18px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+      border-top: 1px solid var(--warm-gray);
+    }
+    .status-info { display: flex; align-items: center; gap: 10px; }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #F59E0B; flex-shrink: 0;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:0.5; transform:scale(0.85)} }
+    .status-text { font-size: 14px; font-weight: 500; color: var(--text); }
+    .status-sub  { font-size: 12px; color: var(--mid-gray); font-weight: 300; }
+    .status-time { font-size: 13px; color: var(--text-soft); font-weight: 300; }
+
+    /* ── MEMBER CTA ───────────────────────────────────────── */
+    .member-cta {
+      background: rgba(252,209,22,0.08);
+      border: 1px solid rgba(252,209,22,0.2);
+      border-radius: 16px; padding: 22px 28px;
+      display: flex; align-items: center; gap: 18px;
+      animation: fadeUp 0.5s 0.65s ease both;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .mcta-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: rgba(252,209,22,0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .mcta-text { flex: 1; min-width: 200px; }
+    .mcta-text strong {
+      display: block; font-size: 15px; font-weight: 500;
+      color: white; margin-bottom: 3px;
+    }
+    .mcta-text span { font-size: 13px; color: rgba(255,255,255,0.5); font-weight: 300; }
+    .mcta-btn {
+      display: inline-block; padding: 10px 22px;
+      background: var(--gold); color: var(--green-deep);
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px;
+      border-radius: 8px; text-decoration: none;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .mcta-btn:hover { transform: translateY(-1px); }
+
+    /* ── ACTION BUTTONS ──────────────────────────────────── */
+    .actions {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      animation: fadeUp 0.5s 0.7s ease both;
+    }
+    .action-btn {
+      flex: 1; min-width: 140px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 13px 20px; border-radius: 10px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px;
+      text-decoration: none; transition: all 0.2s; cursor: pointer; border: none;
+    }
+    .action-primary {
+      background: var(--gold); color: var(--green-deep);
+    }
+    .action-primary:hover { transform: translateY(-2px); }
+    .action-outline {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+    }
+    .action-outline:hover { border-color: rgba(255,255,255,0.4); color: white; }
+
+    /* ── WHAT NEXT ───────────────────────────────────────── */
+    .what-next {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px; padding: 24px 28px;
+      animation: fadeUp 0.5s 0.75s ease both;
+      margin-top: 20px;
+    }
+    .wn-title {
+      font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.4); margin-bottom: 18px;
+    }
+    .wn-steps { display: flex; flex-direction: column; gap: 0; }
+    .wn-step {
+      display: flex; align-items: flex-start; gap: 16px;
+      padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .wn-step:last-child { border-bottom: none; }
+    .wn-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(252,209,22,0.1); border: 1px solid rgba(252,209,22,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+      color: var(--gold); flex-shrink: 0;
+    }
+    .wn-content { flex: 1; }
+    .wn-step-title { font-size: 14px; font-weight: 500; color: white; margin-bottom: 2px; }
+    .wn-step-sub   { font-size: 13px; color: rgba(255,255,255,0.4); font-weight: 300; line-height: 1.5; }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    footer {
+      position: relative; z-index: 1;
+      text-align: center; padding: 24px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 13px; color: rgba(255,255,255,0.25);
+    }
+    footer a { color: rgba(255,255,255,0.35); text-decoration: none; }
+    footer a:hover { color: var(--gold); }
+
+    @media (max-width: 640px) {
+      nav { padding: 0 20px; }
+      .card-header { padding: 20px; }
+      .card-body   { padding: 20px; }
+      .status-bar  { padding: 14px 20px; }
+      .details-grid { grid-template-columns: 1fr; }
+      .detail-row:nth-child(even) { padding-left: 0; border-left: none; }
+      .detail-row:nth-last-child(-n+2) { border-bottom: 1px solid var(--warm-gray); }
+      .detail-row:last-child { border-bottom: none; }
+      .confirm-title { font-size: 28px; }
+      .member-cta { padding: 18px; }
+    }
+  </style>
 </head>
 <body>
-    <div class="card">
-        <div class="check">✅</div>
-        <h1>Booked, <span>{{ name.split()[0] }}</span></h1>
-        <p class="subtitle">Your booking has been received. We'll contact you shortly!</p>
-        <!--{{variable}} is a jinja2 variable template syntax  Flask replaces these with real values we passed in from app.py 
-        using the render_template function-->
-        <div class="summary">
-            <div class="summary-row">
-                <div class="summary-label">Name:</div>
-                <div class="summary-value">{{ name }}</div>
-            </div>
-            <div class="summary-row">
-                <div class="summary-label">phone:</div>
-                <div class="summary-value">{{ phone }}</div>
-            </div>
-            <div class="summary-row">
-                <div class="summary-label">email:</div>
-                <div class="summary-value">{{ email }}</div>
-            </div>
-            <div class="summary-row">
-                <div class="summary-label">Device:</div>
-                <div class="summary-value">{{ device }}</div>
-            </div>
-            <div class="summary-row">
-                <div class="summary-label">Service:</div>
-                <div class="summary-value">{{ service }}</div>
-            </div>
-            <div class="summary-row">
-                <div class="summary-label">Preferred Date:</div>
-                <div class="summary-value">{{ date }}</div>
-            </div>
-            {% if notes %}
-            <div class="summary-row">
-                <div class="summary-label">Notes:</div>
-                <div class="summary-value">{{ notes }}</div>
-            </div>
-            {% endif %}
+
+  <!-- NAV -->
+  <nav>
+    <a href="/" class="nav-logo">Phone<span>Hub</span> Ghana</a>
+    <div class="nav-right">
+      {% if session.get('customer_id') %}
+        <a href="/dashboard">My Account</a>
+      {% else %}
+        <a href="/register">Create Account</a>
+      {% endif %}
+      <a href="/booking">New Booking</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="confirm-wrap">
+
+      <!-- Check animation -->
+      <div class="success-ring">
+        <div class="ring-circle">
+          <div class="ring-inner">
+            <div class="checkmark"></div>
+          </div>
+        </div>
+      </div>
+
+      <h1 class="confirm-title">Booking <span>Confirmed!</span></h1>
+      <p class="confirm-sub">
+        Your repair slot is locked in, {{ name }}.<br>
+        Bring your device to our Service Bar at the time below.
+      </p>
+
+      <!-- BOOKING CARD -->
+      <div class="booking-card">
+
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="ch-label">Booked Service</div>
+            <div class="ch-val">{{ service }}</div>
+          </div>
+          <div class="booking-ref">
+            <div class="ref-label">Ref No.</div>
+            <div class="ref-val">PH-{{ "%05d"|format(range(10000, 99999)|random) }}</div>
+          </div>
         </div>
 
-        <a href="/booking"class="btn btn-primary">⬅Book Another Service</a>
+        <div class="card-body">
+          <div class="details-grid">
+
+            <div class="detail-row">
+              <div class="detail-label">Customer</div>
+              <div class="detail-val">{{ name }}</div>
+            </div>
+
+            <div class="detail-row">
+              <div class="detail-label">Phone Number</div>
+              <div class="detail-val">{{ phone }}</div>
+            </div>
+
+            <div class="detail-row">
+              <div class="detail-label">Email</div>
+              <div class="detail-val" style="font-size:13px; word-break:break-all;">{{ email }}</div>
+            </div>
+
+            <div class="detail-row">
+              <div class="detail-label">Device</div>
+              <div class="detail-val">{{ device }}</div>
+            </div>
+
+            <div class="detail-row">
+              <div class="detail-label">Service</div>
+              <div class="detail-val">
+                <span class="service-pill">🔧 {{ service }}</span>
+              </div>
+            </div>
+
+            <div class="detail-row">
+              <div class="detail-label">Appointment Date</div>
+              <div class="detail-val">{{ date }}</div>
+            </div>
+
+            {% if notes %}
+            <div class="detail-row" style="grid-column: 1 / -1; border-bottom: none;">
+              <div class="detail-label">Your Notes</div>
+              <div class="detail-val" style="font-weight: 300; font-size: 14px; color: var(--text-soft);">{{ notes }}</div>
+            </div>
+            {% endif %}
+
+          </div>
+        </div>
+
+        <div class="status-bar">
+          <div class="status-info">
+            <div class="status-dot"></div>
+            <div>
+              <div class="status-text">Awaiting Confirmation</div>
+              <div class="status-sub">Our team will confirm within 1 hour during working hours</div>
+            </div>
+          </div>
+          <div class="status-time">📍 Osu Oxford Street, Accra</div>
+        </div>
+
+      </div>
+
+      <!-- Member CTA — only shown if not logged in -->
+      {% if not session.get('customer_id') %}
+      <div class="member-cta">
+        <div class="mcta-icon">🎁</div>
+        <div class="mcta-text">
+          <strong>Get 12 months free membership when you create an account.</strong>
+          <span>Track this repair, earn member discounts, and protect your device — all from your dashboard.</span>
+        </div>
+        <a href="/register" class="mcta-btn">Join Free →</a>
+      </div>
+      {% else %}
+      <div class="member-cta">
+        <div class="mcta-icon">✓</div>
+        <div class="mcta-text">
+          <strong>This booking has been saved to your membership account.</strong>
+          <span>View your full service history and manage your bookings from your dashboard.</span>
+        </div>
+        <a href="/dashboard" class="mcta-btn">My Dashboard →</a>
+      </div>
+      {% endif %}
+
+      <!-- Action Buttons -->
+      <div class="actions">
+        <a href="/" class="action-btn action-primary">Back to Home</a>
+        <a href="/booking" class="action-btn action-outline">Book Another Repair</a>
+        {% if session.get('customer_id') %}
+          <a href="/dashboard" class="action-btn action-outline">My Account</a>
+        {% endif %}
+      </div>
+
+      <!-- What happens next -->
+      <div class="what-next">
+        <div class="wn-title">What happens next</div>
+        <div class="wn-steps">
+          <div class="wn-step">
+            <div class="wn-num">1</div>
+            <div class="wn-content">
+              <div class="wn-step-title">We confirm your slot</div>
+              <div class="wn-step-sub">Our team will call or SMS you within 1 hour (Mon–Sat, 8am–7pm) to confirm your appointment on {{ date }}.</div>
+            </div>
+          </div>
+          <div class="wn-step">
+            <div class="wn-num">2</div>
+            <div class="wn-content">
+              <div class="wn-step-title">Bring your device</div>
+              <div class="wn-step-sub">Come to the PhoneHub Service Bar at Osu Oxford Street. No need to bring anything else — just your device.</div>
+            </div>
+          </div>
+          <div class="wn-step">
+            <div class="wn-num">3</div>
+            <div class="wn-content">
+              <div class="wn-step-title">We diagnose & fix</div>
+              <div class="wn-step-sub">Our certified technician will inspect your device and confirm the exact price before starting any work. No surprises.</div>
+            </div>
+          </div>
+          <div class="wn-step">
+            <div class="wn-num">4</div>
+            <div class="wn-content">
+              <div class="wn-step-title">Pay with MoMo or cash</div>
+              <div class="wn-step-sub">MTN MoMo, Vodafone Cash, AirtelTigo, and cash all accepted. Members get a 10% discount on parts and labour.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
+  </main>
+
+  <footer>
+    © 2026 PhoneHub Ghana Ltd. &nbsp;·&nbsp;
+    <a href="tel:+233302000000">+233 (0) 302 000 000</a>
+    &nbsp;·&nbsp;
+    <a href="mailto:hello@phonehubghana.com">hello@phonehubghana.com</a>
+  </footer>
+
 </body>
 </html>

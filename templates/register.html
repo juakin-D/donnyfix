@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register — PhoneHub Ghana</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f4f9f6; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+    .card { background: white; border-radius: 12px; padding: 40px; width: 100%; max-width: 480px; box-shadow: 0 4px 20px rgba(0,107,63,0.1); }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo h1 { color: #006B3F; font-size: 28px; font-weight: 800; }
+    .logo p { color: #6B7280; font-size: 14px; margin-top: 4px; }
+    .badge { display: inline-block; background: #FEF7D0; color: #92610A; border: 1px solid #FCD116; border-radius: 20px; padding: 4px 14px; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    input, select { width: 100%; padding: 10px 14px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 15px; outline: none; transition: border 0.2s; }
+    input:focus, select:focus { border-color: #006B3F; box-shadow: 0 0 0 3px rgba(0,107,63,0.1); }
+    .divider { border: none; border-top: 1px solid #E5E7EB; margin: 20px 0; }
+    .section-label { font-size: 13px; font-weight: 700; color: #006B3F; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+    .row { display: flex; gap: 12px; }
+    .row .form-group { flex: 1; }
+    button[type="submit"] { width: 100%; background: #006B3F; color: white; border: none; padding: 13px; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
+    button[type="submit"]:hover { background: #004D2D; }
+    .login-link { text-align: center; margin-top: 18px; font-size: 14px; color: #6B7280; }
+    .login-link a { color: #006B3F; font-weight: 600; text-decoration: none; }
+    .flash { padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+    .flash.error { background: #FEE2E2; color: #B91C1C; }
+    .flash.success { background: #D1FAE5; color: #065F46; }
+    .membership-info { background: #D6F0E3; border-left: 4px solid #006B3F; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #004D2D; }
+    .membership-info strong { display: block; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>PhoneHub Ghana</h1>
+      <p>Create your membership account</p>
+    </div>
+
+    <div style="text-align:center;">
+      <span class="badge">🎉 FREE 12-Month Standard Membership on signup</span>
+    </div>
+
+    <div class="membership-info">
+      <strong>What you get instantly:</strong>
+      Priority repairs · 10% off accessories · Dedicated support line · Device service history
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST">
+
+      <p class="section-label">Your Details</p>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" name="name" placeholder="e.g. Kwame Mensah" required />
+      </div>
+      <div class="row">
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="tel" name="phone" placeholder="024 000 0000" required />
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="you@email.com" required />
+        </div>
+      </div>
+
+      <hr class="divider" />
+      <p class="section-label">Your Device</p>
+      <div class="row">
+        <div class="form-group">
+          <label>Brand</label>
+          <select name="device_brand">
+            <option value="">-- Select --</option>
+            <option>Tecno</option>
+            <option>Infinix</option>
+            <option>Samsung</option>
+            <option>Itel</option>
+            <option>iPhone</option>
+            <option>Xiaomi</option>
+            <option>Huawei</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Model</label>
+          <input type="text" name="device_model" placeholder="e.g. Spark 20, A54" />
+        </div>
+      </div>
+
+      <hr class="divider" />
+      <p class="section-label">Set a Password</p>
+      <div class="form-group">
+        <label>Password (min. 6 characters)</label>
+        <input type="password" name="password" placeholder="Choose a password" required />
+      </div>
+
+      <button type="submit">Create My Account & Activate Membership</button>
+    </form>
+
+    <div class="login-link">
+      Already have an account? <a href="/login">Log in here</a>
+    </div>
+  </div>
+</body>
+</html>

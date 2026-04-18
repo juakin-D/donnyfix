@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Installments — PhoneHub Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0E1210;--surface:#161C18;--surface2:#1D2521;
+      --border:#2A3330;--border2:#374440;
+      --green:#00C46A;--green-glow:rgba(0,196,106,.12);
+      --gold:#F5C842;--gold-dim:rgba(245,200,66,.12);
+      --red:#E84040;--red-dim:rgba(232,64,64,.12);
+      --amber:#F59E0B;--amber-dim:rgba(245,158,11,.12);
+      --blue:#3B9EE8;--blue-dim:rgba(59,158,232,.12);
+      --text:#E8F0EC;--text-soft:#7A9088;--text-muted:#4A5E58;
+    }
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+    /* SIDEBAR */
+    .sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+    .sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid var(--border)}
+    .logo-mark{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+    .logo-mark span{color:var(--gold)}
+    .logo-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+    .nav-section{padding:16px 12px 8px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:2px 8px;border-radius:8px;color:var(--text-soft);text-decoration:none;font-size:14px;transition:all .15s;cursor:pointer}
+    .nav-item:hover{background:var(--surface2);color:var(--text)}
+    .nav-item.active{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.15)}
+    .nav-icon{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+    .nav-badge{margin-left:auto;background:var(--amber-dim);color:var(--amber);font-family:'DM Mono',monospace;font-size:11px;padding:2px 7px;border-radius:20px;border:1px solid rgba(245,158,11,.2)}
+    .sidebar-footer{margin-top:auto;padding:16px 12px;border-top:1px solid var(--border)}
+    .admin-user{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--surface2)}
+    .admin-avatar{width:32px;height:32px;border-radius:50%;background:var(--green-glow);border:1px solid rgba(0,196,106,.2);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--green);flex-shrink:0}
+    .admin-name{font-size:13px;font-weight:500;color:var(--text)}
+    .admin-role{font-size:11px;color:var(--text-muted)}
+    .logout-btn{display:block;width:100%;margin-top:8px;padding:9px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;text-align:center}
+    .logout-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-dim)}
+
+    /* MAIN */
+    .main{flex:1;min-width:0;display:flex;flex-direction:column}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:64px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+    .topbar-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text)}
+    .topbar-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:.5px}
+    .topbar-right{display:flex;align-items:center;gap:10px}
+    .status-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--green-glow);border:1px solid rgba(0,196,106,.2);font-size:12px;color:var(--green)}
+    .status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+    .content{flex:1;overflow-y:auto;padding:28px 32px}
+
+    /* STATS */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;position:relative;overflow:hidden;transition:border-color .2s}
+    .stat-card:hover{border-color:var(--border2)}
+    .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+    .stat-card.green::before{background:var(--green)}
+    .stat-card.amber::before{background:var(--amber)}
+    .stat-card.red::before{background:var(--red)}
+    .stat-card.blue::before{background:var(--blue)}
+    .stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+    .stat-value{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;margin-bottom:4px}
+    .stat-card.green .stat-value{color:var(--green)}
+    .stat-card.amber .stat-value{color:var(--amber)}
+    .stat-card.red .stat-value{color:var(--red)}
+    .stat-card.blue .stat-value{color:var(--blue)}
+    .stat-sub{font-size:12px;color:var(--text-muted)}
+
+    /* FILTERS */
+    .filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px}
+    .search-wrap{position:relative;flex:1;min-width:200px}
+    .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text-muted);pointer-events:none}
+    .search-input{width:100%;padding:9px 12px 9px 36px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+    .search-input::placeholder{color:var(--text-muted)}
+    .search-input:focus{border-color:var(--green)}
+    .filter-select{padding:9px 32px 9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234A5E58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+    .filter-btn{padding:9px 18px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;font-weight:500}
+    .filter-btn-primary{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.25)}
+    .filter-btn-primary:hover{background:rgba(0,196,106,.2)}
+    .filter-btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border);text-decoration:none;display:inline-flex;align-items:center}
+    .filter-btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+
+    /* TABLE */
+    .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+    .section-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)}
+    .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    table{width:100%;border-collapse:collapse}
+    thead tr{border-bottom:1px solid var(--border)}
+    th{padding:12px 16px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.2px;background:var(--surface2);white-space:nowrap}
+    td{padding:13px 16px;font-size:14px;color:var(--text-soft);border-bottom:1px solid var(--border);vertical-align:middle}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr{transition:background .12s}
+    tbody tr:hover td{background:var(--surface2);color:var(--text)}
+    tbody tr.overdue-row td{background:rgba(232,64,64,.03)}
+
+    .td-name{font-weight:500;color:var(--text)}
+    .td-mono{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)}
+    .device-tag{display:inline-block;padding:3px 9px;border-radius:6px;font-size:12px;background:var(--surface2);color:var(--text-soft);border:1px solid var(--border);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    /* progress bar */
+    .progress-wrap{width:100%;min-width:80px}
+    .progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:3px}
+    .progress-fill{height:100%;border-radius:3px;background:var(--green);transition:width .3s}
+    .progress-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+
+    /* badges */
+    .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+    .badge-active   {background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.2)}
+    .badge-completed{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,158,232,.2)}
+    .badge-overdue  {background:var(--red-dim);color:var(--red);border:1px solid rgba(232,64,64,.2)}
+    .badge-defaulted{background:rgba(100,100,100,.15);color:#888;border:1px solid rgba(100,100,100,.2)}
+    .badge-paused   {background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+    .method-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;font-size:11px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+
+    /* action buttons */
+    .action-cell{display:flex;align-items:center;gap:6px}
+    .act-btn{display:inline-flex;align-items:center;justify-content:center;height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:12px;transition:all .15s;color:var(--text-soft);white-space:nowrap;font-family:'DM Sans',sans-serif}
+    .act-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+    .act-btn.pay:hover{border-color:var(--green);color:var(--green);background:var(--green-glow)}
+    .act-btn.icon-only{width:30px;padding:0}
+
+    /* flash */
+    .flash{padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;display:flex;align-items:center;gap:10px}
+    .flash.success{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.2)}
+    .flash.error{background:var(--red-dim);color:var(--red);border:1px solid rgba(232,64,64,.2)}
+
+    /* empty */
+    .empty-state{text-align:center;padding:56px 32px}
+    .empty-icon{font-size:36px;margin-bottom:12px;opacity:.4}
+    .empty-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--text-soft);margin-bottom:5px}
+    .empty-sub{font-size:13px;color:var(--text-muted)}
+
+    /* MODAL */
+    .modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;padding:32px;max-width:460px;width:90%;animation:modalPop .2s ease}
+    @keyframes modalPop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+    .modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text)}
+    .modal-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:22px;line-height:1;transition:color .15s}
+    .modal-close:hover{color:var(--text)}
+    .modal-section{margin-bottom:16px}
+    .modal-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:7px;display:block}
+    .modal-input,.modal-select{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+    .modal-input:focus,.modal-select:focus{border-color:var(--green)}
+    .modal-input::placeholder{color:var(--text-muted)}
+    .modal-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234A5E58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+    .modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .modal-plan-summary{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .mps-item{font-size:12px}
+    .mps-label{color:var(--text-muted);font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px}
+    .mps-val{color:var(--text);font-weight:500}
+    .modal-submit{width:100%;padding:13px;background:var(--green-glow);border:1px solid rgba(0,196,106,.3);border-radius:9px;color:var(--green);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .2s}
+    .modal-submit:hover{background:rgba(0,196,106,.2)}
+
+    @media(max-width:900px){
+      .sidebar{display:none}
+      .content{padding:20px}
+      .stats-row{grid-template-columns:1fr 1fr}
+      .topbar{padding:0 20px}
+      table{display:block;overflow-x:auto}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">Phone<span>Hub</span></div>
+      <div class="logo-sub">Admin Console</div>
+    </div>
+    <div class="nav-section">Operations</div>
+    <a href="/admin" class="nav-item"><span class="nav-icon">📋</span>Bookings</a>
+    <a href="/admin/members" class="nav-item"><span class="nav-icon">👤</span>Members</a>
+    <a href="/admin/installments" class="nav-item active">
+      <span class="nav-icon">💳</span>Installments
+      {% if overdue_count > 0 %}
+        <span class="nav-badge">{{ overdue_count }}</span>
+      {% endif %}
+    </a>
+    <div class="nav-section">Quick Links</div>
+    <a href="/" class="nav-item" target="_blank"><span class="nav-icon">🌐</span>View Site</a>
+    <div class="sidebar-footer">
+      <div class="admin-user">
+        <div class="admin-avatar">AD</div>
+        <div>
+          <div class="admin-name">{{ session.get('admin_username','Admin') }}</div>
+          <div class="admin-role">Administrator</div>
+        </div>
+      </div>
+      <form method="POST" action="/admin/logout">
+        <button class="logout-btn" type="submit">Sign Out</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Installment Plans</div>
+        <div class="topbar-sub">Device financing — bank & MoMo</div>
+      </div>
+      <div class="topbar-right">
+        <div class="status-pill"><span class="status-dot"></span>Live</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="flash {{ cat }}"><span>{% if cat=='success'%}✓{% else %}✕{% endif %}</span>{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <!-- STATS -->
+      <div class="stats-row">
+        <div class="stat-card green">
+          <div class="stat-label">Active Plans</div>
+          <div class="stat-value">{{ active_count }}</div>
+          <div class="stat-sub">Currently running</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Outstanding</div>
+          <div class="stat-value" style="font-size:18px">{{ fmt_ghs(total_outstanding) }}</div>
+          <div class="stat-sub">Total balance owed</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Overdue</div>
+          <div class="stat-value">{{ overdue_count }}</div>
+          <div class="stat-sub">Past due date</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value">{{ completed_count }}</div>
+          <div class="stat-sub">Fully paid off</div>
+        </div>
+      </div>
+
+      <!-- FILTERS -->
+      <form method="GET">
+        <div class="filter-bar">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" name="search" class="search-input" placeholder="Search customer name, email, device..." value="{{ search }}"/>
+          </div>
+          <select name="status" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="Active"    {% if status_filter=='Active'    %}selected{% endif %}>Active</option>
+            <option value="Completed" {% if status_filter=='Completed' %}selected{% endif %}>Completed</option>
+            <option value="Paused"    {% if status_filter=='Paused'    %}selected{% endif %}>Paused</option>
+            <option value="Defaulted" {% if status_filter=='Defaulted' %}selected{% endif %}>Defaulted</option>
+          </select>
+          <button type="submit" class="filter-btn filter-btn-primary">Filter</button>
+          {% if search or status_filter %}
+            <a href="/admin/installments" class="filter-btn filter-btn-ghost">Clear</a>
+          {% endif %}
+        </div>
+      </form>
+
+      <!-- TABLE -->
+      <div class="section-header">
+        <div class="section-title">
+          All Plans
+          <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px">{{ plans|length }} records</span>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        {% if plans %}
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer</th>
+              <th>Device</th>
+              <th>Total / Balance</th>
+              <th>Monthly</th>
+              <th>Progress</th>
+              <th>Next Due</th>
+              <th>Method</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in plans %}
+            {% set progress = [((p.total_payable - p.balance_remaining) / p.total_payable * 100)|round|int, 100]|min %}
+            <tr class="{% if p.overdue %}overdue-row{% endif %}"
+                data-name="{{ p.customer_name|lower }}"
+                data-email="{{ p.customer_email|lower }}"
+                data-device="{{ p.device_name|lower }}">
+              <td><span class="td-mono">#{{ p.id }}</span></td>
+              <td>
+                <div class="td-name">{{ p.customer_name }}</div>
+                <div class="td-mono">{{ p.customer_phone }}</div>
+              </td>
+              <td><span class="device-tag" title="{{ p.device_name }}">{{ p.device_name }}</span></td>
+              <td>
+                <div style="font-size:13px;font-weight:500;color:var(--text)">{{ fmt_ghs(p.total_payable) }}</div>
+                <div class="td-mono" style="{% if p.balance_remaining > 0 %}color:var(--amber){% else %}color:var(--green){% endif %}">
+                  {{ fmt_ghs(p.balance_remaining) }} left
+                </div>
+              </td>
+              <td>
+                <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--text)">{{ fmt_ghs(p.monthly_amount) }}</div>
+                <div class="td-mono">{{ p.plan_months }}mo plan</div>
+              </td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width:{{ progress }}%"></div>
+                  </div>
+                  <div class="progress-label">{{ p.payments_made }}/{{ p.plan_months }} payments · {{ progress }}%</div>
+                </div>
+              </td>
+              <td>
+                <div style="font-size:13px;{% if p.overdue %}color:var(--red){% else %}color:var(--text){% endif %}">
+                  {{ p.next_due_date }}
+                </div>
+                {% if p.overdue %}
+                  <div class="td-mono" style="color:var(--red);margin-top:2px">OVERDUE</div>
+                {% endif %}
+              </td>
+              <td>
+                <span class="method-badge">
+                  {% if p.payment_method == 'MoMo' %}📲{% else %}🏦{% endif %}
+                  {{ p.payment_method }}
+                </span>
+                {% if p.momo_network %}
+                  <div class="td-mono" style="margin-top:3px">{{ p.momo_network }}</div>
+                {% elif p.bank_name %}
+                  <div class="td-mono" style="margin-top:3px">{{ p.bank_name }}</div>
+                {% endif %}
+              </td>
+              <td>
+                {% if p.status == 'Active' %}
+                  <span class="badge {% if p.overdue %}badge-overdue{% else %}badge-active{% endif %}">
+                    {% if p.overdue %}Overdue{% else %}Active{% endif %}
+                  </span>
+                {% elif p.status == 'Completed' %}
+                  <span class="badge badge-completed">Completed</span>
+                {% elif p.status == 'Paused' %}
+                  <span class="badge badge-paused">Paused</span>
+                {% else %}
+                  <span class="badge badge-defaulted">{{ p.status }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="action-cell">
+                  {% if p.status == 'Active' %}
+                  <button class="act-btn pay" onclick="openPayModal(
+                      {{ p.id }}, '{{ p.customer_name }}', '{{ p.device_name }}',
+                      {{ p.monthly_amount }}, {{ p.balance_remaining }},
+                      '{{ p.payment_method }}')">
+                    + Record Payment
+                  </button>
+                  {% endif %}
+                  <button class="act-btn icon-only" title="Change status" onclick="openStatusModal({{ p.id }}, '{{ p.status }}')">⋯</button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">💳</div>
+          <div class="empty-title">No installment plans found</div>
+          <div class="empty-sub">{% if search or status_filter %}Try adjusting your filters{% else %}Plans will appear here when customers apply{% endif %}</div>
+        </div>
+        {% endif %}
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+
+  <!-- RECORD PAYMENT MODAL -->
+  <div class="modal-overlay" id="pay-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Record Payment</div>
+        <button class="modal-close" onclick="closePayModal()">×</button>
+      </div>
+      <div class="modal-plan-summary" id="modal-summary"></div>
+      <form method="POST" id="pay-form">
+        <div class="modal-row" style="margin-bottom:14px">
+          <div>
+            <span class="modal-label">Amount (GH₵)</span>
+            <input type="number" name="amount" id="pay-amount" class="modal-input" placeholder="0.00" step="0.01" min="1" required/>
+          </div>
+          <div>
+            <span class="modal-label">Payment Date</span>
+            <input type="date" name="paid_on" id="pay-date" class="modal-input" required/>
+          </div>
+        </div>
+        <div class="modal-section">
+          <span class="modal-label">Payment Method</span>
+          <select name="payment_method" id="pay-method" class="modal-select">
+            <option value="MTN MoMo">MTN MoMo</option>
+            <option value="Vodafone Cash">Vodafone Cash</option>
+            <option value="AirtelTigo Money">AirtelTigo Money</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="Bank Deposit">Bank Deposit (cash)</option>
+            <option value="Cash">Cash in store</option>
+          </select>
+        </div>
+        <div class="modal-section">
+          <span class="modal-label">Reference / Transaction ID</span>
+          <input type="text" name="reference" class="modal-input" placeholder="e.g. MoMo ref or bank receipt no."/>
+        </div>
+        <div class="modal-section">
+          <span class="modal-label">Notes (optional)</span>
+          <input type="text" name="notes" class="modal-input" placeholder="Any notes about this payment..."/>
+        </div>
+        <button type="submit" class="modal-submit">✓ Confirm Payment</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- STATUS MODAL -->
+  <div class="modal-overlay" id="status-modal">
+    <div class="modal" style="max-width:360px">
+      <div class="modal-header">
+        <div class="modal-title">Update Plan Status</div>
+        <button class="modal-close" onclick="closeStatusModal()">×</button>
+      </div>
+      <form method="POST" id="status-form">
+        <div class="modal-section">
+          <span class="modal-label">New Status</span>
+          <select name="status" id="new-status" class="modal-select">
+            <option value="Active">Active</option>
+            <option value="Paused">Paused</option>
+            <option value="Completed">Completed</option>
+            <option value="Defaulted">Defaulted</option>
+          </select>
+        </div>
+        <button type="submit" class="modal-submit" style="margin-top:12px">Update Status</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Set today's date on pay modal
+    const today = new Date().toISOString().split('T')[0];
+
+    function fmtGHS(n) {
+      return 'GH\u20B5' + Number(n).toLocaleString('en-GH',{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+
+    function openPayModal(planId, name, device, monthly, balance, method) {
+      document.getElementById('pay-form').action = `/admin/installments/${planId}/record-payment`;
+      document.getElementById('pay-amount').value = monthly.toFixed(2);
+      document.getElementById('pay-date').value = today;
+      // set default method
+      const sel = document.getElementById('pay-method');
+      for(let i=0;i<sel.options.length;i++){
+        if(sel.options[i].value.toLowerCase().includes(method.toLowerCase())){
+          sel.selectedIndex=i; break;
+        }
+      }
+      document.getElementById('modal-summary').innerHTML = `
+        <div class="mps-item"><div class="mps-label">Customer</div><div class="mps-val">${name}</div></div>
+        <div class="mps-item"><div class="mps-label">Device</div><div class="mps-val">${device}</div></div>
+        <div class="mps-item"><div class="mps-label">Monthly Amount</div><div class="mps-val">${fmtGHS(monthly)}</div></div>
+        <div class="mps-item"><div class="mps-label">Balance Remaining</div><div class="mps-val" style="color:var(--amber)">${fmtGHS(balance)}</div></div>
+      `;
+      document.getElementById('pay-modal').classList.add('open');
+    }
+
+    function closePayModal() {
+      document.getElementById('pay-modal').classList.remove('open');
+    }
+
+    function openStatusModal(planId, currentStatus) {
+      document.getElementById('status-form').action = `/admin/installments/${planId}/update-status`;
+      const sel = document.getElementById('new-status');
+      for(let i=0;i<sel.options.length;i++){
+        if(sel.options[i].value===currentStatus){sel.selectedIndex=i;break;}
+      }
+      document.getElementById('status-modal').classList.add('open');
+    }
+
+    function closeStatusModal() {
+      document.getElementById('status-modal').classList.remove('open');
+    }
+
+    // Close on backdrop click
+    document.getElementById('pay-modal').addEventListener('click', function(e){ if(e.target===this) closePayModal(); });
+    document.getElementById('status-modal').addEventListener('click', function(e){ if(e.target===this) closeStatusModal(); });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape'){closePayModal();closeStatusModal();} });
+
+    // Live search
+    document.querySelector('.search-input').addEventListener('input', function(){
+      const q = this.value.toLowerCase();
+      document.querySelectorAll('tbody tr').forEach(r=>{
+        const match = !q || r.dataset.name?.includes(q) || r.dataset.email?.includes(q) || r.dataset.device?.includes(q);
+        r.style.display = match ? '' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>

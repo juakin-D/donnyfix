@@ -1,517 +1,702 @@
-<!DOCTYPE html> 
-<html  lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book a Repair - Donnyfix</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com"/>
-    <link href="https://fonts.googleapis.com/css2?family=syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
-    <style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Book a Repair — PhoneHub Ghana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* some CSS Variables as index.html for consistency */
-        :root {
-            --bg: #fafafa;
-            --bg2: #f5f4f0;
-            --text: #18181b;
-            --text2: #52525b;
-            --text3: #a1a1aa;
-            --accent: #0d9488;
-            --accent-lt:#ccfbf1;
-            --border: #e4e4e7;
-            --white: #ffffff;
-            --radius: 10px;
-            --font-head:playfair display, georgia, serif;
-            --font-body: Epilogue, system-ui, sans-serif;
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
-            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
-            --transition: 0.18s ease;
-
-        }
-        *, *::before, *::after  {
-            box-sizing: border-box; margin: 0; padding: 0;
-        }
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: var(--font-body);
-            font-size: 16px;
-            line-height: 1.65;
-            -webkit-font-smoothing: antialiased;
-            min-height: 100vh;
-            
-        }
-        a { color: inherit; text-decoration: none; }
-        .container {
-            max-width: 1080px;
-            margin: 0 auto;
-            padding: 0 clamp(20px, 5vw, 48px);
-        }
-        /* page load animation same as index.html */
-        @keyframes fadeup {
-            from { opacity: 0; transform: translateY(16px);}
-            to { opacity: 1; transform: translateY(0);}
-        }
-        .reveal { animation: fadeup 0.5s ease both;}
-        .reveal-1 { animation-delay: 0.5s;}
-        .reveal-2 { animation-delay: 0.15s;}
-        .reveal-3 { animation-delay: 0.25s;}
-
-
-        /* NAV identical to index.html */
-        nav {
-            position: fixed; top: 0; z-index: 100;
-            background: rgba(250, 250, 249, 0.88);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
-        }
-        .nav-inner {
-            display: flex; align-items: center; justify-content: space-between; height: 60px;
-        }
-
-
-        /* logo style*/
-        .logo {
-            font-family: var(--font-head);
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: -0.3px;
-        }
-        .logo em { font-style: normal; color: var(--accent);}
-        .nav-links{
-            display: flex; align-items: center; gap: 28px; list-style: none;
-        }
-
-        nav {
-            position: sticky; top: 0; z-index: 100;
-            background: rgba(250, 250, 249, 0.88);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
-        }
-        .nav-inner {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 40px;
-        }
-
-        .nav-links {
-            display: flex; align-items: center; gap: 28px; list-style: none;
-        }
-        .nav-links a {
-            font-size: 0.785rem;
-            color: var(--white);
-            transition: color var(--transition);
-        }
-        .nav-links a:hover { color: var(--text2); }
-        @media (max-width: 600px) {
-            .nav-links li:not(:last-child) { display: none;}
-        }
-
-        /* BUTTONS SYSTEMS SAME AS INDEX.HTML */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            border: none;
-            border-radius: var(--radius);
-            padding: 11px 22px;
-            font-family: var(--font-body);
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all var(--transition);
-            white-space: nowrap;
-        }
-        .btn-primary { background: var(--text); color: var(--white); }
-        .btn-primary:hover { background: var(--accent);transform: translateY(-2px); box-shadow: var(--shadow-md);}
-        .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border);} 
-        .btn-outline:hover { border-color: var(--text2); background: var(--white); }
-
-
-        /* PAGE LAYOUT 
-        TWO- column layout layout on Desktop. On mobile, it stacks vertically */
-
-        .page-body {
-             padding: clamp(40px, 8vw, 72px) 0 80px;
-        }
-        .page-grid {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: clamp(32px, 5vw, 64px);
-            align-items: start;
-        }
-        @media (max-width: 760px) {
-            .page-grid { grid-template-columns: 1fr; }
-            .sidebar { order: 2;}
-            .form-col { order: 1;}
-        }
-
-        /* sidebar styles, sticky summary panel */
-        .sidebar {
-            position: sticky;
-            top: 80px;
-        }
-        .sidebar-eyebrow {
-            display: inline-flex; align-items: center; gap: 8px;
-            font-size: 0.75rem; font-weight: 600; letter-spacing: 1.8px;
-            color: var(--text3);
-            text-transform: uppercase; margin: 16px;
-        }
-        .sidebar h1 {
-            font-family: var(--font-head);
-            font-size: clamp(1.6rem, 3vw, 2.2rem);
-            font-weight: 700; line-height: 1.5;
-            letter-spacing: -0.8px;
-             margin-bottom: 12px;
-        }
-        .sidebar h1 em { font-style: normal; color: var(--accent);}
-
-        .sidebar-desc {
-            font-size: 0.9rem; color: var(--text2); 
-            font-weight: 300; line-height: 1.65;
-             margin-bottom: 28px;
-        }
-
-        /* TRUST checklist in sidebar*/
-
-        .trust-list {
-            list-style: none; display: flex; flex-direction: column; gap: 10px;
-            padding: 20px; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
-        }
-        .trust-list li {
-            display: flex; align-items: center; gap: 10px;font-size: 0.83rem; color: var(--text2);
-        }
-
-        .trust-list li::before {
-            content: '';
-            width: 6px; height: 6px;
-            background: var(--accent);
-            border-radius: 50%; flex-shrink: 0;
-        }
-
-        /* FORM CARD */
-        .form-card {
-            background: var(--white);
-            border: 1px solid var(--white);
-            border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm);
-        }
-           /* Section headers inside the form */
-         .form-section {
-      padding: 20px 28px 0;
-      border-top: 1px solid var(--border);
+    :root {
+      --green:       #006B3F;
+      --green-dark:  #004D2D;
+      --green-deep:  #002D1A;
+      --gold:        #FCD116;
+      --off-white:   #F7F5F0;
+      --warm-gray:   #E8E4DC;
+      --mid-gray:    #8C8880;
+      --text:        #111008;
+      --text-soft:   #4A4740;
     }
 
-    .form-section:first-child { border-top: none; }
-
-    .form-section-label {
-      font-size: 0.7rem; font-weight: 600;
-      letter-spacing: 1.8px; text-transform: uppercase;
-      color: var(--text-3); margin-bottom: 20px;
-      display: flex; align-items: center; gap: 10px;
-    }
-
-    .form-section-label::after {
-      content: ''; flex: 1; height: 1px;
-      background: var(--border);
-    }
-
-    .form-fields {
-      padding: 0 28px 24px;
-      display: flex; flex-direction: column; gap: 18px;
-    }
-
-    /* Two-column row within the form */
-    .field-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    @media (max-width: 500px) {
-      .field-row { grid-template-columns: 1fr; }
-      .form-section { padding: 20px 20px 0; }
-      .form-fields { padding: 0 20px 20px; }
-    }
-
-    .field { display: flex; flex-direction: column; gap: 6px; }
-       /*
-      LABELS
-      for="X" on label ties to id="X" on input.
-      Clicking the label focuses the field —
-      a small UX detail that makes forms easier to use.
-    */
-
-     label {
-      font-size: 0.8rem; font-weight: 500;
-      color: var(--text-2); letter-spacing: 0.2px;
-    }
-
-    label .req { color: var(--accent); margin-left: 2px; }
-      /*
-      INPUT STYLES
-       The transition animates the border and glow
-      smoothly when the user clicks in.
-    */
-
-    input, select, textarea {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--off-white);
       color: var(--text);
-      font-family: var(--font-body);
-      font-size: 0.9rem;
-      font-weight: 400;
-      outline: none;
-      transition: border-color var(--transition), box-shadow var(--transition);
-      appearance: none;
-      -webkit-appearance: none;
+      min-height: 100vh;
     }
 
-     /*
-      FOCUS STATE
-      WHY: :focus fires when the element is active/selected.
-      The teal border + soft glow matches the accent color
-      and makes it immediately clear which field is active.
-    */
-    input:focus, select:focus, textarea:focus  {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
-      background: var(--white);
+    /* ── NAV ─────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 68px;
+      background: rgba(247,245,240,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--warm-gray);
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px;
+      color: var(--green); text-decoration: none; letter-spacing: -0.3px;
+    }
+    .nav-logo span { color: var(--gold); }
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+    .nav-right a {
+      color: var(--text-soft); text-decoration: none; font-size: 14px;
+      padding: 8px 14px; border-radius: 8px; transition: all 0.2s;
+    }
+    .nav-right a:hover { color: var(--text); background: var(--warm-gray); }
+    .nav-right a.active {
+      background: var(--green); color: white; font-weight: 500;
     }
 
-    input::placeholder, textarea::placeholder {
-      color: var(--text-3);
-      font-weight: 300;
+    /* ── PAGE LAYOUT ─────────────────────────────────────── */
+    .page {
+      max-width: 1100px; margin: 0 auto;
+      padding: 56px 48px 100px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 56px; align-items: start;
     }
 
-    /* Custom dropdown arrow */
+    /* ── PAGE HEADER ─────────────────────────────────────── */
+    .page-header { margin-bottom: 40px; }
+    .page-header .breadcrumb {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--mid-gray); margin-bottom: 16px;
+    }
+    .page-header .breadcrumb a { color: var(--mid-gray); text-decoration: none; }
+    .page-header .breadcrumb a:hover { color: var(--green); }
+    .page-header .breadcrumb span { color: var(--warm-gray); }
+    .page-header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 38px; font-weight: 800;
+      letter-spacing: -1px; line-height: 1.1;
+      color: var(--text); margin-bottom: 10px;
+    }
+    .page-header h1 em { color: var(--green); font-style: normal; }
+    .page-header p { font-size: 16px; color: var(--text-soft); font-weight: 300; line-height: 1.6; }
+
+    /* ── PROGRESS STEPS ──────────────────────────────────── */
+    .progress { display: flex; align-items: center; gap: 0; margin-bottom: 40px; }
+    .prog-step {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; font-weight: 500; color: var(--mid-gray);
+    }
+    .prog-step.active { color: var(--green); }
+    .prog-step.done   { color: var(--green); }
+    .prog-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 2px solid var(--warm-gray);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+      color: var(--mid-gray); flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    .prog-step.active .prog-dot {
+      border-color: var(--green); background: var(--green); color: white;
+    }
+    .prog-step.done .prog-dot {
+      border-color: var(--green); background: var(--green); color: white;
+    }
+    .prog-line {
+      flex: 1; height: 1px; background: var(--warm-gray);
+      margin: 0 12px; min-width: 32px;
+    }
+
+    /* ── FORM ────────────────────────────────────────────── */
+    .form-card {
+      background: white;
+      border: 1px solid var(--warm-gray);
+      border-radius: 20px;
+      padding: 40px;
+      animation: fadeUp 0.5s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-section { margin-bottom: 36px; }
+    .form-section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 2px;
+      color: var(--green); margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--warm-gray);
+    }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block; font-size: 13px; font-weight: 500;
+      color: var(--text); margin-bottom: 7px;
+    }
+    .form-group label .req { color: var(--green); }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="date"],
+    select, textarea {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--warm-gray);
+      border-radius: 10px; font-family: 'DM Sans', sans-serif;
+      font-size: 15px; color: var(--text);
+      background: var(--off-white);
+      outline: none; transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none; appearance: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--green);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(0,107,63,0.08);
+    }
+    input::placeholder, textarea::placeholder { color: var(--mid-gray); font-weight: 300; }
+    textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+    /* custom select arrow */
     .select-wrap { position: relative; }
     .select-wrap::after {
-      content: '▾'; position: absolute;
-      right: 14px; top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-3); font-size: 0.8rem;
+      content: '';
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid var(--mid-gray);
       pointer-events: none;
     }
-    select option { background: var(--white); }
 
-    textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
-    
-
-    /* FORM FOOTER - Submit area*/
-
-     .form-footer {
-      padding: 20px 28px 28px;
-      border-top: 1px solid var(--border);
-      background: var(--bg);
+    /* service cards picker */
+    .service-picker {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+    }
+    .service-option { position: relative; }
+    .service-option input[type="radio"] {
+      position: absolute; opacity: 0; width: 0; height: 0;
+    }
+    .service-label {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-radius: 12px;
+      border: 1.5px solid var(--warm-gray);
+      cursor: pointer; transition: all 0.2s;
+      background: var(--off-white);
+    }
+    .service-label:hover { border-color: var(--green); background: white; }
+    .service-option input:checked + .service-label {
+      border-color: var(--green);
+      background: rgba(0,107,63,0.05);
+      box-shadow: 0 0 0 3px rgba(0,107,63,0.08);
+    }
+    .svc-ico {
+      width: 36px; height: 36px; flex-shrink: 0;
+      border-radius: 10px; background: rgba(0,107,63,0.08);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .svc-info { flex: 1; min-width: 0; }
+    .svc-name { font-size: 13px; font-weight: 500; color: var(--text); }
+    .svc-price-tag { font-size: 11px; color: var(--mid-gray); font-weight: 300; }
+    .svc-check {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid var(--warm-gray);
+      flex-shrink: 0; transition: all 0.2s;
+      background: white;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .service-option input:checked + .service-label .svc-check {
+      background: var(--green); border-color: var(--green);
+    }
+    .service-option input:checked + .service-label .svc-check::after {
+      content: '';
+      width: 6px; height: 4px;
+      border-left: 2px solid white; border-bottom: 2px solid white;
+      transform: rotate(-45deg) translate(1px, -1px);
+      display: block;
     }
 
+    /* submit button */
     .submit-btn {
-      width: 100%;
-      padding: 13px;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: var(--radius);
-      font-family: var(--font-head);
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      letter-spacing: 0.2px;
-      transition: all var(--transition);
+      width: 100%; padding: 15px;
+      background: var(--green); color: white;
+      border: none; border-radius: 12px;
+      font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      margin-top: 8px;
     }
-
-    .submit-btn:hover {
-      background: #0f766e;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(13,148,136,0.25);
-    }
-
+    .submit-btn:hover { background: var(--green-dark); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,107,63,0.25); }
     .submit-btn:active { transform: translateY(0); }
-
-    .form-note {
-      text-align: center; font-size: 0.775rem;
-      color: var(--text-3); margin-top: 12px;
+    .submit-note {
+      text-align: center; font-size: 13px; color: var(--mid-gray);
+      margin-top: 12px; font-weight: 300;
     }
 
-    /* FOOTER*/
+    /* member login nudge */
+    .member-nudge {
+      background: rgba(0,107,63,0.06);
+      border: 1px solid rgba(0,107,63,0.15);
+      border-radius: 12px; padding: 16px 18px;
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 28px;
+    }
+    .nudge-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--green); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .nudge-text { flex: 1; }
+    .nudge-text strong { display: block; font-size: 13px; font-weight: 500; color: var(--green); margin-bottom: 2px; }
+    .nudge-text span { font-size: 12px; color: var(--text-soft); font-weight: 300; }
+    .nudge-link {
+      font-size: 13px; font-weight: 600; color: var(--green);
+      text-decoration: none; white-space: nowrap;
+      padding: 7px 14px; border: 1.5px solid var(--green);
+      border-radius: 8px; transition: all 0.2s;
+    }
+    .nudge-link:hover { background: var(--green); color: white; }
 
-     footer { border-top: 1px solid var(--border); padding: 32px 0; }
-    .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
-    .footer-copy { font-size: 0.8rem; color: var(--text-3); }
-    .footer-links { display: flex; gap: 20px; list-style: none; }
-    .footer-links a { font-size: 0.8rem; color: var(--text-3); transition: color var(--transition); }
-    .footer-links a:hover { color: var(--text); }
+    /* flash messages */
+    .flash { padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; }
+    .flash.error   { background: #FEE2E2; color: #B91C1C; border: 1px solid #FCA5A5; }
+    .flash.success { background: #D1FAE5; color: #065F46; border: 1px solid #6EE7B7; }
 
-    </style>
+    /* ── SIDEBAR ─────────────────────────────────────────── */
+    .sidebar { position: sticky; top: 88px; }
+
+    .sidebar-card {
+      background: white; border: 1px solid var(--warm-gray);
+      border-radius: 20px; padding: 28px;
+      margin-bottom: 16px;
+      animation: fadeUp 0.5s 0.1s ease both;
+    }
+    .sidebar-card-title {
+      font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+      color: var(--text); margin-bottom: 16px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--warm-gray);
+    }
+
+    /* service bar times */
+    .hours-list { list-style: none; }
+    .hours-list li {
+      display: flex; justify-content: space-between;
+      font-size: 14px; padding: 8px 0;
+      border-bottom: 1px solid var(--warm-gray);
+      color: var(--text-soft);
+    }
+    .hours-list li:last-child { border-bottom: none; }
+    .hours-list li strong { color: var(--text); font-weight: 500; }
+    .open-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #D1FAE5; color: #065F46;
+      font-size: 12px; font-weight: 500;
+      padding: 4px 10px; border-radius: 20px;
+      margin-bottom: 14px;
+    }
+    .open-badge::before {
+      content: ''; width: 6px; height: 6px;
+      border-radius: 50%; background: #10B981;
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+    /* brands served */
+    .brands-mini { display: flex; flex-wrap: wrap; gap: 6px; }
+    .brand-tag {
+      background: var(--off-white); border: 1px solid var(--warm-gray);
+      border-radius: 6px; padding: 4px 10px;
+      font-size: 12px; font-weight: 500; color: var(--text-soft);
+    }
+
+    /* guarantee items */
+    .guarantee-list { list-style: none; }
+    .guarantee-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text-soft);
+      padding: 8px 0; border-bottom: 1px solid var(--warm-gray);
+      font-weight: 300; line-height: 1.4;
+    }
+    .guarantee-list li:last-child { border-bottom: none; }
+    .guarantee-list li .g-icon {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: rgba(0,107,63,0.1); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; margin-top: 1px;
+    }
+
+    /* ── MOBILE ──────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .page { grid-template-columns: 1fr; gap: 32px; padding: 32px 20px 60px; }
+      nav { padding: 0 20px; }
+      .nav-right a:not(.active) { display: none; }
+      .form-row { grid-template-columns: 1fr; }
+      .service-picker { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .page-header h1 { font-size: 28px; }
+    }
+  </style>
 </head>
 <body>
-    <!-- NAV — same markup as index.html -->
-    <nav>
-         <div class="container nav-inner">
-             <a href="/" class="logo">Donny<em>Fix</em></a>
-             <ul class="nav-links">
-                 <li><a href="/#services">Services</a></li>
-                <li><a href="/#how-it-works">How it works</a></li>
-                <li><a href="/#reviews">Reviews</a></li>
-                <li><a href="/" class="btn btn-primary" style="padding:8px 18px;font-size:0.82rem;">Back-home</a></li>
-             </ul>
-         </div>
-    </nav>  
 
-     <!-- PAGE BODY -->
+  <!-- NAV -->
+  <nav>
+    <a href="/" class="nav-logo">Phone<span>Hub</span> Ghana</a>
+    <div class="nav-right">
+      <a href="/">Home</a>
+      {% if session.get('customer_id') %}
+        <a href="/dashboard">My Account</a>
+        <a href="/logout">Log Out</a>
+      {% else %}
+        <a href="/login">Login</a>
+        <a href="/register">Join Free</a>
+      {% endif %}
+      <a href="/booking" class="active">Book Repair</a>
+    </div>
+  </nav>
 
-  <div class="page-body">
-    <div class="container">
-      <div class="page-grid">
+  <div class="page">
 
-            <!-- ========== SIDEBAR ========== -->
-    <aside class="sidebar reveal reveal-1">
+    <!-- LEFT: FORM -->
+    <div>
+      <div class="page-header">
+        <div class="breadcrumb">
+          <a href="/">Home</a>
+          <span>›</span>
+          <span>Book a Repair</span>
+        </div>
+        <h1>Book a <em>Repair</em><br>or Service</h1>
+        <p>Fill in your details below and we'll confirm your slot. Most repairs are done the same day.</p>
+      </div>
 
-     <!----<p class="sidebar-eyebrow">Booking</p>
+      <!-- Progress -->
+      <div class="progress">
+        <div class="prog-step active">
+          <div class="prog-dot">1</div>
+          <span>Your Details</span>
+        </div>
+        <div class="prog-line"></div>
+        <div class="prog-step">
+          <div class="prog-dot">2</div>
+          <span>Confirmation</span>
+        </div>
+        <div class="prog-line"></div>
+        <div class="prog-step">
+          <div class="prog-dot">3</div>
+          <span>Done</span>
+        </div>
+      </div>
 
-      <h1>Book a<br /><em>repair.</em></h1>
-    -->
-      <p class="sidebar-desc">
-        Fill in the form and we'll confirm your slot within the hour.
-        Most repairs are done same day.
-      </p>
-<!---
-      <ul class="trust-list">
-        <li>No fix, no fee — ever</li>
-        <li>90-day repair guarantee</li>
-        <li>Genuine parts only</li>
-        <li>Most repairs under 60 min</li>
-        <li>Free full diagnostic</li>
-        <li>Your data stays private</li>
-      </ul>
-    </aside>
--->
-    <!-- ========== FORM ========== -->
-    <div class="form-col reveal reveal-2">
-      <!--
-        FORM ELEMENT
-        action="/booking" — URL Flask handles
-        method="POST"    — sends data in request body, not URL
-        WHY POST not GET: GET puts form data in the URL
-        (visible, bookmarkable). POST hides it in the
-        request body — correct for personal data.
-      -->
-      <form action="/booking" method="POST">
-        <div class="form-card">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
 
-          <!-- Section 1: Personal details -->
+      <!-- Member nudge (shown when not logged in) -->
+      {% if not session.get('customer_id') %}
+      <div class="member-nudge">
+        <div class="nudge-icon">🎁</div>
+        <div class="nudge-text">
+          <strong>PhoneHub Member? Get priority booking.</strong>
+          <span>Log in and your booking links automatically to your membership account.</span>
+        </div>
+        <a href="/login" class="nudge-link">Log in</a>
+      </div>
+      {% else %}
+      <div class="member-nudge">
+        <div class="nudge-icon">✓</div>
+        <div class="nudge-text">
+          <strong>Booking as a member — great!</strong>
+          <span>This repair will be logged to your membership account and service history.</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- FORM CARD -->
+      <div class="form-card">
+        <form method="POST" action="/booking">
+
+          <!-- Your Details -->
           <div class="form-section">
-            <p class="form-section-label">Your details</p>
-          </div>
-          <div class="form-fields">
-            <div class="field-row">
-              <div class="field">
-                <label for="name">Full name <span class="req">*</span></label>
-                <input type="text" id="name" name="name"
-                  placeholder="e.g. Donny Joe " required />
+            <div class="form-section-title">Your Details</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Full Name <span class="req">*</span></label>
+                <input type="text" name="name" placeholder="Kwame Mensah"
+                  value="{{ session.get('customer_name', '') }}" required />
               </div>
-              <div class="field">
-                <!--
-                  type="tel" WHY: On mobile devices this
-                  opens a numeric keypad instead of the
-                  full keyboard — small UX improvement.
-                -->
-                <label for="phone">Phone number <span class="req">*</span></label>
-                <input type="tel" id="phone" name="phone"
-                  placeholder="e.g. 020 000 0000" required />
+              <div class="form-group">
+                <label>Phone Number <span class="req">*</span></label>
+                <input type="tel" name="phone" placeholder="024 000 0000" required />
               </div>
             </div>
-            <div class="field">
-              <!--
-                type="email" WHY: Browser auto-validates
-                that input contains @ and a domain.
-                On mobile it shows an email keyboard.
-              -->
-              <label for="email">Email address <span class="req">*</span></label>
-              <input type="email" id="email" name="email"
-                placeholder="you@example.com" required />
+            <div class="form-group">
+              <label>Email Address <span class="req">*</span></label>
+              <input type="email" name="email" placeholder="you@email.com" required />
             </div>
           </div>
 
-          <!-- Section 2: Device & service -->
+          <!-- Device Info -->
           <div class="form-section">
-            <p class="form-section-label">Device & service</p>
-          </div>
-          <div class="form-fields">
-            <div class="field-row">
-              <div class="field">
-                <label for="device">Device <span class="req">*</span></label>
-                <!--
-                  WHY select-wrap div: We use it to inject
-                  the custom ▾ arrow via CSS ::after,
-                  because you can't style ::after on <select>
-                  directly in most browsers.
-                -->
+            <div class="form-section-title">Your Device</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Brand <span class="req">*</span></label>
                 <div class="select-wrap">
-                  <select id="device" name="device" required>
-                    <option value="" disabled selected>Select device</option>
-                    <option value="iphone">iPhone</option>
-                    <option value="samsung">Samsung</option>
-                    <option value="pixel">Google Pixel</option>
-                    <option value="other">Other Android</option>
+                  <select name="device" required>
+                    <option value="" disabled selected>Select brand & model</option>
+                    <optgroup label="Tecno">
+                      <option>Tecno Spark 20</option>
+                      <option>Tecno Spark 10</option>
+                      <option>Tecno Camon 20</option>
+                      <option>Tecno Phantom X2</option>
+                      <option>Other Tecno</option>
+                    </optgroup>
+                    <optgroup label="Infinix">
+                      <option>Infinix Note 40</option>
+                      <option>Infinix Note 30</option>
+                      <option>Infinix Hot 40</option>
+                      <option>Infinix Zero 30</option>
+                      <option>Other Infinix</option>
+                    </optgroup>
+                    <optgroup label="Samsung">
+                      <option>Samsung Galaxy A55</option>
+                      <option>Samsung Galaxy A35</option>
+                      <option>Samsung Galaxy A15</option>
+                      <option>Samsung Galaxy S24</option>
+                      <option>Other Samsung</option>
+                    </optgroup>
+                    <optgroup label="iPhone">
+                      <option>iPhone 16</option>
+                      <option>iPhone 15</option>
+                      <option>iPhone 14</option>
+                      <option>iPhone 13</option>
+                      <option>Older iPhone</option>
+                    </optgroup>
+                    <optgroup label="Other Brands">
+                      <option>Itel</option>
+                      <option>Xiaomi</option>
+                      <option>OPPO</option>
+                      <option>Vivo</option>
+                      <option>Huawei</option>
+                      <option>Nokia</option>
+                      <option>Other</option>
+                    </optgroup>
                   </select>
                 </div>
               </div>
-              <div class="field">
-                <label for="service">Service needed <span class="req">*</span></label>
-                <div class="select-wrap">
-                  <select id="service" name="service" required>
-                    <option value="" disabled selected>Select service</option>
-                    <option value="screen">Screen replacement</option>
-                    <option value="battery">Battery replacement</option>
-                    <option value="water">Water damage recovery</option>
-                    <option value="camera">Camera repair</option>
-                    <option value="charging">Charging port fix</option>
-                    <option value="diagnostic">Free diagnostic</option>
-                  </select>
-                </div>
+              <div class="form-group">
+                <label>Preferred Date <span class="req">*</span></label>
+                <input type="date" name="date" required />
               </div>
             </div>
-            <div class="field">
-              <!--
-                type="date" WHY: Shows a native date picker.
-                The browser handles the calendar UI for free.
-              -->
-              <label for="date">Preferred date <span class="req">*</span></label>
-              <input type="date" id="date" name="date" required />
-            </div>
-            <div class="field">
-              <label for="notes">Additional notes</label>
-              <textarea id="notes" name="notes"
-                placeholder="Describe the issue, mention your model, or add anything useful..."></textarea>
+          </div>
+
+          <!-- Service Type -->
+          <div class="form-section">
+            <div class="form-section-title">Service Needed</div>
+            <div class="service-picker">
+
+              <div class="service-option">
+                <input type="radio" name="service" id="s1" value="Screen Replacement" required />
+                <label class="service-label" for="s1">
+                  <div class="svc-ico">📱</div>
+                  <div class="svc-info">
+                    <div class="svc-name">Screen Replacement</div>
+                    <div class="svc-price-tag">From GH₵300</div>
+                  </div>
+                  <div class="svc-check"></div>
+                </label>
+              </div>
+
+              <div class="service-option">
+                <input type="radio" name="service" id="s2" value="Battery Replacement" />
+                <label class="service-label" for="s2">
+                  <div class="svc-ico">🔋</div>
+                  <div class="svc-info">
+                    <div class="svc-name">Battery Replacement</div>
+                    <div class="svc-price-tag">From GH₵150</div>
+                  </div>
+                  <div class="svc-check"></div>
+                </label>
+              </div>
+
+              <div class="service-option">
+                <input type="radio" name="service" id="s3" value="Charging Port Repair" />
+                <label class="service-label" for="s3">
+                  <div class="svc-ico">🔌</div>
+                  <div class="svc-info">
+                    <div class="svc-name">Charging Port Repair</div>
+                    <div class="svc-price-tag">From GH₵120</div>
+                  </div>
+                  <div class="svc-check"></div>
+                </label>
+              </div>
+
+              <div class="service-option">
+                <input type="radio" name="service" id="s4" value="Water Damage Treatment" />
+                <label class="service-label" for="s4">
+                  <div class="svc-ico">💧</div>
+                  <div class="svc-info">
+                    <div class="svc-name">Water Damage</div>
+                    <div class="svc-price-tag">From GH₵200</div>
+                  </div>
+                  <div class="svc-check"></div>
+                </label>
+              </div>
+
+              <div class="service-option">
+                <input type="radio" name="service" id="s5" value="Software Restore" />
+                <label class="service-label" for="s5">
+                  <div class="svc-ico">💻</div>
+                  <div class="svc-info">
+                    <div class="svc-name">Software Restore</div>
+                    <div class="svc-price-tag">From GH₵80</div>
+                  </div>
+                  <div class="svc-check"></div>
+                </label>
+              </div>
+
+              <div class="service-option">
+                <input type="radio" name="service" id="s6" value="Data Backup & Transfer" />
+                <label class="service-label" for="s6">
+                  <div class="svc-ico">💾</div>
+                  <div class="svc-info">
+                    <div class="svc-name">Data Backup & Transfer</div>
+                    <div class="svc-price-tag">From GH₵100</div>
+                  </div>
+                  <div class="svc-check"></div>
+                </label>
+              </div>
+
+              <div class="service-option">
+                <input type="radio" name="service" id="s7" value="Full Diagnostics" />
+                <label class="service-label" for="s7">
+                  <div class="svc-ico">🔍</div>
+                  <div class="svc-info">
+                    <div class="svc-name">Full Diagnostics</div>
+                    <div class="svc-price-tag">GH₵50 (free for members)</div>
+                  </div>
+                  <div class="svc-check"></div>
+                </label>
+              </div>
+
+              <div class="service-option">
+                <input type="radio" name="service" id="s8" value="Camera / Speaker Repair" />
+                <label class="service-label" for="s8">
+                  <div class="svc-ico">📷</div>
+                  <div class="svc-info">
+                    <div class="svc-name">Camera / Speaker</div>
+                    <div class="svc-price-tag">From GH₵150</div>
+                  </div>
+                  <div class="svc-check"></div>
+                </label>
+              </div>
+
             </div>
           </div>
 
-          <!-- Submit -->
-          <div class="form-footer">
-            <button type="submit" class="submit-btn">
-              Confirm booking →
-            </button>
-            <p class="form-note">🔒 Your details are never shared with third parties.</p>
+          <!-- Notes -->
+          <div class="form-section" style="margin-bottom: 28px;">
+            <div class="form-section-title">Additional Notes</div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>Describe the issue (optional)</label>
+              <textarea name="notes" placeholder="e.g. Screen cracked after drop, touch still works. Phone is a Tecno Spark 20 Pro bought 6 months ago..."></textarea>
+            </div>
           </div>
-        </div><!-- /.form-card -->
-      </form>
-    </div>
-  </div><!-- /.page-grid -->
-</div><!-- /.container -->
 
-    <footer>
-    <div class="container footer-inner">
-      <span class="footer-copy">© 2026 DonnyFix. All rights reserved.</span>
-      <ul class="footer-links">     
-        <li><a href="#">Privacy</a></li>
-        <li><a href="#">Terms</a></li>
-        <li><a href="#">Contact: <span>0541057500</span></a></li>
-      </ul>
+          <button type="submit" class="submit-btn">
+            Confirm Booking →
+          </button>
+          <p class="submit-note">We'll send a confirmation to your email. No payment required upfront.</p>
+
+        </form>
+      </div>
     </div>
-    </footer>
+
+    <!-- RIGHT: SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- Opening Hours -->
+      <div class="sidebar-card">
+        <div class="open-badge">Open Today</div>
+        <div class="sidebar-card-title">Service Bar Hours</div>
+        <ul class="hours-list">
+          <li><strong>Mon – Fri</strong><span>8:00am – 7:00pm</span></li>
+          <li><strong>Saturday</strong><span>9:00am – 6:00pm</span></li>
+          <li><strong>Sunday</strong><span>10:00am – 4:00pm</span></li>
+        </ul>
+        <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--warm-gray);">
+          <div style="font-size: 13px; color: var(--text-soft); font-weight: 300; line-height: 1.5;">
+            📍 Osu Oxford Street, Accra<br>
+            📞 +233 (0) 302 000 000
+          </div>
+        </div>
+      </div>
+
+      <!-- Brands -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-title">All Brands Repaired</div>
+        <div class="brands-mini">
+          <span class="brand-tag">Tecno</span>
+          <span class="brand-tag">Infinix</span>
+          <span class="brand-tag">Samsung</span>
+          <span class="brand-tag">iPhone</span>
+          <span class="brand-tag">Itel</span>
+          <span class="brand-tag">Xiaomi</span>
+          <span class="brand-tag">OPPO</span>
+          <span class="brand-tag">Huawei</span>
+          <span class="brand-tag">Vivo</span>
+          <span class="brand-tag">Nokia</span>
+        </div>
+      </div>
+
+      <!-- Our Guarantee -->
+      <div class="sidebar-card">
+        <div class="sidebar-card-title">Our Guarantee</div>
+        <ul class="guarantee-list">
+          <li>
+            <span class="g-icon">✓</span>
+            Genuine parts only — no counterfeits
+          </li>
+          <li>
+            <span class="g-icon">✓</span>
+            30-day repair warranty on all work
+          </li>
+          <li>
+            <span class="g-icon">✓</span>
+            Same-day service for most repairs
+          </li>
+          <li>
+            <span class="g-icon">✓</span>
+            Fixed pricing — no hidden charges
+          </li>
+          <li>
+            <span class="g-icon">✓</span>
+            Members get priority service queue
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+  </div><!-- end .page -->
+
+  <script>
+    // Set minimum booking date to today
+    const dateInput = document.querySelector('input[type="date"]');
+    if (dateInput) {
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.setAttribute('min', today);
+      dateInput.value = today;
+    }
+  </script>
+
 </body>
 </html>
