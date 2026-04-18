@@ -193,6 +193,7 @@
 
       <div class="form-card">
         <form method="POST" id="install-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <!-- Device -->
           <div class="fsection">

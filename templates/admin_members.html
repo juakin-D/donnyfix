@@ -66,6 +66,7 @@
       <a href="/admin">Bookings</a>
       <a href="/admin/members" class="active">Members</a>
       <form method="POST" action="/admin/logout" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button style="background:rgba(255,255,255,0.15);color:white;border:none;padding:7px 16px;border-radius:6px;font-size:14px;cursor:pointer;">Log Out</button>
       </form>
     </div>
@@ -159,6 +160,7 @@
               <td>
                 <form method="POST" action="/admin/members/delete/{{ m.id }}"
                       onsubmit="return confirm('Delete member {{ m.name }}?')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="delete-btn" type="submit">Delete</button>
                 </form>
               </td>

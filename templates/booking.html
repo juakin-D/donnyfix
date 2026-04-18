@@ -421,6 +421,7 @@
       <!-- FORM CARD -->
       <div class="form-card">
         <form method="POST" action="/booking">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <!-- Your Details -->
           <div class="form-section">

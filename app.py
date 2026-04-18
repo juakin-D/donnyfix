@@ -1,4 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
+from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from functools import wraps
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
@@ -22,6 +25,15 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1-hour token validity
+
+csrf    = CSRFProtect(app)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri=os.environ.get('RATELIMIT_STORAGE_URI', 'memory://'),
+)
 
 ADMIN_SESSION_TIMEOUT = timedelta(minutes=int(os.environ.get('ADMIN_TIMEOUT_MINUTES', 30)))
 
@@ -715,6 +727,7 @@ def installment_detail(plan_id):
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/admin/login', methods=['GET', 'POST'])
+@limiter.limit('5 per minute', methods=['POST'])
 def admin_login():
     if session.get('admin_logged_in'):
         return redirect(url_for('admin'))
@@ -1072,6 +1085,18 @@ def not_found(_e):
 @app.errorhandler(500)
 def server_error(_e):
     return render_template('500.html'), 500
+
+
+@app.errorhandler(CSRFError)
+def csrf_error(_e):
+    flash('Your form session expired. Please try again.', 'error')
+    return redirect(request.referrer or url_for('home'))
+
+
+@app.errorhandler(429)
+def too_many_requests(_e):
+    flash('Too many login attempts. Please wait a minute and try again.', 'error')
+    return render_template('admin_login.html'), 429
 
 
 # ─── RUN ──────────────────────────────────────────────────────────────────────

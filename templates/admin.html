@@ -467,6 +467,7 @@
         </div>
       </div>
       <form method="POST" action="/admin/logout">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="logout-btn" type="submit">Sign Out</button>
       </form>
     </div>
@@ -619,6 +620,7 @@
               </td>
               <td>
                 <form method="POST" action="/admin/bookings/{{ b['id'] }}/status">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <select name="status" class="status-select" onchange="this.form.submit()" title="Change status">
                     {% set s = b['status'] or 'Pending' %}
                     <option value="Pending"     {% if s == 'Pending'     %}selected{% endif %}>Pending</option>
@@ -638,6 +640,7 @@
                   <form method="POST" action="/admin/delete/{{ b['id'] }}"
                         onsubmit="return confirm('Delete booking #{{ b['id'] }} for {{ b['name'] }}?')"
                         style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="act-btn delete" title="Delete booking">🗑</button>
                   </form>
                 </div>

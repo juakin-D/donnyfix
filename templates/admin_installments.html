@@ -194,6 +194,7 @@
         </div>
       </div>
       <form method="POST" action="/admin/logout">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="logout-btn" type="submit">Sign Out</button>
       </form>
     </div>
@@ -271,6 +272,7 @@
           <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px">{{ plans|length }} records</span>
         </div>
         <form method="POST" action="/admin/installments/send-reminders" style="display:flex;align-items:center;gap:8px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <select name="days" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-soft);font-size:13px;outline:none">
             <option value="1">Due tomorrow</option>
             <option value="3" selected>Due in 3 days</option>
@@ -404,6 +406,7 @@
       </div>
       <div class="modal-plan-summary" id="modal-summary"></div>
       <form method="POST" id="pay-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-row" style="margin-bottom:14px">
           <div>
             <span class="modal-label">Amount (GH₵)</span>
@@ -446,6 +449,7 @@
         <button class="modal-close" onclick="closeStatusModal()">×</button>
       </div>
       <form method="POST" id="status-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-section">
           <span class="modal-label">New Status</span>
           <select name="status" id="new-status" class="modal-select">
