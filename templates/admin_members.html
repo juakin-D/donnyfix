@@ -181,6 +181,20 @@
       {% else %}
         <div class="empty-state">No members found.</div>
       {% endif %}
+      {% if total_pages > 1 %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:13px;color:#6B7280;border-top:1px solid #E5E7EB;margin-top:8px">
+        <span>Showing {{ members|length }} of {{ total }} members</span>
+        <div style="display:flex;gap:6px">
+          {% if page > 1 %}
+            <a href="?page={{ page - 1 }}&search={{ search }}&tier={{ tier }}" style="padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;text-decoration:none;color:#374151">← Prev</a>
+          {% endif %}
+          <span style="padding:5px 12px;background:#006B3F;color:white;border-radius:6px">{{ page }} / {{ total_pages }}</span>
+          {% if page < total_pages %}
+            <a href="?page={{ page + 1 }}&search={{ search }}&tier={{ tier }}" style="padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;text-decoration:none;color:#374151">Next →</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
     </div>
 
   </div>

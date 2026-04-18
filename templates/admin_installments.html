@@ -392,6 +392,20 @@
           <div class="empty-sub">{% if search or status_filter %}Try adjusting your filters{% else %}Plans will appear here when customers apply{% endif %}</div>
         </div>
         {% endif %}
+        {% if total_pages > 1 %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);margin-top:8px">
+          <span>Showing {{ plans|length }} of {{ total }} plans</span>
+          <div style="display:flex;gap:6px">
+            {% if page > 1 %}
+              <a href="?page={{ page - 1 }}&search={{ search }}&status={{ status_filter }}" style="padding:5px 12px;border:1px solid var(--border2);border-radius:6px;text-decoration:none;color:var(--text-soft)">← Prev</a>
+            {% endif %}
+            <span style="padding:5px 12px;background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.2);border-radius:6px">{{ page }} / {{ total_pages }}</span>
+            {% if page < total_pages %}
+              <a href="?page={{ page + 1 }}&search={{ search }}&status={{ status_filter }}" style="padding:5px 12px;border:1px solid var(--border2);border-radius:6px;text-decoration:none;color:var(--text-soft)">Next →</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
       </div>
 
     </div><!-- /content -->

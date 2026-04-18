@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
 from flask_wtf.csrf import CSRFProtect, CSRFError
+from markupsafe import escape as _he
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from functools import wraps
@@ -24,7 +25,15 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key')
+_secret_key = os.environ.get('SECRET_KEY', '')
+if not _secret_key:
+    _secret_key = 'change-this-secret-key'
+    # logged after basicConfig is set up below; stored for the warning
+    _SECRET_KEY_MISSING = True
+else:
+    _SECRET_KEY_MISSING = False
+app.secret_key = _secret_key
+del _secret_key
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1-hour token validity
@@ -38,9 +47,12 @@ limiter = Limiter(
 )
 
 ADMIN_SESSION_TIMEOUT = timedelta(minutes=int(os.environ.get('ADMIN_TIMEOUT_MINUTES', 30)))
+ADMIN_PAGE_SIZE       = 50
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
 logger = logging.getLogger(__name__)
+if _SECRET_KEY_MISSING:
+    logger.warning('SECRET_KEY env var not set — sessions can be forged. Set SECRET_KEY in production!')
 
 DATABASE              = os.path.join(os.path.dirname(__file__), 'bookings.db')
 ADMIN_USERNAME        = os.environ.get('ADMIN_USERNAME', 'admin')
@@ -139,6 +151,8 @@ def init_db():
     # email_verified column — safe to run on existing DBs
     try:
         c.execute('ALTER TABLE customers ADD COLUMN email_verified INTEGER DEFAULT 0')
+        # First migration: trust all pre-existing accounts as verified
+        c.execute('UPDATE customers SET email_verified=1')
     except Exception:
         pass
 
@@ -271,6 +285,9 @@ def _normalize_gh_phone(phone):
 def send_sms(phone, message):
     if not AT_API_KEY:
         logger.warning('send_sms skipped — AT_API_KEY not configured')
+        return False
+    if not phone or not valid_gh_phone(phone):
+        logger.warning('send_sms skipped — invalid phone number: %r', phone)
         return False
     normalized = _normalize_gh_phone(phone)
     try:
@@ -441,6 +458,22 @@ def generate_payment_receipt_pdf(plan, payment, customer_name):
     return buf
 
 
+@app.after_request
+def set_security_headers(response):
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data:; "
+        "connect-src 'self';"
+    )
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options']        = 'SAMEORIGIN'
+    response.headers['Referrer-Policy']        = 'strict-origin-when-cross-origin'
+    return response
+
+
 @app.context_processor
 def inject_helpers():
     return dict(membership_status=membership_status,
@@ -540,12 +573,12 @@ def booking():
         booking_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
         conn.close()
         send_email(email, 'Booking Confirmed — PhoneHub Ghana', f"""
-        <p>Hi {name},</p>
+        <p>Hi {_he(name)},</p>
         <p>Your repair booking is confirmed.</p>
         <ul>
-          <li><b>Device:</b> {device}</li>
-          <li><b>Service:</b> {service}</li>
-          <li><b>Date:</b> {date}</li>
+          <li><b>Device:</b> {_he(device)}</li>
+          <li><b>Service:</b> {_he(service)}</li>
+          <li><b>Date:</b> {_he(date)}</li>
         </ul>
         <p>We'll see you at our Osu Oxford Street location. Call us on +233 (0) 302 000 000 with any questions.</p>
         <p>— PhoneHub Ghana Team</p>
@@ -603,7 +636,7 @@ def register():
         session['customer_name'] = customer['name']
         verify_url = url_for('verify_email', token=v_token, _external=True)
         send_email(email, 'Verify your email — PhoneHub Ghana', f"""
-        <p>Hi {name},</p>
+        <p>Hi {_he(name)},</p>
         <p>Your PhoneHub Ghana account is live! Please verify your email to unlock all features.</p>
         <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
         <p style="margin-top:12px;font-size:13px;color:#666">Link expires in 24 hours. If you didn't create an account, ignore this email.</p>
@@ -790,6 +823,7 @@ def admin_logout():
 def admin():
     search  = request.args.get('search', '').strip()
     service = request.args.get('service', '').strip()
+    page    = max(1, int(request.args.get('page', 1)))
     conn    = get_db()
     q = 'SELECT * FROM bookings WHERE 1=1'
     params = []
@@ -798,10 +832,13 @@ def admin():
         params += [f'%{search}%'] * 3
     if service:
         q += ' AND service=?'; params.append(service)
-    q += ' ORDER BY date DESC'
-    bookings = conn.execute(q, params).fetchall()
+    total    = conn.execute(q.replace('SELECT *', 'SELECT COUNT(*)'), params).fetchone()[0]
+    q       += ' ORDER BY date DESC LIMIT ? OFFSET ?'
+    bookings = conn.execute(q, params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
     conn.close()
-    return render_template('admin.html', bookings=bookings, search=search, service=service)
+    total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
+    return render_template('admin.html', bookings=bookings, search=search, service=service,
+                           page=page, total_pages=total_pages, total=total)
 
 
 @app.route('/admin/delete/<int:booking_id>', methods=['POST'])
@@ -828,8 +865,8 @@ def update_booking_status(booking_id):
     conn.commit(); conn.close()
     if booking and new_status == 'Complete':
         send_email(booking['email'], 'Your repair is ready — PhoneHub Ghana', f"""
-        <p>Hi {booking['name']},</p>
-        <p>Great news — your <b>{booking['device']}</b> ({booking['service']}) is complete and ready for collection.</p>
+        <p>Hi {_he(booking['name'])},</p>
+        <p>Great news — your <b>{_he(booking['device'])}</b> ({_he(booking['service'])}) is complete and ready for collection.</p>
         <p>Visit us at Osu Oxford Street or call +233 (0) 302 000 000 to arrange pickup.</p>
         <p>— PhoneHub Ghana Team</p>
         """)
@@ -842,6 +879,7 @@ def update_booking_status(booking_id):
 def admin_members():
     search = request.args.get('search', '').strip()
     tier   = request.args.get('tier', '').strip()
+    page   = max(1, int(request.args.get('page', 1)))
     conn   = get_db()
     q = 'SELECT * FROM customers WHERE 1=1'
     params = []
@@ -850,8 +888,9 @@ def admin_members():
         params += [f'%{search}%'] * 3
     if tier:
         q += ' AND membership_tier=?'; params.append(tier)
-    q += ' ORDER BY created_at DESC'
-    customers = conn.execute(q, params).fetchall()
+    total    = conn.execute(q.replace('SELECT *', 'SELECT COUNT(*)'), params).fetchone()[0]
+    q       += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    customers = conn.execute(q, params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
     conn.close()
     members = [{
         'id': c['id'], 'name': c['name'], 'phone': c['phone'], 'email': c['email'],
@@ -859,7 +898,9 @@ def admin_members():
         'tier': c['membership_tier'], 'expiry': c['membership_expiry'],
         'status': membership_status(c['membership_expiry']), 'created_at': c['created_at'],
     } for c in customers]
-    return render_template('admin_members.html', members=members, search=search, tier=tier)
+    total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
+    return render_template('admin_members.html', members=members, search=search, tier=tier,
+                           page=page, total_pages=total_pages, total=total)
 
 
 @app.route('/admin/members/delete/<int:customer_id>', methods=['POST'])
@@ -878,6 +919,7 @@ def delete_member(customer_id):
 def admin_installments():
     status_filter = request.args.get('status', '').strip()
     search        = request.args.get('search', '').strip()
+    page          = max(1, int(request.args.get('page', 1)))
     conn          = get_db()
     q = '''SELECT ip.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email
            FROM installment_plans ip JOIN customers c ON c.id=ip.customer_id WHERE 1=1'''
@@ -887,9 +929,19 @@ def admin_installments():
     if search:
         q += ' AND (c.name LIKE ? OR c.email LIKE ? OR ip.device_name LIKE ?)'
         params += [f'%{search}%'] * 3
-    q += ' ORDER BY ip.created_at DESC'
-    plans  = conn.execute(q, params).fetchall()
-    today  = datetime.today().strftime('%Y-%m-%d')
+    # Stat counts run on full result set (before pagination)
+    count_q           = q.replace('SELECT ip.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email', 'SELECT COUNT(*)')
+    total             = conn.execute(count_q, params).fetchone()[0]
+    # Aggregate stats (full set — lightweight queries)
+    today             = datetime.today().strftime('%Y-%m-%d')
+    stats_q           = q + ' ORDER BY ip.created_at DESC'
+    all_plans         = conn.execute(stats_q, params).fetchall()
+    total_outstanding = sum(p['balance_remaining'] for p in all_plans if p['status'] == 'Active')
+    active_count      = sum(1 for p in all_plans if p['status'] == 'Active')
+    completed_count   = sum(1 for p in all_plans if p['status'] == 'Completed')
+
+    q      += ' ORDER BY ip.created_at DESC LIMIT ? OFFSET ?'
+    plans   = conn.execute(q, params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
     paid_map = {row[0]: row[1] for row in conn.execute(
         'SELECT plan_id, COALESCE(SUM(amount),0) FROM payments GROUP BY plan_id'
     ).fetchall()}
@@ -899,11 +951,9 @@ def admin_installments():
         overdue = (p['status'] == 'Active' and p['next_due_date'] < today)
         annotated.append({**dict(p), 'paid_total': paid, 'overdue': overdue})
 
-    total_outstanding = sum(p['balance_remaining'] for p in plans if p['status'] == 'Active')
-    active_count      = sum(1 for p in plans if p['status'] == 'Active')
-    overdue_count     = sum(1 for p in annotated if p['overdue'])
-    completed_count   = sum(1 for p in plans if p['status'] == 'Completed')
+    overdue_count = sum(1 for p in annotated if p['overdue'])
     conn.close()
+    total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
 
     return render_template('admin_installments.html',
                            plans=annotated,
@@ -913,7 +963,8 @@ def admin_installments():
                            completed_count=completed_count,
                            status_filter=status_filter,
                            search=search,
-                           bank_details=BANK_DETAILS)
+                           bank_details=BANK_DETAILS,
+                           page=page, total_pages=total_pages, total=total)
 
 
 @app.route('/admin/installments/<int:plan_id>/record-payment', methods=['POST'])
@@ -1016,6 +1067,12 @@ def booking_receipt(booking_id):
     conn.close()
     if not booking:
         return render_template('404.html'), 404
+    is_admin = session.get('admin_logged_in')
+    is_owner = (session.get('customer_id') and
+                booking['customer_id'] == session['customer_id'])
+    if not is_admin and not is_owner:
+        flash('Please log in to download your receipt.', 'error')
+        return redirect(url_for('customer_login'))
     buf  = generate_booking_receipt_pdf(dict(booking))
     resp = make_response(buf.read())
     resp.headers['Content-Type']        = 'application/pdf'
@@ -1162,7 +1219,7 @@ def resend_verification():
     conn.commit(); conn.close()
     verify_url = url_for('verify_email', token=v_token, _external=True)
     send_email(customer['email'], 'Verify your email — PhoneHub Ghana', f"""
-    <p>Hi {customer['name']},</p>
+    <p>Hi {_he(customer['name'])},</p>
     <p>Click below to verify your email address:</p>
     <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
     <p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>
@@ -1175,6 +1232,7 @@ def resend_verification():
 # ─── PASSWORD RESET ───────────────────────────────────────────────────────────
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit('5 per hour', methods=['POST'])
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
@@ -1191,7 +1249,7 @@ def forgot_password():
             conn.commit()
             reset_url = url_for('reset_password', token=token, _external=True)
             send_email(email, 'Reset your password — PhoneHub Ghana', f"""
-            <p>Hi {customer['name']},</p>
+            <p>Hi {_he(customer['name'])},</p>
             <p>We received a request to reset your PhoneHub Ghana password.</p>
             <p><a href="{reset_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Reset Password</a></p>
             <p style="font-size:13px;color:#666;margin-top:12px">This link expires in 30 minutes. If you didn't request this, ignore the email.</p>

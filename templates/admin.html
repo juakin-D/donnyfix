@@ -651,9 +651,15 @@
         </table>
 
         <div class="pagination">
-          <span id="pagination-info">Showing {{ bookings|length }} booking{{ 's' if bookings|length != 1 else '' }}</span>
+          <span id="pagination-info">Showing {{ bookings|length }} of {{ total }} booking{{ 's' if total != 1 else '' }}</span>
           <div class="page-btns">
-            <button class="page-btn active">1</button>
+            {% if page > 1 %}
+              <a class="page-btn" href="?page={{ page - 1 }}&search={{ search }}&service={{ service }}">← Prev</a>
+            {% endif %}
+            <span class="page-btn active">{{ page }} / {{ total_pages }}</span>
+            {% if page < total_pages %}
+              <a class="page-btn" href="?page={{ page + 1 }}&search={{ search }}&service={{ service }}">Next →</a>
+            {% endif %}
           </div>
         </div>
 
