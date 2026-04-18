@@ -105,6 +105,11 @@
     .plan-view-link { font-size: 13px; color: #006B3F; font-weight: 600; text-align: right; }
     .apply-btn { display: inline-block; background: #006B3F; color: white; padding: 8px 18px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; }
     .apply-btn:hover { background: #004D2D; }
+    .apply-btn.disabled { background: #D1D5DB; color: #9CA3AF; cursor: not-allowed; pointer-events: none; }
+    .eligibility-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 10px; }
+    .eligibility-badge.eligible   { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; }
+    .eligibility-badge.ineligible { background: rgba(220,38,38,0.25); border: 1px solid rgba(220,38,38,0.5); color: #FCA5A5; }
+    .ineligible-notice { background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 8px; padding: 12px 16px; font-size: 14px; color: #92400E; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
   </style>
 </head>
 <body>
@@ -157,6 +162,11 @@
         <div class="expiry-label">MEMBERSHIP EXPIRES</div>
         <div class="expiry-date">{{ customer['membership_expiry'] }}</div>
         <div class="status-pill">{{ status }}</div>
+        {% if installment_eligible %}
+          <div class="eligibility-badge eligible">✓ Installment Eligible</div>
+        {% else %}
+          <div class="eligibility-badge ineligible">✕ Installment Locked</div>
+        {% endif %}
       </div>
     </div>
 
@@ -181,6 +191,11 @@
           {% set active = plans | selectattr('status', 'equalto', 'Active') | list %}
           {{ active | length }} active plan{% if active | length != 1 %}s{% endif %}
         </div>
+        {% if installment_eligible %}
+          <div style="margin-top:8px;font-size:12px;color:#059669;font-weight:600;">✓ Eligible to apply</div>
+        {% else %}
+          <div style="margin-top:8px;font-size:12px;color:#DC2626;font-weight:600;">✕ Renew membership to apply</div>
+        {% endif %}
       </div>
       <div class="card">
         <div class="card-label">Your Device</div>
@@ -238,8 +253,20 @@
     <!-- INSTALLMENT PLANS -->
     <div class="section-title">
       My Installment Plans
-      <a href="/installment/apply" class="apply-btn">+ Apply for Plan</a>
+      {% if installment_eligible %}
+        <a href="/installment/apply" class="apply-btn">+ Apply for Plan</a>
+      {% else %}
+        <span class="apply-btn disabled" title="Renew your membership to apply for an installment plan">+ Apply for Plan</span>
+      {% endif %}
     </div>
+
+    {% if not installment_eligible %}
+    <div class="ineligible-notice">
+      ⚠️ <strong>Installment plans require an active membership.</strong>
+      Your membership is <strong>{{ status }}</strong>. Please visit the store or contact us at
+      <a href="tel:0541057500" style="color:#92400E;font-weight:700;">0541057500</a> to renew.
+    </div>
+    {% endif %}
 
     {% if plans %}
       <div class="plan-cards">
@@ -289,7 +316,11 @@
       <div class="table-wrap">
         <div class="empty-state">
           No installment plans yet.
-          <a href="/installment/apply" style="color:#006B3F; font-weight:600;">Apply for a plan →</a>
+          {% if installment_eligible %}
+            <a href="/installment/apply" style="color:#006B3F; font-weight:600;">Apply for a plan →</a>
+          {% else %}
+            <span style="color:#9CA3AF;">Renew your membership to apply.</span>
+          {% endif %}
         </div>
       </div>
     {% endif %}

@@ -706,9 +706,11 @@ def dashboard():
         (session['customer_id'],)).fetchall()
     conn.close()
     status = membership_status(customer['membership_expiry'])
+    installment_eligible = status in ('Active', 'Expiring Soon')
     return render_template('dashboard.html',
                            customer=customer, bookings=bookings,
                            plans=plans, status=status,
+                           installment_eligible=installment_eligible,
                            now=datetime.today().strftime('%Y-%m-%d'))
 
 
@@ -719,6 +721,14 @@ def dashboard():
 @app.route('/installment/apply', methods=['GET', 'POST'])
 @customer_required
 def installment_apply():
+    conn     = get_db()
+    customer = conn.execute('SELECT * FROM customers WHERE id=?', (session['customer_id'],)).fetchone()
+    conn.close()
+    mem_status = membership_status(customer['membership_expiry'])
+    if mem_status not in ('Active', 'Expiring Soon'):
+        flash('Your membership has expired or is inactive. Please renew to apply for an installment plan.', 'error')
+        return redirect(url_for('dashboard'))
+
     if request.method == 'POST':
         try:
             device_name    = request.form.get('device_name', '').strip()
@@ -1074,7 +1084,7 @@ def record_payment(plan_id):
     if new_status == 'Completed':
         send_sms(plan['customer_phone'] if 'customer_phone' in plan.keys() else '',
                  f"Hi {first}, your PhoneHub Ghana installment for {plan['device_name']} "
-                 f"is now FULLY PAID! Thank you. Call 0302000000 for your receipt.")
+                 f"is now FULLY PAID! Thank you. Call 0541057500 for your receipt.")
         flash(f'Plan #{plan_id} fully paid — marked Completed. Receipt: /receipt/payment/{payment_id}', 'success')
     else:
         send_sms(plan['customer_phone'] if 'customer_phone' in plan.keys() else '',
@@ -1198,14 +1208,14 @@ def send_payment_reminders():
             msg = (f"Hi {first}, your PhoneHub Ghana installment of "
                    f"{fmt_ghs(p['monthly_amount'])} for {p['device_name']} "
                    f"was DUE {p['next_due_date']}. Please pay now via "
-                   f"{p['payment_method']} & call 0302000000. "
+                   f"{p['payment_method']} & call 0541057500. "
                    f"Balance: {fmt_ghs(p['balance_remaining'])}.")
         else:
             msg = (f"Hi {first}, your PhoneHub Ghana installment of "
                    f"{fmt_ghs(p['monthly_amount'])} for {p['device_name']} "
                    f"is due {p['next_due_date']}. Pay via "
                    f"{p['payment_method']}. Balance: {fmt_ghs(p['balance_remaining'])}. "
-                   f"Questions? Call 0302000000.")
+                   f"Questions? Call 0541057500.")
         if send_sms(p['customer_phone'], msg):
             sent += 1
         else:
