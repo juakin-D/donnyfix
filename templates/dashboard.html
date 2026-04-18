@@ -234,7 +234,7 @@
     {% if plans %}
       <div class="plan-cards">
         {% for p in plans %}
-          {% set progress = [(p['payments_made'] / p['plan_months'] * 100)|round|int, 100]|min %}
+          {% set progress = [[(p['payments_made'] / p['plan_months'] * 100)|round|int, 0]|max, 100]|min %}
           {% set is_overdue = (p['status'] == 'Active' and p['next_due_date'] < now) %}
           <a href="/installment/{{ p['id'] }}" class="plan-card {% if is_overdue %}overdue{% elif p['status'] == 'Completed' %}completed{% endif %}">
             <div class="plan-card-top">

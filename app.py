@@ -1,11 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
 from functools import wraps
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import smtplib
 import os
+import logging
 import requests as http_req
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -20,6 +21,11 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+ADMIN_SESSION_TIMEOUT = timedelta(minutes=int(os.environ.get('ADMIN_TIMEOUT_MINUTES', 30)))
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
+logger = logging.getLogger(__name__)
 
 DATABASE       = os.path.join(os.path.dirname(__file__), 'bookings.db')
 ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
@@ -180,7 +186,8 @@ MAIL_FROM = os.environ.get('MAIL_FROM', 'noreply@phonehubghana.com')
 
 def send_email(to, subject, html_body):
     if not MAIL_USER or not MAIL_PASS:
-        return
+        logger.warning('send_email skipped — MAIL_USER/MAIL_PASS not configured')
+        return False
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
@@ -191,8 +198,11 @@ def send_email(to, subject, html_body):
             s.starttls()
             s.login(MAIL_USER, MAIL_PASS)
             s.sendmail(MAIL_FROM, to, msg.as_string())
-    except Exception:
-        pass  # never crash the app on email failure
+        logger.info('Email sent to %s — %s', to, subject)
+        return True
+    except Exception as exc:
+        logger.error('Email to %s failed: %s', to, exc)
+        return False
 
 
 # ─── SMS (Africa's Talking) ───────────────────────────────────────────────────
@@ -213,17 +223,24 @@ def _normalize_gh_phone(phone):
 
 def send_sms(phone, message):
     if not AT_API_KEY:
+        logger.warning('send_sms skipped — AT_API_KEY not configured')
         return False
+    normalized = _normalize_gh_phone(phone)
     try:
         resp = http_req.post(
             'https://api.africastalking.com/version1/messaging',
             headers={'apiKey': AT_API_KEY, 'Accept': 'application/json'},
-            data={'username': AT_USERNAME, 'to': _normalize_gh_phone(phone),
+            data={'username': AT_USERNAME, 'to': normalized,
                   'message': message, 'from': AT_SENDER_ID},
             timeout=10,
         )
-        return resp.status_code == 201
-    except Exception:
+        if resp.status_code == 201:
+            logger.info('SMS sent to %s', normalized)
+            return True
+        logger.error('SMS to %s failed — HTTP %s: %s', normalized, resp.status_code, resp.text[:200])
+        return False
+    except Exception as exc:
+        logger.error('SMS to %s failed: %s', normalized, exc)
         return False
 
 
@@ -390,6 +407,14 @@ def admin_required(f):
     def w(*a, **kw):
         if not session.get('admin_logged_in'):
             return redirect(url_for('admin_login'))
+        last = session.get('admin_last_activity')
+        if last:
+            elapsed = datetime.now(timezone.utc) - datetime.fromisoformat(last).replace(tzinfo=timezone.utc)
+            if elapsed > ADMIN_SESSION_TIMEOUT:
+                session.clear()
+                flash('Your session expired. Please log in again.', 'error')
+                return redirect(url_for('admin_login'))
+        session['admin_last_activity'] = datetime.now(timezone.utc).isoformat()
         return f(*a, **kw)
     return w
 
@@ -638,8 +663,9 @@ def admin_login():
         u = request.form.get('username', '').strip()
         p = request.form.get('password', '')
         if u == ADMIN_USERNAME and p == ADMIN_PASSWORD:
-            session['admin_logged_in'] = True
-            session['admin_username']  = u
+            session['admin_logged_in']    = True
+            session['admin_username']     = u
+            session['admin_last_activity'] = datetime.now(timezone.utc).isoformat()
             flash('Login successful.', 'success')
             return redirect(url_for('admin'))
         flash('Invalid username or password.', 'error')
@@ -756,11 +782,12 @@ def admin_installments():
     q += ' ORDER BY ip.created_at DESC'
     plans  = conn.execute(q, params).fetchall()
     today  = datetime.today().strftime('%Y-%m-%d')
+    paid_map = {row[0]: row[1] for row in conn.execute(
+        'SELECT plan_id, COALESCE(SUM(amount),0) FROM payments GROUP BY plan_id'
+    ).fetchall()}
     annotated = []
     for p in plans:
-        paid = conn.execute(
-            'SELECT COALESCE(SUM(amount),0) FROM payments WHERE plan_id=?', (p['id'],)
-        ).fetchone()[0]
+        paid    = paid_map.get(p['id'], 0)
         overdue = (p['status'] == 'Active' and p['next_due_date'] < today)
         annotated.append({**dict(p), 'paid_total': paid, 'overdue': overdue})
 
@@ -803,7 +830,7 @@ def record_payment(plan_id):
 
     new_balance       = round(max(plan['balance_remaining'] - amount, 0), 2)
     new_payments_made = plan['payments_made'] + 1
-    new_next_due      = next_due_date()
+    new_next_due      = add_one_month(plan['next_due_date'])
     new_status        = 'Completed' if new_balance <= 0.01 else plan['status']
 
     conn.execute(

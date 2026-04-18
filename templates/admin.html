@@ -513,7 +513,7 @@
         </div>
         <div class="stat-card amber">
           <div class="stat-label">Pending</div>
-          <div class="stat-value">{{ bookings|selectattr('status', 'equalto', 'Pending')|list|length if bookings else bookings|length }}</div>
+          <div class="stat-value">{{ bookings|selectattr('status', 'equalto', 'Pending')|list|length }}</div>
           <div class="stat-sub">Awaiting service</div>
         </div>
         <div class="stat-card gold">

@@ -302,7 +302,7 @@
           </thead>
           <tbody>
             {% for p in plans %}
-            {% set progress = [((p.total_payable - p.balance_remaining) / p.total_payable * 100)|round|int, 100]|min %}
+            {% set progress = [[((p.total_payable - p.balance_remaining) / p.total_payable * 100)|round|int, 0]|max, 100]|min %}
             <tr class="{% if p.overdue %}overdue-row{% endif %}"
                 data-name="{{ p.customer_name|lower }}"
                 data-email="{{ p.customer_email|lower }}"
