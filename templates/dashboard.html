@@ -126,6 +126,16 @@
       {% endfor %}
     {% endwith %}
 
+    {% if not customer['email_verified'] %}
+    <div class="flash" style="background:#FEF3C7;color:#92400E;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <span>⚠️ Your email is not verified. Check your inbox for the verification link.</span>
+      <form method="POST" action="/resend-verification" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" style="background:#92400E;color:white;border:none;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;white-space:nowrap">Resend email</button>
+      </form>
+    </div>
+    {% endif %}
+
     <div class="greeting">
       <h2>Welcome back, {{ customer['name'].split()[0] }} 👋</h2>
       <p>Here's your PhoneHub Ghana membership overview.</p>

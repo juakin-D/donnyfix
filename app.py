@@ -10,7 +10,9 @@ import sqlite3
 import smtplib
 import os
 import re
+import secrets
 import logging
+from decimal import Decimal, ROUND_HALF_UP
 import requests as http_req
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -46,14 +48,13 @@ _admin_pw_raw         = os.environ.get('ADMIN_PASSWORD', 'change-this-password')
 ADMIN_PASSWORD_HASH   = generate_password_hash(_admin_pw_raw)
 del _admin_pw_raw
 
-# PhoneHub Ghana bank details — replace with your real account
 BANK_DETAILS = {
-    'bank_name':    'GCB Bank Ghana',
-    'account_name': 'PhoneHub Ghana Ltd.',
-    'account_no':   '1234567890',
-    'branch':       'Osu Branch, Accra',
-    'sort_code':    '030100',
-    'swift':        'GHCBGHAC',
+    'bank_name':    os.environ.get('BANK_NAME',    'GCB Bank Ghana'),
+    'account_name': os.environ.get('BANK_ACCT_NAME','PhoneHub Ghana Ltd.'),
+    'account_no':   os.environ.get('BANK_ACCT_NO', ''),
+    'branch':       os.environ.get('BANK_BRANCH',  ''),
+    'sort_code':    os.environ.get('BANK_SORT',    ''),
+    'swift':        os.environ.get('BANK_SWIFT',   ''),
 }
 
 # Service fee % applied to installment total
@@ -121,6 +122,26 @@ def init_db():
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (plan_id) REFERENCES installment_plans(id))''')
 
+    c.execute('''CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        expires_at TEXT NOT NULL,
+        used INTEGER DEFAULT 0)''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS email_verification_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        expires_at TEXT NOT NULL,
+        used INTEGER DEFAULT 0)''')
+
+    # email_verified column — safe to run on existing DBs
+    try:
+        c.execute('ALTER TABLE customers ADD COLUMN email_verified INTEGER DEFAULT 0')
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
 
@@ -175,16 +196,21 @@ def next_due_date():
     return add_one_month(datetime.today().strftime('%Y-%m-%d'))
 
 
+def _d(value):
+    """Convert to Decimal rounded to 2dp."""
+    return Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
 def calculate_plan(device_price, months):
     cfg         = PLAN_CONFIG[months]
-    service_fee = round(device_price * INSTALLMENT_FEE_PERCENT / 100, 2)
-    total       = round(device_price + service_fee, 2)
-    deposit     = round(total * cfg['deposit_pct'] / 100, 2)
-    balance     = round(total - deposit, 2)
-    monthly     = round(balance / months, 2)
+    price       = _d(device_price)
+    service_fee = _d(price * Decimal(str(INSTALLMENT_FEE_PERCENT)) / 100)
+    total       = _d(price + service_fee)
+    deposit     = _d(total * Decimal(cfg['deposit_pct']) / 100)
+    balance     = _d(total - deposit)
+    monthly     = _d(balance / Decimal(months))
     return {
-        'service_fee': service_fee, 'total': total,
-        'deposit': deposit, 'balance': balance, 'monthly': monthly,
+        'service_fee': float(service_fee), 'total': float(total),
+        'deposit': float(deposit), 'balance': float(balance), 'monthly': float(monthly),
         'deposit_pct': cfg['deposit_pct'], 'months': months,
     }
 
@@ -561,21 +587,29 @@ def register():
             conn.close()
             return render_template('register.html')
         conn.execute(
-            "INSERT INTO customers (name,phone,email,password_hash,device_brand,device_model,membership_tier,membership_start,membership_expiry) VALUES (?,?,?,?,?,?,'Standard',?,?)",
+            "INSERT INTO customers (name,phone,email,password_hash,device_brand,device_model,membership_tier,membership_start,membership_expiry,email_verified) VALUES (?,?,?,?,?,?,'Standard',?,?,0)",
             (name, phone, email, hash_password(pw), db, dm, start, expiry))
         conn.commit()
         customer = conn.execute('SELECT * FROM customers WHERE email=?', (email,)).fetchone()
+        # Create email verification token
+        v_token  = secrets.token_urlsafe(32)
+        v_expiry = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+        conn.execute(
+            'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (?,?,?)',
+            (customer['id'], v_token, v_expiry))
+        conn.commit()
         conn.close()
         session['customer_id']   = customer['id']
         session['customer_name'] = customer['name']
-        send_email(email, 'Welcome to PhoneHub Ghana!', f"""
+        verify_url = url_for('verify_email', token=v_token, _external=True)
+        send_email(email, 'Verify your email — PhoneHub Ghana', f"""
         <p>Hi {name},</p>
-        <p>Your PhoneHub Ghana account is live and your <b>12-month Standard Membership</b> starts today.</p>
-        <p>You can now book repairs, apply for installment plans, and track your device history from your dashboard.</p>
-        <p>Membership expires: <b>{expiry}</b></p>
+        <p>Your PhoneHub Ghana account is live! Please verify your email to unlock all features.</p>
+        <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
+        <p style="margin-top:12px;font-size:13px;color:#666">Link expires in 24 hours. If you didn't create an account, ignore this email.</p>
         <p>— PhoneHub Ghana Team</p>
         """)
-        flash(f'Welcome, {name}! Your 12-month membership is now active.', 'success')
+        flash(f'Welcome, {name}! Check your email to verify your account.', 'success')
         return redirect(url_for('dashboard'))
     return render_template('register.html')
 
@@ -913,11 +947,22 @@ def record_payment(plan_id):
               f'Use the exact balance to close the plan.', 'error')
         return redirect(url_for('admin_installments'))
 
+    # Duplicate guard — same plan + date + amount within last 60 seconds
+    duplicate = conn.execute(
+        '''SELECT id FROM payments
+           WHERE plan_id=? AND paid_on=? AND amount=?
+             AND created_at >= datetime('now', '-60 seconds')''',
+        (plan_id, paid_on, amount)).fetchone()
+    if duplicate:
+        conn.close()
+        flash('Duplicate payment detected — this payment was already recorded moments ago.', 'error')
+        return redirect(url_for('admin_installments'))
+
     conn.execute(
         'INSERT INTO payments (plan_id,amount,paid_on,payment_method,reference,notes) VALUES (?,?,?,?,?,?)',
         (plan_id, amount, paid_on, method, reference or None, notes or None))
 
-    new_balance       = round(max(plan['balance_remaining'] - amount, 0), 2)
+    new_balance       = float(_d(max(_d(plan['balance_remaining']) - _d(amount), Decimal('0'))))
     new_payments_made = plan['payments_made'] + 1
     new_next_due      = add_one_month(plan['next_due_date'])
     new_status        = 'Completed' if new_balance <= 0.01 else plan['status']
@@ -1073,6 +1118,158 @@ def send_payment_reminders():
     else:
         flash(f'Sent {sent} SMS reminder(s). {skipped} failed (check AT_API_KEY / phone numbers).', 'success')
     return redirect(url_for('admin_installments'))
+
+
+# ─── EMAIL VERIFICATION ───────────────────────────────────────────────────────
+
+@app.route('/verify-email/<token>')
+def verify_email(token):
+    conn = get_db()
+    row  = conn.execute(
+        'SELECT * FROM email_verification_tokens WHERE token=? AND used=0', (token,)).fetchone()
+    if not row:
+        conn.close()
+        flash('Verification link is invalid or already used.', 'error')
+        return redirect(url_for('dashboard'))
+    expires = datetime.fromisoformat(row['expires_at']).replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires:
+        conn.close()
+        flash('Verification link has expired. Request a new one from your dashboard.', 'error')
+        return redirect(url_for('dashboard'))
+    conn.execute('UPDATE customers SET email_verified=1 WHERE id=?', (row['customer_id'],))
+    conn.execute('UPDATE email_verification_tokens SET used=1 WHERE id=?', (row['id'],))
+    conn.commit(); conn.close()
+    flash('Email verified! Your account is fully active.', 'success')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/resend-verification', methods=['POST'])
+@customer_required
+def resend_verification():
+    conn     = get_db()
+    customer = conn.execute('SELECT * FROM customers WHERE id=?', (session['customer_id'],)).fetchone()
+    if customer['email_verified']:
+        conn.close()
+        flash('Your email is already verified.', 'success')
+        return redirect(url_for('dashboard'))
+    # Invalidate old tokens
+    conn.execute('UPDATE email_verification_tokens SET used=1 WHERE customer_id=?', (customer['id'],))
+    v_token  = secrets.token_urlsafe(32)
+    v_expiry = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+    conn.execute(
+        'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (?,?,?)',
+        (customer['id'], v_token, v_expiry))
+    conn.commit(); conn.close()
+    verify_url = url_for('verify_email', token=v_token, _external=True)
+    send_email(customer['email'], 'Verify your email — PhoneHub Ghana', f"""
+    <p>Hi {customer['name']},</p>
+    <p>Click below to verify your email address:</p>
+    <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
+    <p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>
+    <p>— PhoneHub Ghana Team</p>
+    """)
+    flash('Verification email sent — check your inbox.', 'success')
+    return redirect(url_for('dashboard'))
+
+
+# ─── PASSWORD RESET ───────────────────────────────────────────────────────────
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        conn  = get_db()
+        customer = conn.execute('SELECT * FROM customers WHERE email=?', (email,)).fetchone()
+        if customer:
+            # Invalidate any existing tokens for this email
+            conn.execute('UPDATE password_reset_tokens SET used=1 WHERE email=?', (email,))
+            token   = secrets.token_urlsafe(32)
+            expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
+            conn.execute(
+                'INSERT INTO password_reset_tokens (email,token,expires_at) VALUES (?,?,?)',
+                (email, token, expires))
+            conn.commit()
+            reset_url = url_for('reset_password', token=token, _external=True)
+            send_email(email, 'Reset your password — PhoneHub Ghana', f"""
+            <p>Hi {customer['name']},</p>
+            <p>We received a request to reset your PhoneHub Ghana password.</p>
+            <p><a href="{reset_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Reset Password</a></p>
+            <p style="font-size:13px;color:#666;margin-top:12px">This link expires in 30 minutes. If you didn't request this, ignore the email.</p>
+            <p>— PhoneHub Ghana Team</p>
+            """)
+        conn.close()
+        # Always show the same message to avoid email enumeration
+        flash('If an account with that email exists, a reset link has been sent.', 'success')
+        return redirect(url_for('forgot_password'))
+    return render_template('forgot_password.html')
+
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    conn = get_db()
+    row  = conn.execute(
+        'SELECT * FROM password_reset_tokens WHERE token=? AND used=0', (token,)).fetchone()
+    if not row:
+        conn.close()
+        flash('Reset link is invalid or already used.', 'error')
+        return redirect(url_for('forgot_password'))
+    expires = datetime.fromisoformat(row['expires_at']).replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires:
+        conn.close()
+        flash('Reset link has expired. Please request a new one.', 'error')
+        return redirect(url_for('forgot_password'))
+    if request.method == 'POST':
+        pw  = request.form.get('password', '')
+        pw2 = request.form.get('password2', '')
+        if len(pw) < 6:
+            conn.close()
+            flash('Password must be at least 6 characters.', 'error')
+            return render_template('reset_password.html', token=token)
+        if pw != pw2:
+            conn.close()
+            flash('Passwords do not match.', 'error')
+            return render_template('reset_password.html', token=token)
+        conn.execute('UPDATE customers SET password_hash=? WHERE email=?',
+                     (generate_password_hash(pw), row['email']))
+        conn.execute('UPDATE password_reset_tokens SET used=1 WHERE id=?', (row['id'],))
+        conn.commit(); conn.close()
+        flash('Password updated. Please log in.', 'success')
+        return redirect(url_for('customer_login'))
+    conn.close()
+    return render_template('reset_password.html', token=token)
+
+
+# ─── ADMIN MEMBERSHIP EXTENSION ───────────────────────────────────────────────
+
+@app.route('/admin/members/<int:customer_id>/extend', methods=['POST'])
+@admin_required
+def extend_membership(customer_id):
+    try:
+        months = int(request.form.get('months', 0))
+    except ValueError:
+        months = 0
+    if months not in (1, 3, 6, 12):
+        flash('Invalid extension period.', 'error')
+        return redirect(url_for('admin_members'))
+    conn     = get_db()
+    customer = conn.execute('SELECT * FROM customers WHERE id=?', (customer_id,)).fetchone()
+    if not customer:
+        conn.close()
+        flash('Member not found.', 'error')
+        return redirect(url_for('admin_members'))
+    # Extend from today if already expired, else from current expiry
+    current_expiry = customer['membership_expiry']
+    try:
+        base = max(datetime.strptime(current_expiry, '%Y-%m-%d'), datetime.today())
+    except (ValueError, TypeError):
+        base = datetime.today()
+    new_expiry = (base + timedelta(days=30 * months)).strftime('%Y-%m-%d')
+    conn.execute('UPDATE customers SET membership_expiry=? WHERE id=?', (new_expiry, customer_id))
+    conn.commit(); conn.close()
+    logger.info('Admin %s extended membership for customer #%d by %d months (new expiry: %s)',
+                session.get('admin_username'), customer_id, months, new_expiry)
+    flash(f'Membership extended by {months} month(s). New expiry: {new_expiry}.', 'success')
+    return redirect(url_for('admin_members'))
 
 
 # ─── ERROR HANDLERS ───────────────────────────────────────────────────────────

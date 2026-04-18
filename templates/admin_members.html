@@ -157,7 +157,17 @@
                 </span>
               </td>
               <td>{{ m.created_at[:10] if m.created_at else '—' }}</td>
-              <td>
+              <td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                <form method="POST" action="/admin/members/{{ m.id }}/extend" style="display:flex;gap:4px;align-items:center">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <select name="months" style="padding:4px 6px;border:1px solid #d1d5db;border-radius:5px;font-size:12px">
+                    <option value="1">+1 mo</option>
+                    <option value="3">+3 mo</option>
+                    <option value="6">+6 mo</option>
+                    <option value="12">+12 mo</option>
+                  </select>
+                  <button type="submit" style="background:#006B3F;color:white;border:none;padding:5px 10px;border-radius:5px;font-size:12px;cursor:pointer">Extend</button>
+                </form>
                 <form method="POST" action="/admin/members/delete/{{ m.id }}"
                       onsubmit="return confirm('Delete member {{ m.name }}?')">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
