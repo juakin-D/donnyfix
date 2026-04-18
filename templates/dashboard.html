@@ -114,7 +114,7 @@
     <div class="nav-right">
       <span>👋 {{ session['customer_name'] }}</span>
       <a href="/booking" class="nav-btn">Book a Repair</a>
-      <a href="/logout" class="nav-btn">Log Out</a>
+      <form method="POST" action="/logout" style="display:inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="nav-btn" style="background:none;border:none;cursor:pointer;padding:0">Log Out</button></form>
     </div>
   </nav>
 

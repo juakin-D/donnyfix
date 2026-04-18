@@ -458,15 +458,30 @@ def generate_payment_receipt_pdf(plan, payment, customer_name):
     return buf
 
 
+def _safe_redirect(fallback):
+    """Redirect to request.referrer only if it is same-origin."""
+    ref = request.referrer
+    if ref:
+        from urllib.parse import urlparse
+        ref_host = urlparse(ref).netloc
+        own_host = urlparse(request.host_url).netloc
+        if ref_host == own_host:
+            return redirect(ref)
+    return redirect(fallback)
+
+
 @app.after_request
 def set_security_headers(response):
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline'; "          # unsafe-inline needed for existing inline scripts
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data:; "
-        "connect-src 'self';"
+        "connect-src 'self'; "
+        "form-action 'self'; "                         # forms can only POST to same origin
+        "base-uri 'self'; "                            # blocks <base> tag injection
+        "upgrade-insecure-requests;"                   # force HTTPS in production
     )
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options']        = 'SAMEORIGIN'
@@ -572,8 +587,9 @@ def booking():
         conn.commit()
         booking_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
         conn.close()
-        # Allow guests to download their own receipt during this browser session
-        session['guest_booking_ids'] = session.get('guest_booking_ids', []) + [booking_id]
+        # Allow guests to download their receipt during this browser session (capped to avoid cookie bloat)
+        ids = session.get('guest_booking_ids', []) + [booking_id]
+        session['guest_booking_ids'] = ids[-10:]
         send_email(email, 'Booking Confirmed — PhoneHub Ghana', f"""
         <p>Hi {_he(name)},</p>
         <p>Your repair booking is confirmed.</p>
@@ -599,10 +615,10 @@ def register():
     if session.get('customer_id'):
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
-        name  = request.form['name'].strip()
-        phone = request.form['phone'].strip()
-        email = request.form['email'].strip().lower()
-        pw    = request.form['password']
+        name  = request.form.get('name', '').strip()
+        phone = request.form.get('phone', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        pw    = request.form.get('password', '')
         db    = request.form.get('device_brand', '').strip()
         dm    = request.form.get('device_model', '').strip()
         if not name or len(name) > 100:
@@ -654,8 +670,8 @@ def customer_login():
     if session.get('customer_id'):
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
-        email = request.form['email'].strip().lower()
-        pw    = request.form['password']
+        email = request.form.get('email', '').strip().lower()
+        pw    = request.form.get('password', '')
         conn  = get_db()
         c = conn.execute('SELECT * FROM customers WHERE email=?', (email,)).fetchone()
         conn.close()
@@ -668,10 +684,9 @@ def customer_login():
     return render_template('customer_login.html')
 
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 def customer_logout():
-    session.pop('customer_id', None)
-    session.pop('customer_name', None)
+    session.clear()
     flash('You have been logged out.', 'success')
     return redirect(url_for('home'))
 
@@ -705,10 +720,14 @@ def dashboard():
 @customer_required
 def installment_apply():
     if request.method == 'POST':
-        device_name    = request.form['device_name'].strip()
-        device_price   = float(request.form['device_price'])
-        plan_months    = int(request.form['plan_months'])
-        payment_method = request.form['payment_method']
+        try:
+            device_name    = request.form.get('device_name', '').strip()
+            device_price   = float(request.form.get('device_price', 0))
+            plan_months    = int(request.form.get('plan_months', 0))
+            payment_method = request.form.get('payment_method', '').strip()
+        except (ValueError, TypeError):
+            flash('Invalid form data. Please try again.', 'error')
+            return redirect(url_for('installment_apply'))
         notes          = request.form.get('notes', '').strip()
         momo_number    = request.form.get('momo_number', '').strip()
         momo_network   = request.form.get('momo_network', '').strip()
@@ -987,7 +1006,10 @@ def record_payment(plan_id):
         flash('Invalid payment amount.', 'error')
         return redirect(url_for('admin_installments'))
 
-    method    = request.form['payment_method']
+    method    = request.form.get('payment_method', '').strip()
+    if method not in ('Cash', 'MoMo', 'Bank Transfer', 'Card', 'Cheque'):
+        flash('Invalid payment method.', 'error')
+        return redirect(url_for('admin_installments'))
     reference = request.form.get('reference', '').strip()
     notes     = request.form.get('notes', '').strip()
     paid_on   = request.form.get('paid_on', datetime.today().strftime('%Y-%m-%d'))
@@ -1358,7 +1380,7 @@ def server_error(_e):
 @app.errorhandler(CSRFError)
 def csrf_error(_e):
     flash('Your form session expired. Please try again.', 'error')
-    return redirect(request.referrer or url_for('home'))
+    return _safe_redirect(url_for('home'))
 
 
 @app.errorhandler(429)
@@ -1368,7 +1390,7 @@ def too_many_requests(_e):
         flash('Too many attempts. Please wait a minute and try again.', 'error')
         return render_template('admin_login.html'), 429
     flash('Too many attempts. Please wait a while and try again.', 'error')
-    return redirect(request.referrer or url_for('home'))
+    return _safe_redirect(url_for('home'))
 
 
 # ─── RUN ──────────────────────────────────────────────────────────────────────

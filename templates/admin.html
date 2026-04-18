@@ -633,7 +633,7 @@
               <td>
                 <div class="action-cell">
                   <button class="act-btn" title="View notes"
-                    onclick="showNotes('{{ b['id'] }}', '{{ b['name'] }}', '{{ b['notes']|replace("'", "\\'") if b['notes'] else 'No notes.' }}')">
+                    onclick="showNotes({{ b['id'] }}, {{ b['name']|tojson }}, {{ (b['notes'] if b['notes'] else 'No notes.')|tojson }})">
                     👁
                   </button>
                   <a class="act-btn" href="/receipt/booking/{{ b['id'] }}" target="_blank" title="Download receipt">🧾</a>

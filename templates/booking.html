@@ -351,7 +351,7 @@
       <a href="/">Home</a>
       {% if session.get('customer_id') %}
         <a href="/dashboard">My Account</a>
-        <a href="/logout">Log Out</a>
+        <form method="POST" action="/logout" style="display:inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" >Log Out</button></form>
       {% else %}
         <a href="/login">Login</a>
         <a href="/register">Join Free</a>
