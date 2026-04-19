@@ -7,7 +7,8 @@ from functools import wraps
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import smtplib
 import os
 import re
@@ -28,7 +29,6 @@ app = Flask(__name__)
 _secret_key = os.environ.get('SECRET_KEY', '')
 if not _secret_key:
     _secret_key = 'change-this-secret-key'
-    # logged after basicConfig is set up below; stored for the warning
     _SECRET_KEY_MISSING = True
 else:
     _SECRET_KEY_MISSING = False
@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 if _SECRET_KEY_MISSING:
     logger.warning('SECRET_KEY env var not set — sessions can be forged. Set SECRET_KEY in production!')
 
-DATABASE              = os.path.join(os.path.dirname(__file__), 'bookings.db')
+DATABASE_URL          = os.environ.get('DATABASE_URL')
 ADMIN_USERNAME        = os.environ.get('ADMIN_USERNAME', 'admin')
 _admin_pw_raw         = os.environ.get('ADMIN_PASSWORD', 'change-this-password')
 ADMIN_PASSWORD_HASH   = generate_password_hash(_admin_pw_raw)
@@ -79,27 +79,56 @@ PLAN_CONFIG = {
 
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
 
-def init_db():
-    conn = sqlite3.connect(DATABASE)
-    c = conn.cursor()
+class _PgConn:
+    """Thin wrapper so callers use conn.execute() / conn.commit() / conn.close()."""
+    def __init__(self, conn):
+        self._conn = conn
 
-    c.execute('''CREATE TABLE IF NOT EXISTS bookings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    def execute(self, sql, params=None):
+        cur = self._conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute(sql, params or ())
+        return cur
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        self._conn.rollback()
+
+    def close(self):
+        self._conn.close()
+
+
+def get_db():
+    if not DATABASE_URL:
+        raise RuntimeError('DATABASE_URL environment variable is not set.')
+    return _PgConn(psycopg2.connect(DATABASE_URL))
+
+
+def init_db():
+    if not DATABASE_URL:
+        logger.error('DATABASE_URL not set — skipping init_db()')
+        return
+    conn = get_db()
+
+    conn.execute('''CREATE TABLE IF NOT EXISTS customers (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL, phone TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL, device_brand TEXT, device_model TEXT,
+        membership_tier TEXT DEFAULT 'Standard',
+        membership_start TEXT, membership_expiry TEXT,
+        email_verified INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW())''')
+
+    conn.execute('''CREATE TABLE IF NOT EXISTS bookings (
+        id SERIAL PRIMARY KEY,
         name TEXT NOT NULL, phone TEXT NOT NULL, email TEXT NOT NULL,
         device TEXT NOT NULL, service TEXT NOT NULL, date TEXT NOT NULL,
         notes TEXT, customer_id INTEGER, status TEXT DEFAULT 'Pending',
         FOREIGN KEY (customer_id) REFERENCES customers(id))''')
 
-    c.execute('''CREATE TABLE IF NOT EXISTS customers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL, phone TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL, device_brand TEXT, device_model TEXT,
-        membership_tier TEXT DEFAULT 'Standard',
-        membership_start TEXT, membership_expiry TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP)''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS installment_plans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conn.execute('''CREATE TABLE IF NOT EXISTS installment_plans (
+        id SERIAL PRIMARY KEY,
         customer_id INTEGER NOT NULL,
         device_name TEXT NOT NULL,
         device_price REAL NOT NULL,
@@ -116,11 +145,11 @@ def init_db():
         bank_name TEXT, bank_reference TEXT,
         status TEXT DEFAULT 'Active',
         notes TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
         FOREIGN KEY (customer_id) REFERENCES customers(id))''')
 
-    c.execute('''CREATE TABLE IF NOT EXISTS payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conn.execute('''CREATE TABLE IF NOT EXISTS payments (
+        id SERIAL PRIMARY KEY,
         plan_id INTEGER NOT NULL,
         amount REAL NOT NULL,
         paid_on TEXT NOT NULL,
@@ -128,39 +157,25 @@ def init_db():
         reference TEXT,
         recorded_by TEXT DEFAULT 'admin',
         notes TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
         FOREIGN KEY (plan_id) REFERENCES installment_plans(id))''')
 
-    c.execute('''CREATE TABLE IF NOT EXISTS password_reset_tokens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conn.execute('''CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id SERIAL PRIMARY KEY,
         email TEXT NOT NULL,
         token TEXT NOT NULL UNIQUE,
         expires_at TEXT NOT NULL,
         used INTEGER DEFAULT 0)''')
 
-    c.execute('''CREATE TABLE IF NOT EXISTS email_verification_tokens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conn.execute('''CREATE TABLE IF NOT EXISTS email_verification_tokens (
+        id SERIAL PRIMARY KEY,
         customer_id INTEGER NOT NULL,
         token TEXT NOT NULL UNIQUE,
         expires_at TEXT NOT NULL,
         used INTEGER DEFAULT 0)''')
 
-    # email_verified column — safe to run on existing DBs
-    try:
-        c.execute('ALTER TABLE customers ADD COLUMN email_verified INTEGER DEFAULT 0')
-        # First migration: trust all pre-existing accounts as verified
-        c.execute('UPDATE customers SET email_verified=1')
-    except Exception:
-        pass
-
     conn.commit()
     conn.close()
-
-
-def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -194,7 +209,6 @@ def membership_status(expiry_str):
 def add_one_month(date_str):
     """Add one calendar month to a YYYY-MM-DD string."""
     d = datetime.strptime(date_str, '%Y-%m-%d')
-    # Handle month overflow (e.g. Jan 31 -> Feb 28)
     month = d.month + 1
     year  = d.year + (1 if month > 12 else 0)
     month = month if month <= 12 else 1
@@ -423,7 +437,6 @@ def generate_payment_receipt_pdf(plan, payment, customer_name):
     story.append(Spacer(1, 4*mm))
     story.append(HRFlowable(width='100%', thickness=0.5, color=_C_LGRAY, spaceAfter=4))
 
-    # Highlighted amount box
     story.append(_section_label('Payment', styles))
     amt_table = Table([['Amount Paid', fmt_ghs(payment['amount'])]], colWidths=[45*mm, 115*mm])
     amt_table.setStyle(TableStyle([
@@ -471,14 +484,14 @@ def _safe_redirect(fallback):
 def set_security_headers(response):
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "          # unsafe-inline needed for existing inline scripts
+        "script-src 'self' 'unsafe-inline'; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data:; "
         "connect-src 'self'; "
-        "form-action 'self'; "                         # forms can only POST to same origin
-        "base-uri 'self'; "                            # blocks <base> tag injection
-        "upgrade-insecure-requests;"                   # force HTTPS in production
+        "form-action 'self'; "
+        "base-uri 'self'; "
+        "upgrade-insecure-requests;"
     )
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options']        = 'SAMEORIGIN'
@@ -588,13 +601,12 @@ def booking():
             return render_template('booking.html')
 
         conn = get_db()
-        conn.execute(
-            'INSERT INTO bookings (name,phone,email,device,service,date,notes,customer_id) VALUES (?,?,?,?,?,?,?,?)',
+        cur = conn.execute(
+            'INSERT INTO bookings (name,phone,email,device,service,date,notes,customer_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id',
             (name, phone, email, device, service, date, notes, cid))
+        booking_id = cur.fetchone()['id']
         conn.commit()
-        booking_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
         conn.close()
-        # Allow guests to download their receipt during this browser session (capped to avoid cookie bloat)
         ids = session.get('guest_booking_ids', []) + [booking_id]
         session['guest_booking_ids'] = ids[-10:]
         send_email(email, 'Booking Confirmed — PhoneHub Ghana', f"""
@@ -640,20 +652,19 @@ def register():
         start  = datetime.today().strftime('%Y-%m-%d')
         expiry = (datetime.today() + timedelta(days=365)).strftime('%Y-%m-%d')
         conn = get_db()
-        if conn.execute('SELECT id FROM customers WHERE email=?', (email,)).fetchone():
+        if conn.execute('SELECT id FROM customers WHERE email=%s', (email,)).fetchone():
             flash('An account with that email already exists.', 'error')
             conn.close()
             return render_template('register.html')
         conn.execute(
-            "INSERT INTO customers (name,phone,email,password_hash,device_brand,device_model,membership_tier,membership_start,membership_expiry,email_verified) VALUES (?,?,?,?,?,?,'Standard',?,?,0)",
+            "INSERT INTO customers (name,phone,email,password_hash,device_brand,device_model,membership_tier,membership_start,membership_expiry,email_verified) VALUES (%s,%s,%s,%s,%s,%s,'Standard',%s,%s,0)",
             (name, phone, email, hash_password(pw), db, dm, start, expiry))
         conn.commit()
-        customer = conn.execute('SELECT * FROM customers WHERE email=?', (email,)).fetchone()
-        # Create email verification token
+        customer = conn.execute('SELECT * FROM customers WHERE email=%s', (email,)).fetchone()
         v_token  = secrets.token_urlsafe(32)
         v_expiry = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
         conn.execute(
-            'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (?,?,?)',
+            'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (%s,%s,%s)',
             (customer['id'], v_token, v_expiry))
         conn.commit()
         conn.close()
@@ -680,7 +691,7 @@ def customer_login():
         email = request.form.get('email', '').strip().lower()
         pw    = request.form.get('password', '')
         conn  = get_db()
-        c = conn.execute('SELECT * FROM customers WHERE email=?', (email,)).fetchone()
+        c = conn.execute('SELECT * FROM customers WHERE email=%s', (email,)).fetchone()
         conn.close()
         if c and verify_password(c['password_hash'], pw):
             session['customer_id']   = c['id']
@@ -704,12 +715,12 @@ def customer_logout():
 @customer_required
 def dashboard():
     conn     = get_db()
-    customer = conn.execute('SELECT * FROM customers WHERE id=?', (session['customer_id'],)).fetchone()
+    customer = conn.execute('SELECT * FROM customers WHERE id=%s', (session['customer_id'],)).fetchone()
     bookings = conn.execute(
-        'SELECT * FROM bookings WHERE customer_id=? ORDER BY date DESC',
+        'SELECT * FROM bookings WHERE customer_id=%s ORDER BY date DESC',
         (session['customer_id'],)).fetchall()
     plans = conn.execute(
-        'SELECT * FROM installment_plans WHERE customer_id=? ORDER BY created_at DESC',
+        'SELECT * FROM installment_plans WHERE customer_id=%s ORDER BY created_at DESC',
         (session['customer_id'],)).fetchall()
     conn.close()
     status = membership_status(customer['membership_expiry'])
@@ -729,7 +740,7 @@ def dashboard():
 @customer_required
 def installment_apply():
     conn     = get_db()
-    customer = conn.execute('SELECT * FROM customers WHERE id=?', (session['customer_id'],)).fetchone()
+    customer = conn.execute('SELECT * FROM customers WHERE id=%s', (session['customer_id'],)).fetchone()
     conn.close()
     mem_status = membership_status(customer['membership_expiry'])
     if mem_status not in ('Active', 'Expiring Soon'):
@@ -774,20 +785,21 @@ def installment_apply():
 
         p = calculate_plan(device_price, plan_months)
         conn = get_db()
-        conn.execute(
+        cur = conn.execute(
             '''INSERT INTO installment_plans
                (customer_id,device_name,device_price,service_fee,total_payable,
                 deposit_amount,balance_remaining,monthly_amount,plan_months,
                 next_due_date,payment_method,momo_number,momo_network,
                 bank_name,bank_reference,notes)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+               RETURNING id''',
             (session['customer_id'], device_name, device_price,
              p['service_fee'], p['total'], p['deposit'], p['balance'],
              p['monthly'], plan_months, next_due_date(),
              payment_method, momo_number or None, momo_network or None,
              bank_name or None, bank_reference or None, notes or None))
+        plan_id = cur.fetchone()['id']
         conn.commit()
-        plan_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
         conn.close()
         flash(f'Plan created! Deposit of {fmt_ghs(p["deposit"])} is due now.', 'success')
         return redirect(url_for('installment_detail', plan_id=plan_id))
@@ -814,14 +826,14 @@ def installment_apply():
 def installment_detail(plan_id):
     conn = get_db()
     plan = conn.execute(
-        'SELECT * FROM installment_plans WHERE id=? AND customer_id=?',
+        'SELECT * FROM installment_plans WHERE id=%s AND customer_id=%s',
         (plan_id, session['customer_id'])).fetchone()
     if not plan:
         conn.close()
         flash('Plan not found.', 'error')
         return redirect(url_for('dashboard'))
     payments   = conn.execute(
-        'SELECT * FROM payments WHERE plan_id=? ORDER BY paid_on DESC', (plan_id,)).fetchall()
+        'SELECT * FROM payments WHERE plan_id=%s ORDER BY paid_on DESC', (plan_id,)).fetchall()
     conn.close()
     paid_total = sum(p['amount'] for p in payments)
     progress   = round((paid_total / plan['total_payable']) * 100) if plan['total_payable'] else 0
@@ -873,12 +885,12 @@ def admin():
     q = 'SELECT * FROM bookings WHERE 1=1'
     params = []
     if search:
-        q += ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)'
+        q += ' AND (name LIKE %s OR email LIKE %s OR phone LIKE %s)'
         params += [f'%{search}%'] * 3
     if service:
-        q += ' AND service=?'; params.append(service)
-    total    = conn.execute(q.replace('SELECT *', 'SELECT COUNT(*)'), params).fetchone()[0]
-    q       += ' ORDER BY date DESC LIMIT ? OFFSET ?'
+        q += ' AND service=%s'; params.append(service)
+    total    = conn.execute(q.replace('SELECT *', 'SELECT COUNT(*) AS cnt'), params).fetchone()['cnt']
+    q       += ' ORDER BY date DESC LIMIT %s OFFSET %s'
     bookings = conn.execute(q, params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
     conn.close()
     total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
@@ -890,7 +902,7 @@ def admin():
 @admin_required
 def delete_booking(booking_id):
     conn = get_db()
-    conn.execute('DELETE FROM bookings WHERE id=?', (booking_id,))
+    conn.execute('DELETE FROM bookings WHERE id=%s', (booking_id,))
     conn.commit(); conn.close()
     logger.warning('Admin %s deleted booking #%d', session.get('admin_username'), booking_id)
     flash('Booking deleted.', 'success')
@@ -905,8 +917,8 @@ def update_booking_status(booking_id):
         flash('Invalid status.', 'error')
         return redirect(url_for('admin'))
     conn = get_db()
-    booking = conn.execute('SELECT * FROM bookings WHERE id=?', (booking_id,)).fetchone()
-    conn.execute('UPDATE bookings SET status=? WHERE id=?', (new_status, booking_id))
+    booking = conn.execute('SELECT * FROM bookings WHERE id=%s', (booking_id,)).fetchone()
+    conn.execute('UPDATE bookings SET status=%s WHERE id=%s', (new_status, booking_id))
     conn.commit(); conn.close()
     if booking and new_status == 'Complete':
         send_email(booking['email'], 'Your repair is ready — PhoneHub Ghana', f"""
@@ -932,12 +944,12 @@ def admin_members():
     q = 'SELECT * FROM customers WHERE 1=1'
     params = []
     if search:
-        q += ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)'
+        q += ' AND (name LIKE %s OR email LIKE %s OR phone LIKE %s)'
         params += [f'%{search}%'] * 3
     if tier:
-        q += ' AND membership_tier=?'; params.append(tier)
-    total    = conn.execute(q.replace('SELECT *', 'SELECT COUNT(*)'), params).fetchone()[0]
-    q       += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+        q += ' AND membership_tier=%s'; params.append(tier)
+    total    = conn.execute(q.replace('SELECT *', 'SELECT COUNT(*) AS cnt'), params).fetchone()['cnt']
+    q       += ' ORDER BY created_at DESC LIMIT %s OFFSET %s'
     customers = conn.execute(q, params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
     conn.close()
     members = [{
@@ -955,7 +967,7 @@ def admin_members():
 @admin_required
 def delete_member(customer_id):
     conn = get_db()
-    conn.execute('DELETE FROM customers WHERE id=?', (customer_id,))
+    conn.execute('DELETE FROM customers WHERE id=%s', (customer_id,))
     conn.commit(); conn.close()
     logger.warning('Admin %s deleted member #%d', session.get('admin_username'), customer_id)
     flash('Member deleted.', 'success')
@@ -976,14 +988,12 @@ def admin_installments():
            FROM installment_plans ip JOIN customers c ON c.id=ip.customer_id WHERE 1=1'''
     params = []
     if status_filter:
-        q += ' AND ip.status=?'; params.append(status_filter)
+        q += ' AND ip.status=%s'; params.append(status_filter)
     if search:
-        q += ' AND (c.name LIKE ? OR c.email LIKE ? OR ip.device_name LIKE ?)'
+        q += ' AND (c.name LIKE %s OR c.email LIKE %s OR ip.device_name LIKE %s)'
         params += [f'%{search}%'] * 3
-    # Stat counts run on full result set (before pagination)
-    count_q           = q.replace('SELECT ip.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email', 'SELECT COUNT(*)')
-    total             = conn.execute(count_q, params).fetchone()[0]
-    # Aggregate stats (full set — lightweight queries)
+    count_q           = q.replace('SELECT ip.*, c.name as customer_name, c.phone as customer_phone, c.email as customer_email', 'SELECT COUNT(*) AS cnt')
+    total             = conn.execute(count_q, params).fetchone()['cnt']
     today             = datetime.today().strftime('%Y-%m-%d')
     stats_q           = q + ' ORDER BY ip.created_at DESC'
     all_plans         = conn.execute(stats_q, params).fetchall()
@@ -991,10 +1001,10 @@ def admin_installments():
     active_count      = sum(1 for p in all_plans if p['status'] == 'Active')
     completed_count   = sum(1 for p in all_plans if p['status'] == 'Completed')
 
-    q      += ' ORDER BY ip.created_at DESC LIMIT ? OFFSET ?'
+    q      += ' ORDER BY ip.created_at DESC LIMIT %s OFFSET %s'
     plans   = conn.execute(q, params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
-    paid_map = {row[0]: row[1] for row in conn.execute(
-        'SELECT plan_id, COALESCE(SUM(amount),0) FROM payments GROUP BY plan_id'
+    paid_map = {row['plan_id']: row['total_paid'] for row in conn.execute(
+        'SELECT plan_id, COALESCE(SUM(amount),0) AS total_paid FROM payments GROUP BY plan_id'
     ).fetchall()}
     annotated = []
     for p in plans:
@@ -1040,7 +1050,7 @@ def record_payment(plan_id):
         paid_on = datetime.today().strftime('%Y-%m-%d')
 
     conn = get_db()
-    plan = conn.execute('SELECT * FROM installment_plans WHERE id=?', (plan_id,)).fetchone()
+    plan = conn.execute('SELECT * FROM installment_plans WHERE id=%s', (plan_id,)).fetchone()
     if not plan:
         conn.close()
         flash('Plan not found.', 'error')
@@ -1059,17 +1069,18 @@ def record_payment(plan_id):
     # Duplicate guard — same plan + date + amount within last 60 seconds
     duplicate = conn.execute(
         '''SELECT id FROM payments
-           WHERE plan_id=? AND paid_on=? AND amount=?
-             AND created_at >= datetime('now', '-60 seconds')''',
+           WHERE plan_id=%s AND paid_on=%s AND amount=%s
+             AND created_at >= NOW() - INTERVAL '60 seconds' ''',
         (plan_id, paid_on, amount)).fetchone()
     if duplicate:
         conn.close()
         flash('Duplicate payment detected — this payment was already recorded moments ago.', 'error')
         return redirect(url_for('admin_installments'))
 
-    conn.execute(
-        'INSERT INTO payments (plan_id,amount,paid_on,payment_method,reference,notes) VALUES (?,?,?,?,?,?)',
+    cur = conn.execute(
+        'INSERT INTO payments (plan_id,amount,paid_on,payment_method,reference,notes) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id',
         (plan_id, amount, paid_on, method, reference or None, notes or None))
+    payment_id = cur.fetchone()['id']
 
     new_balance       = float(_d(max(_d(plan['balance_remaining']) - _d(amount), Decimal('0'))))
     new_payments_made = plan['payments_made'] + 1
@@ -1077,24 +1088,22 @@ def record_payment(plan_id):
     new_status        = 'Completed' if new_balance <= 0.01 else plan['status']
 
     conn.execute(
-        'UPDATE installment_plans SET balance_remaining=?,payments_made=?,next_due_date=?,status=? WHERE id=?',
+        'UPDATE installment_plans SET balance_remaining=%s,payments_made=%s,next_due_date=%s,status=%s WHERE id=%s',
         (new_balance, new_payments_made, new_next_due, new_status, plan_id))
-    payment_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
     conn.commit()
     logger.info('Admin %s recorded payment of %s for plan #%d (new balance: %s)',
                 session.get('admin_username'), fmt_ghs(amount), plan_id, fmt_ghs(new_balance))
     conn.close()
 
-    # SMS confirmation to customer
-    _name_parts = plan['customer_name'].split() if 'customer_name' in plan.keys() else []
+    _name_parts = plan['customer_name'].split() if plan.get('customer_name') else []
     first = _name_parts[0] if _name_parts else 'Customer'
     if new_status == 'Completed':
-        send_sms(plan['customer_phone'] if 'customer_phone' in plan.keys() else '',
+        send_sms(plan.get('customer_phone', ''),
                  f"Hi {first}, your PhoneHub Ghana installment for {plan['device_name']} "
                  f"is now FULLY PAID! Thank you. Call 0541057500 for your receipt.")
         flash(f'Plan #{plan_id} fully paid — marked Completed. Receipt: /receipt/payment/{payment_id}', 'success')
     else:
-        send_sms(plan['customer_phone'] if 'customer_phone' in plan.keys() else '',
+        send_sms(plan.get('customer_phone', ''),
                  f"Hi {first}, payment of {fmt_ghs(amount)} received for your {plan['device_name']} plan. "
                  f"Balance: {fmt_ghs(new_balance)}. Next due: {new_next_due}. -PhoneHub Ghana")
         flash(f'Payment of {fmt_ghs(amount)} recorded for plan #{plan_id}.', 'success')
@@ -1109,7 +1118,7 @@ def update_plan_status(plan_id):
         flash('Invalid status value.', 'error')
         return redirect(url_for('admin_installments'))
     conn = get_db()
-    conn.execute('UPDATE installment_plans SET status=? WHERE id=?', (new_status, plan_id))
+    conn.execute('UPDATE installment_plans SET status=%s WHERE id=%s', (new_status, plan_id))
     conn.commit(); conn.close()
     logger.info('Admin %s set plan #%d status to %s', session.get('admin_username'), plan_id, new_status)
     flash(f'Plan #{plan_id} updated to {new_status}.', 'success')
@@ -1121,7 +1130,7 @@ def update_plan_status(plan_id):
 @app.route('/receipt/booking/<int:booking_id>')
 def booking_receipt(booking_id):
     conn    = get_db()
-    booking = conn.execute('SELECT * FROM bookings WHERE id=?', (booking_id,)).fetchone()
+    booking = conn.execute('SELECT * FROM bookings WHERE id=%s', (booking_id,)).fetchone()
     conn.close()
     if not booking:
         return render_template('404.html'), 404
@@ -1143,7 +1152,7 @@ def booking_receipt(booking_id):
 @admin_required
 def payment_receipt(payment_id):
     conn    = get_db()
-    payment = conn.execute('SELECT * FROM payments WHERE id=?', (payment_id,)).fetchone()
+    payment = conn.execute('SELECT * FROM payments WHERE id=%s', (payment_id,)).fetchone()
     if not payment:
         conn.close()
         flash('Payment not found.', 'error')
@@ -1152,7 +1161,7 @@ def payment_receipt(payment_id):
         '''SELECT ip.*, c.name as customer_name
            FROM installment_plans ip
            JOIN customers c ON c.id = ip.customer_id
-           WHERE ip.id=?''',
+           WHERE ip.id=%s''',
         (payment['plan_id'],)).fetchone()
     conn.close()
     if not plan:
@@ -1170,7 +1179,7 @@ def payment_receipt(payment_id):
 def latest_payment_receipt(plan_id):
     conn    = get_db()
     payment = conn.execute(
-        'SELECT * FROM payments WHERE plan_id=? ORDER BY created_at DESC LIMIT 1', (plan_id,)).fetchone()
+        'SELECT * FROM payments WHERE plan_id=%s ORDER BY created_at DESC LIMIT 1', (plan_id,)).fetchone()
     if not payment:
         conn.close()
         flash('No payments recorded for this plan yet.', 'error')
@@ -1178,7 +1187,7 @@ def latest_payment_receipt(plan_id):
     plan = conn.execute(
         '''SELECT ip.*, c.name as customer_name
            FROM installment_plans ip JOIN customers c ON c.id=ip.customer_id
-           WHERE ip.id=?''', (plan_id,)).fetchone()
+           WHERE ip.id=%s''', (plan_id,)).fetchone()
     conn.close()
     buf  = generate_payment_receipt_pdf(dict(plan), dict(payment), plan['customer_name'])
     resp = make_response(buf.read())
@@ -1202,7 +1211,7 @@ def send_payment_reminders():
         '''SELECT ip.*, c.name as customer_name, c.phone as customer_phone
            FROM installment_plans ip
            JOIN customers c ON c.id = ip.customer_id
-           WHERE ip.status = 'Active' AND ip.next_due_date <= ?
+           WHERE ip.status = 'Active' AND ip.next_due_date <= %s
            ORDER BY ip.next_due_date''',
         (cutoff,)).fetchall()
     conn.close()
@@ -1242,7 +1251,7 @@ def send_payment_reminders():
 def verify_email(token):
     conn = get_db()
     row  = conn.execute(
-        'SELECT * FROM email_verification_tokens WHERE token=? AND used=0', (token,)).fetchone()
+        'SELECT * FROM email_verification_tokens WHERE token=%s AND used=0', (token,)).fetchone()
     if not row:
         conn.close()
         flash('Verification link is invalid or already used.', 'error')
@@ -1252,8 +1261,8 @@ def verify_email(token):
         conn.close()
         flash('Verification link has expired. Request a new one from your dashboard.', 'error')
         return redirect(url_for('dashboard'))
-    conn.execute('UPDATE customers SET email_verified=1 WHERE id=?', (row['customer_id'],))
-    conn.execute('UPDATE email_verification_tokens SET used=1 WHERE id=?', (row['id'],))
+    conn.execute('UPDATE customers SET email_verified=1 WHERE id=%s', (row['customer_id'],))
+    conn.execute('UPDATE email_verification_tokens SET used=1 WHERE id=%s', (row['id'],))
     conn.commit(); conn.close()
     flash('Email verified! Your account is fully active.', 'success')
     return redirect(url_for('dashboard'))
@@ -1264,17 +1273,16 @@ def verify_email(token):
 @limiter.limit('3 per hour')
 def resend_verification():
     conn     = get_db()
-    customer = conn.execute('SELECT * FROM customers WHERE id=?', (session['customer_id'],)).fetchone()
+    customer = conn.execute('SELECT * FROM customers WHERE id=%s', (session['customer_id'],)).fetchone()
     if customer['email_verified']:
         conn.close()
         flash('Your email is already verified.', 'success')
         return redirect(url_for('dashboard'))
-    # Invalidate old tokens
-    conn.execute('UPDATE email_verification_tokens SET used=1 WHERE customer_id=?', (customer['id'],))
+    conn.execute('UPDATE email_verification_tokens SET used=1 WHERE customer_id=%s', (customer['id'],))
     v_token  = secrets.token_urlsafe(32)
     v_expiry = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
     conn.execute(
-        'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (?,?,?)',
+        'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (%s,%s,%s)',
         (customer['id'], v_token, v_expiry))
     conn.commit(); conn.close()
     verify_url = url_for('verify_email', token=v_token, _external=True)
@@ -1297,14 +1305,13 @@ def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         conn  = get_db()
-        customer = conn.execute('SELECT * FROM customers WHERE email=?', (email,)).fetchone()
+        customer = conn.execute('SELECT * FROM customers WHERE email=%s', (email,)).fetchone()
         if customer:
-            # Invalidate any existing tokens for this email
-            conn.execute('UPDATE password_reset_tokens SET used=1 WHERE email=?', (email,))
+            conn.execute('UPDATE password_reset_tokens SET used=1 WHERE email=%s', (email,))
             token   = secrets.token_urlsafe(32)
             expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
             conn.execute(
-                'INSERT INTO password_reset_tokens (email,token,expires_at) VALUES (?,?,?)',
+                'INSERT INTO password_reset_tokens (email,token,expires_at) VALUES (%s,%s,%s)',
                 (email, token, expires))
             conn.commit()
             reset_url = url_for('reset_password', token=token, _external=True)
@@ -1316,7 +1323,6 @@ def forgot_password():
             <p>— PhoneHub Ghana Team</p>
             """)
         conn.close()
-        # Always show the same message to avoid email enumeration
         flash('If an account with that email exists, a reset link has been sent.', 'success')
         return redirect(url_for('forgot_password'))
     return render_template('forgot_password.html')
@@ -1326,7 +1332,7 @@ def forgot_password():
 def reset_password(token):
     conn = get_db()
     row  = conn.execute(
-        'SELECT * FROM password_reset_tokens WHERE token=? AND used=0', (token,)).fetchone()
+        'SELECT * FROM password_reset_tokens WHERE token=%s AND used=0', (token,)).fetchone()
     if not row:
         conn.close()
         flash('Reset link is invalid or already used.', 'error')
@@ -1347,9 +1353,9 @@ def reset_password(token):
             conn.close()
             flash('Passwords do not match.', 'error')
             return render_template('reset_password.html', token=token)
-        conn.execute('UPDATE customers SET password_hash=? WHERE email=?',
+        conn.execute('UPDATE customers SET password_hash=%s WHERE email=%s',
                      (generate_password_hash(pw), row['email']))
-        conn.execute('UPDATE password_reset_tokens SET used=1 WHERE id=?', (row['id'],))
+        conn.execute('UPDATE password_reset_tokens SET used=1 WHERE id=%s', (row['id'],))
         conn.commit(); conn.close()
         flash('Password updated. Please log in.', 'success')
         return redirect(url_for('customer_login'))
@@ -1370,19 +1376,18 @@ def extend_membership(customer_id):
         flash('Invalid extension period.', 'error')
         return redirect(url_for('admin_members'))
     conn     = get_db()
-    customer = conn.execute('SELECT * FROM customers WHERE id=?', (customer_id,)).fetchone()
+    customer = conn.execute('SELECT * FROM customers WHERE id=%s', (customer_id,)).fetchone()
     if not customer:
         conn.close()
         flash('Member not found.', 'error')
         return redirect(url_for('admin_members'))
-    # Extend from today if already expired, else from current expiry
     current_expiry = customer['membership_expiry']
     try:
         base = max(datetime.strptime(current_expiry, '%Y-%m-%d'), datetime.today())
     except (ValueError, TypeError):
         base = datetime.today()
     new_expiry = (base + timedelta(days=30 * months)).strftime('%Y-%m-%d')
-    conn.execute('UPDATE customers SET membership_expiry=? WHERE id=?', (new_expiry, customer_id))
+    conn.execute('UPDATE customers SET membership_expiry=%s WHERE id=%s', (new_expiry, customer_id))
     conn.commit(); conn.close()
     logger.info('Admin %s extended membership for customer #%d by %d months (new expiry: %s)',
                 session.get('admin_username'), customer_id, months, new_expiry)
