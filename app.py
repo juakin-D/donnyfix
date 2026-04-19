@@ -543,6 +543,11 @@ def home():
     return render_template('index.html')
 
 
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+
 @app.route('/booking', methods=['GET', 'POST'])
 def booking():
     if request.method == 'POST':

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Privacy Policy — PhoneHub Ghana</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:      #006B3F;
+      --green-dark: #004D2D;
+      --gold:       #FCD116;
+      --off-white:  #F7F5F0;
+      --warm-gray:  #E8E4DC;
+      --mid-gray:   #8C8880;
+      --text:       #111008;
+      --text-soft:  #4A4740;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--off-white);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--green);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: white;
+      text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+    .brand span { color: var(--gold); }
+    .nav-links { display: flex; gap: 8px; }
+    .nav-link {
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      font-size: 14px;
+      padding: 7px 16px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.15); color: white; }
+
+    /* HERO BAND */
+    .hero-band {
+      background: var(--green-dark);
+      padding: 48px 32px 40px;
+      text-align: center;
+    }
+    .hero-band h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 36px;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 10px;
+    }
+    .hero-band p {
+      color: rgba(255,255,255,0.65);
+      font-size: 15px;
+    }
+
+    /* CONTENT */
+    .page {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    .section {
+      background: white;
+      border-radius: 14px;
+      padding: 32px 36px;
+      margin-bottom: 20px;
+      border: 1px solid var(--warm-gray);
+    }
+
+    .section-number {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      background: var(--green);
+      color: white;
+      border-radius: 50%;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 28px;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--green-dark);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+    }
+
+    p {
+      font-size: 15px;
+      color: var(--text-soft);
+      line-height: 1.75;
+      margin-bottom: 12px;
+    }
+    p:last-child { margin-bottom: 0; }
+
+    ul {
+      margin: 10px 0 12px 0;
+      padding-left: 20px;
+    }
+    li {
+      font-size: 15px;
+      color: var(--text-soft);
+      line-height: 1.7;
+      margin-bottom: 6px;
+    }
+
+    .highlight-box {
+      background: #F0FAF5;
+      border-left: 3px solid var(--green);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+      color: var(--green-dark);
+      font-weight: 500;
+    }
+
+    a { color: var(--green); font-weight: 600; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .effective-date {
+      text-align: center;
+      font-size: 13px;
+      color: var(--mid-gray);
+      margin-bottom: 32px;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* FOOTER */
+    footer {
+      background: var(--green-dark);
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      padding: 28px 24px;
+      font-size: 13px;
+    }
+    footer a { color: rgba(255,255,255,0.8); font-weight: 400; }
+    footer a:hover { color: white; text-decoration: underline; }
+    .footer-links { display: flex; justify-content: center; gap: 20px; margin-top: 10px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="brand">Phone<span>Hub</span> Ghana</a>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/booking" class="nav-link">Book a Repair</a>
+      <a href="/register" class="nav-link">Join</a>
+    </div>
+  </nav>
+
+  <div class="hero-band">
+    <h1>Privacy Policy</h1>
+    <p>How PhoneHub Ghana collects, uses, and protects your information.</p>
+  </div>
+
+  <div class="page">
+
+    <p class="effective-date">Effective date: 1 January 2026 &nbsp;·&nbsp; Last updated: April 2026</p>
+
+    <!-- 1. Who We Are -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">1</span>Who We Are
+      </div>
+      <p>
+        PhoneHub Ghana Ltd. ("PhoneHub", "we", "us", or "our") operates the PhoneHub Ghana
+        website and membership platform at <a href="https://phonehubghana.com">phonehubghana.com</a>.
+        We are based in Accra, Ghana, and provide phone sales, repair services, and device
+        financing (installment plans) to our members.
+      </p>
+      <p>
+        If you have any questions about this policy, contact us at
+        <a href="mailto:hello@phonehubghana.com">hello@phonehubghana.com</a> or call
+        <a href="tel:+233541057500">0541057500</a>.
+      </p>
+    </div>
+
+    <!-- 2. Data We Collect -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">2</span>Data We Collect
+      </div>
+      <p>We collect only the information necessary to provide our services:</p>
+      <ul>
+        <li><strong>Identity data:</strong> Full name, phone number, email address</li>
+        <li><strong>Device data:</strong> Phone brand and model you register with us</li>
+        <li><strong>Account data:</strong> Password (stored as a secure hash — never in plain text), membership tier and expiry date</li>
+        <li><strong>Booking data:</strong> Repair date, device, service type, and notes you provide when booking</li>
+        <li><strong>Installment data:</strong> Device being financed, purchase price, payment method, MoMo number (if applicable), bank details (if applicable), payment history</li>
+        <li><strong>Usage data:</strong> Pages visited and actions taken within your account, solely for service delivery</li>
+      </ul>
+      <div class="highlight-box">
+        We do not collect payment card numbers. All MoMo transactions are processed
+        directly through your mobile network — we only record the reference number and amount.
+      </div>
+    </div>
+
+    <!-- 3. How We Use Your Data -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">3</span>How We Use Your Data
+      </div>
+      <p>Your data is used exclusively to run your PhoneHub membership and services:</p>
+      <ul>
+        <li>Creating and managing your membership account</li>
+        <li>Processing and tracking your repair bookings</li>
+        <li>Administering your installment plan and recording payments</li>
+        <li>Sending SMS and email notifications about your bookings, payments, and membership status</li>
+        <li>Maintaining your full device service history</li>
+        <li>Verifying your email address and authenticating your account</li>
+        <li>Complying with applicable Ghanaian law and resolving disputes</li>
+      </ul>
+    </div>
+
+    <!-- 4. Mobile Money Payment Data -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">4</span>Mobile Money Payment Data
+      </div>
+      <p>
+        When you choose MoMo as your installment payment method, we collect your MoMo
+        number and network (MTN, Vodafone, or AirtelTigo) to enable our staff to initiate
+        or verify payment collection.
+      </p>
+      <p>
+        We do not store your MoMo PIN or any authentication credentials. Transactions
+        are completed directly between you and your mobile network. We only record the
+        confirmed transaction reference, amount, and date.
+      </p>
+      <div class="highlight-box">
+        Your MoMo number is used only for your installment plan payments and is never
+        shared with third parties or used for any other purpose.
+      </div>
+    </div>
+
+    <!-- 5. Data Storage & Security -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">5</span>Data Storage &amp; Security
+      </div>
+      <p>
+        Your data is stored in a secured SQLite database hosted on
+        <a href="https://render.com" target="_blank" rel="noopener">Render</a> (render.com),
+        a cloud platform based in the United States. Render maintains industry-standard
+        physical and network security controls.
+      </p>
+      <p>We protect your data through:</p>
+      <ul>
+        <li>Passwords hashed using Werkzeug's PBKDF2-SHA256 — your real password is never stored</li>
+        <li>HTTPS encryption on all data in transit</li>
+        <li>CSRF protection on all forms</li>
+        <li>HTTP-only, SameSite session cookies</li>
+        <li>Admin access protected by separate credentials with session timeouts</li>
+        <li>Rate limiting on login and sensitive endpoints</li>
+      </ul>
+      <p>
+        No system is 100% secure. If you suspect your account has been compromised,
+        contact us immediately at <a href="mailto:hello@phonehubghana.com">hello@phonehubghana.com</a>.
+      </p>
+    </div>
+
+    <!-- 6. Data Sharing -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">6</span>Data Sharing
+      </div>
+      <p>
+        <strong>We do not sell, rent, or trade your personal data to any third party.</strong>
+      </p>
+      <p>We share data only in the following limited situations:</p>
+      <ul>
+        <li><strong>SMS notifications:</strong> Your phone number is passed to Africa's Talking (our SMS provider) solely to deliver booking and payment alerts to you</li>
+        <li><strong>Legal obligation:</strong> If required by Ghanaian law, court order, or a valid government request</li>
+        <li><strong>Business transfer:</strong> In the unlikely event of a merger or acquisition, your data would be transferred only with equivalent privacy protections in place</li>
+      </ul>
+    </div>
+
+    <!-- 7. Data Retention -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">7</span>Data Retention
+      </div>
+      <p>
+        We retain your account and booking data for as long as your membership is active
+        and for up to 2 years after your last interaction with us, for record-keeping and
+        dispute resolution purposes.
+      </p>
+      <p>
+        Installment payment records are kept for 5 years in accordance with standard
+        financial record-keeping practices.
+      </p>
+    </div>
+
+    <!-- 8. Your Rights -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">8</span>Your Rights
+      </div>
+      <p>You have the right to:</p>
+      <ul>
+        <li><strong>Access</strong> the personal data we hold about you</li>
+        <li><strong>Correct</strong> any inaccurate information in your profile</li>
+        <li><strong>Delete</strong> your account and associated data (subject to legal retention obligations)</li>
+        <li><strong>Object</strong> to processing of your data for non-essential purposes</li>
+        <li><strong>Portability</strong> — receive a copy of your data in a readable format</li>
+      </ul>
+      <div class="highlight-box">
+        To exercise any of these rights, email us at
+        <a href="mailto:hello@phonehubghana.com">hello@phonehubghana.com</a> with the
+        subject line "Data Request". We will respond within 14 days.
+      </div>
+    </div>
+
+    <!-- 9. Cookies & Sessions -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">9</span>Cookies &amp; Sessions
+      </div>
+      <p>
+        We use a single session cookie to keep you logged in during your visit. This cookie
+        is HTTP-only (inaccessible to JavaScript), SameSite=Strict, and expires when your
+        session times out or you log out.
+      </p>
+      <p>
+        We do not use advertising cookies, analytics cookies, or any third-party tracking.
+        There is no Google Analytics, Facebook Pixel, or similar tracker on this site.
+      </p>
+    </div>
+
+    <!-- 10. Changes to This Policy -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">10</span>Changes to This Policy
+      </div>
+      <p>
+        We may update this policy from time to time. When we do, we will update the
+        "Last updated" date at the top of this page. Continued use of our services after
+        changes are posted constitutes your acceptance of the updated policy.
+      </p>
+      <p>
+        For significant changes we will notify registered members by email.
+      </p>
+    </div>
+
+    <!-- 11. Contact -->
+    <div class="section">
+      <div class="section-title">
+        <span class="section-number">11</span>Contact Us
+      </div>
+      <p>If you have any questions or concerns about this Privacy Policy or how we handle your data:</p>
+      <ul>
+        <li><strong>Email:</strong> <a href="mailto:hello@phonehubghana.com">hello@phonehubghana.com</a></li>
+        <li><strong>Phone:</strong> <a href="tel:+233541057500">0541057500</a></li>
+        <li><strong>Address:</strong> <a href="https://maps.google.com/?q=Osu+Oxford+Street,+Accra,+Ghana" target="_blank" rel="noopener">Osu Oxford Street, Accra, Ghana</a></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <footer>
+    <div>© 2026 PhoneHub Ghana Ltd. All rights reserved.</div>
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="/booking">Book a Repair</a>
+      <a href="/register">Membership</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="mailto:hello@phonehubghana.com">hello@phonehubghana.com</a>
+    </div>
+  </footer>
+
+</body>
+</html>
