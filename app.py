@@ -277,11 +277,10 @@ def send_email(to, subject, html_body):
         return False
 
 
-# ─── SMS (Africa's Talking) ───────────────────────────────────────────────────
+# ─── SMS (Arkesel) ────────────────────────────────────────────────────────────
 
-AT_API_KEY   = os.environ.get('AT_API_KEY', '')
-AT_USERNAME  = os.environ.get('AT_USERNAME', 'sandbox')
-AT_SENDER_ID = os.environ.get('AT_SENDER_ID', 'PhoneHub')
+ARKESEL_API_KEY  = os.environ.get('ARKESEL_API_KEY', '')
+ARKESEL_SENDER   = os.environ.get('ARKESEL_SENDER_ID', 'PhoneHub')
 
 
 def _normalize_gh_phone(phone):
@@ -294,25 +293,30 @@ def _normalize_gh_phone(phone):
 
 
 def send_sms(phone, message):
-    if not AT_API_KEY:
-        logger.warning('send_sms skipped — AT_API_KEY not configured')
+    if not ARKESEL_API_KEY:
+        logger.warning('send_sms skipped — ARKESEL_API_KEY not configured')
         return False
     if not phone or not valid_gh_phone(phone):
         logger.warning('send_sms skipped — invalid phone number: %r', phone)
         return False
     normalized = _normalize_gh_phone(phone)
     try:
-        resp = http_req.post(
-            'https://api.africastalking.com/version1/messaging',
-            headers={'apiKey': AT_API_KEY, 'Accept': 'application/json'},
-            data={'username': AT_USERNAME, 'to': normalized,
-                  'message': message, 'from': AT_SENDER_ID},
+        resp = http_req.get(
+            'https://sms.arkesel.com/sms/api',
+            params={
+                'action':  'send-sms',
+                'api_key': ARKESEL_API_KEY,
+                'to':      normalized,
+                'from':    ARKESEL_SENDER,
+                'sms':     message,
+            },
             timeout=10,
         )
-        if resp.status_code == 201:
-            logger.info('SMS sent to %s', normalized)
+        data = resp.json()
+        if data.get('code') == 'ok':
+            logger.info('SMS sent to %s via Arkesel', normalized)
             return True
-        logger.error('SMS to %s failed — HTTP %s: %s', normalized, resp.status_code, resp.text[:200])
+        logger.error('SMS to %s failed — Arkesel: %s', normalized, data)
         return False
     except Exception as exc:
         logger.error('SMS to %s failed: %s', normalized, exc)
@@ -1239,8 +1243,8 @@ def send_payment_reminders():
             skipped += 1
 
     total = len(plans)
-    if not AT_API_KEY:
-        flash(f'SMS not configured — set AT_API_KEY env var. Would have sent {total} reminder(s).', 'error')
+    if not ARKESEL_API_KEY:
+        flash(f'SMS not configured — set ARKESEL_API_KEY env var. Would have sent {total} reminder(s).', 'error')
     else:
         flash(f'Sent {sent} SMS reminder(s). {skipped} failed (check AT_API_KEY / phone numbers).', 'success')
     return redirect(url_for('admin_installments'))
