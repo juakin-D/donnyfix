@@ -145,7 +145,7 @@
           <div>
             <div class="ph-label">Installment Plan #{{ plan['id'] }}</div>
             <div class="ph-device">{{ plan['device_name'] }}</div>
-            <div class="ph-plan-label">{{ plan['plan_months'] }}-month plan · Started {{ plan['created_at'].strftime('%Y-%m-%d') if plan['created_at'] else '—' }}</div>
+            <div class="ph-plan-label">{{ plan['plan_months'] }}-month plan · Started {{ plan['created_at'] or '—' }}</div>
           </div>
           <div>
             {% if plan['status'] == 'Active' %}
@@ -275,7 +275,7 @@
         <strong>Next payment: {{ fmt_ghs(plan['monthly_amount']) }} due {{ plan['next_due_date'] }}</strong>
         <span>Pay via {{ plan['payment_method'] }} and contact us with your reference to confirm.</span>
       </div>
-      <a href="tel:+233302000000" class="ac-btn">📞 Call to Confirm Payment</a>
+      <a href="tel:+233541057500" class="ac-btn">📞 Call to Confirm Payment</a>
     </div>
     {% elif plan['status'] == 'Completed' %}
     <div class="action-card" style="background:rgba(0,107,63,.08);border:1px solid rgba(0,107,63,.15)">

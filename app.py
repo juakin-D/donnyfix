@@ -836,13 +836,20 @@ def installment_detail(plan_id):
         conn.close()
         flash('Plan not found.', 'error')
         return redirect(url_for('dashboard'))
-    payments   = conn.execute(
+    payments_raw = conn.execute(
         'SELECT * FROM payments WHERE plan_id=%s ORDER BY paid_on DESC', (plan_id,)).fetchall()
     conn.close()
+
+    # Convert to plain dicts so Jinja2 never handles raw psycopg2 row objects
+    plan_dict = dict(plan)
+    if plan_dict.get('created_at') and hasattr(plan_dict['created_at'], 'strftime'):
+        plan_dict['created_at'] = plan_dict['created_at'].strftime('%Y-%m-%d')
+    payments = [dict(p) for p in payments_raw]
+
     paid_total = sum(p['amount'] for p in payments)
-    progress   = round((paid_total / plan['total_payable']) * 100) if plan['total_payable'] else 0
+    progress   = round((paid_total / plan_dict['total_payable']) * 100) if plan_dict['total_payable'] else 0
     return render_template('installment_detail.html',
-                           plan=plan, payments=payments,
+                           plan=plan_dict, payments=payments,
                            paid_total=paid_total, progress=progress,
                            bank_details=BANK_DETAILS)
 
