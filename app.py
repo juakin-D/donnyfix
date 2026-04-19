@@ -1062,7 +1062,12 @@ def record_payment(plan_id):
         paid_on = datetime.today().strftime('%Y-%m-%d')
 
     conn = get_db()
-    plan = conn.execute('SELECT * FROM installment_plans WHERE id=%s', (plan_id,)).fetchone()
+    plan = conn.execute(
+        '''SELECT ip.*, c.name AS customer_name, c.phone AS customer_phone
+           FROM installment_plans ip
+           JOIN customers c ON c.id = ip.customer_id
+           WHERE ip.id=%s''',
+        (plan_id,)).fetchone()
     if not plan:
         conn.close()
         flash('Plan not found.', 'error')
@@ -1089,33 +1094,42 @@ def record_payment(plan_id):
         flash('Duplicate payment detected — this payment was already recorded moments ago.', 'error')
         return redirect(url_for('admin_installments'))
 
-    cur = conn.execute(
-        'INSERT INTO payments (plan_id,amount,paid_on,payment_method,reference,notes) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id',
-        (plan_id, amount, paid_on, method, reference or None, notes or None))
-    payment_id = cur.fetchone()['id']
+    try:
+        cur = conn.execute(
+            'INSERT INTO payments (plan_id,amount,paid_on,payment_method,reference,notes) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id',
+            (plan_id, amount, paid_on, method, reference or None, notes or None))
+        payment_id = cur.fetchone()['id']
 
-    new_balance       = float(_d(max(_d(plan['balance_remaining']) - _d(amount), Decimal('0'))))
-    new_payments_made = plan['payments_made'] + 1
-    new_next_due      = add_one_month(plan['next_due_date'])
-    new_status        = 'Completed' if new_balance <= 0.01 else plan['status']
+        new_balance       = float(_d(max(_d(plan['balance_remaining']) - _d(amount), Decimal('0'))))
+        new_payments_made = plan['payments_made'] + 1
+        new_next_due      = add_one_month(plan['next_due_date'])
+        new_status        = 'Completed' if new_balance <= 0.01 else plan['status']
 
-    conn.execute(
-        'UPDATE installment_plans SET balance_remaining=%s,payments_made=%s,next_due_date=%s,status=%s WHERE id=%s',
-        (new_balance, new_payments_made, new_next_due, new_status, plan_id))
-    conn.commit()
+        conn.execute(
+            'UPDATE installment_plans SET balance_remaining=%s,payments_made=%s,next_due_date=%s,status=%s WHERE id=%s',
+            (new_balance, new_payments_made, new_next_due, new_status, plan_id))
+        conn.commit()
+    except Exception as exc:
+        conn.rollback()
+        conn.close()
+        logger.error('record_payment plan #%d failed: %s', plan_id, exc)
+        flash('Payment could not be recorded — please try again.', 'error')
+        return redirect(url_for('admin_installments'))
+
     logger.info('Admin %s recorded payment of %s for plan #%d (new balance: %s)',
                 session.get('admin_username'), fmt_ghs(amount), plan_id, fmt_ghs(new_balance))
     conn.close()
 
-    _name_parts = plan['customer_name'].split() if plan.get('customer_name') else []
-    first = _name_parts[0] if _name_parts else 'Customer'
+    customer_name  = plan.get('customer_name') or ''
+    customer_phone = plan.get('customer_phone') or ''
+    first = customer_name.split()[0] if customer_name else 'Customer'
     if new_status == 'Completed':
-        send_sms(plan.get('customer_phone', ''),
+        send_sms(customer_phone,
                  f"Hi {first}, your PhoneHub Ghana installment for {plan['device_name']} "
                  f"is now FULLY PAID! Thank you. Call 0541057500 for your receipt.")
         flash(f'Plan #{plan_id} fully paid — marked Completed. Receipt: /receipt/payment/{payment_id}', 'success')
     else:
-        send_sms(plan.get('customer_phone', ''),
+        send_sms(customer_phone,
                  f"Hi {first}, payment of {fmt_ghs(amount)} received for your {plan['device_name']} plan. "
                  f"Balance: {fmt_ghs(new_balance)}. Next due: {new_next_due}. -PhoneHub Ghana")
         flash(f'Payment of {fmt_ghs(amount)} recorded for plan #{plan_id}.', 'success')
