@@ -145,7 +145,7 @@
           <div>
             <div class="ph-label">Installment Plan #{{ plan['id'] }}</div>
             <div class="ph-device">{{ plan['device_name'] }}</div>
-            <div class="ph-plan-label">{{ plan['plan_months'] }}-month plan · Started {{ plan['created_at'][:10] }}</div>
+            <div class="ph-plan-label">{{ plan['plan_months'] }}-month plan · Started {{ plan['created_at'].strftime('%Y-%m-%d') if plan['created_at'] else '—' }}</div>
           </div>
           <div>
             {% if plan['status'] == 'Active' %}
