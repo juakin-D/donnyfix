@@ -323,7 +323,7 @@ def _pdf_header(styles):
         Paragraph('PhoneHub Ghana',
                   ParagraphStyle('ph', parent=styles['Normal'], fontSize=20,
                                  fontName='Helvetica-Bold', textColor=_C_GREEN)),
-        Paragraph('Osu Oxford Street, Accra · +233 (0) 302 000 000 · hello@phonehubghana.com',
+        Paragraph('Osu Oxford Street, Accra · 0541057500 · hello@phonehubghana.com',
                   ParagraphStyle('phs', parent=styles['Normal'], fontSize=8, textColor=_C_GRAY)),
         Spacer(1, 3*mm),
         HRFlowable(width='100%', thickness=2, color=_C_GOLD, spaceAfter=8),
@@ -598,7 +598,7 @@ def booking():
           <li><b>Service:</b> {_he(service)}</li>
           <li><b>Date:</b> {_he(date)}</li>
         </ul>
-        <p>We'll see you at our Osu Oxford Street location. Call us on +233 (0) 302 000 000 with any questions.</p>
+        <p>We'll see you at our Osu Oxford Street location. Call us on 0541057500 with any questions.</p>
         <p>— PhoneHub Ghana Team</p>
         """)
         return render_template('confirmation.html',
@@ -905,7 +905,7 @@ def update_booking_status(booking_id):
         send_email(booking['email'], 'Your repair is ready — PhoneHub Ghana', f"""
         <p>Hi {_he(booking['name'])},</p>
         <p>Great news — your <b>{_he(booking['device'])}</b> ({_he(booking['service'])}) is complete and ready for collection.</p>
-        <p>Visit us at Osu Oxford Street or call +233 (0) 302 000 000 to arrange pickup.</p>
+        <p>Visit us at Osu Oxford Street or call 0541057500 to arrange pickup.</p>
         <p>— PhoneHub Ghana Team</p>
         """)
     flash(f'Booking #{booking_id} marked as {new_status}.', 'success')
