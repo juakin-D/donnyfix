@@ -69,14 +69,11 @@ BANK_DETAILS = {
     'swift':        os.environ.get('BANK_SWIFT',   ''),
 }
 
-# Service fee % applied to installment total
-INSTALLMENT_FEE_PERCENT = 4.0
-
-# Plan config: months -> deposit %, label, min device price
+# Plan config: months -> deposit %, fee %, label, min device price
 PLAN_CONFIG = {
-    3:  {'deposit_pct': 40, 'label': '3 Months',  'min_price': 500},
-    6:  {'deposit_pct': 30, 'label': '6 Months',  'min_price': 1500},
-    12: {'deposit_pct': 20, 'label': '12 Months', 'min_price': 3000},
+    3:  {'deposit_pct': 40, 'fee_pct': 5,  'label': '3 Months',  'min_price': 500},
+    6:  {'deposit_pct': 30, 'fee_pct': 10, 'label': '6 Months',  'min_price': 1500},
+    12: {'deposit_pct': 20, 'fee_pct': 10, 'label': '12 Months', 'min_price': 3000},
 }
 
 
@@ -217,7 +214,7 @@ def _d(value):
 def calculate_plan(device_price, months):
     cfg         = PLAN_CONFIG[months]
     price       = _d(device_price)
-    service_fee = _d(price * Decimal(str(INSTALLMENT_FEE_PERCENT)) / 100)
+    service_fee = _d(price * Decimal(str(cfg['fee_pct'])) / 100)
     total       = _d(price + service_fee)
     deposit     = _d(total * Decimal(cfg['deposit_pct']) / 100)
     balance     = _d(total - deposit)
@@ -225,7 +222,7 @@ def calculate_plan(device_price, months):
     return {
         'service_fee': float(service_fee), 'total': float(total),
         'deposit': float(deposit), 'balance': float(balance), 'monthly': float(monthly),
-        'deposit_pct': cfg['deposit_pct'], 'months': months,
+        'deposit_pct': cfg['deposit_pct'], 'fee_pct': cfg['fee_pct'], 'months': months,
     }
 
 

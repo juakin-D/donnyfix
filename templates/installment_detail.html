@@ -193,7 +193,7 @@
         <div class="dc-sub">Before service fee</div>
       </div>
       <div class="detail-card">
-        <div class="dc-label">Service Fee (4%)</div>
+        <div class="dc-label">Service Fee ({{ PLAN_CONFIG[plan['plan_months']]['fee_pct'] }}%)</div>
         <div class="dc-val mono">{{ fmt_ghs(plan['service_fee']) }}</div>
         <div class="dc-sub">One-time financing fee</div>
       </div>

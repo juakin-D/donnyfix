@@ -357,7 +357,7 @@
             <span class="calc-val" id="c-price">—</span>
           </div>
           <div class="calc-row">
-            <span class="calc-label">Service Fee (4%)</span>
+            <span class="calc-label" id="fee-label">Service Fee</span>
             <span class="calc-val" id="c-fee">—</span>
           </div>
           <div class="calc-row total">
@@ -395,7 +395,7 @@
             <span style="font-weight:500;color:var(--text)">{{ cfg.label }}</span>
             <span>{{ cfg.deposit_pct }}%</span>
             <span>{{ months }}x</span>
-            <span>4%</span>
+            <span>{{ cfg.fee_pct }}%</span>
           </div>
           {% endfor %}
         </div>
@@ -405,7 +405,7 @@
       <div class="sidebar-card">
         <div class="sc-title">Our Installment Promise</div>
         <ul class="glist">
-          <li><span class="gi">✓</span>No hidden charges — fixed 4% service fee only</li>
+          <li><span class="gi">✓</span>No hidden charges — 5% fee for 3 months, 10% for 6 &amp; 12 months</li>
           <li><span class="gi">✓</span>Pay by MoMo or bank transfer every month</li>
           <li><span class="gi">✓</span>Take your device home after deposit is paid</li>
           <li><span class="gi">✓</span>No credit checks — open to all PhoneHub members</li>
@@ -417,8 +417,8 @@
   </div>
 
   <script>
-    const FEE = 0.04;
-    const PLANS = { 3: 40, 6: 30, 12: 20 };
+    const FEES  = { 3: 0.05, 6: 0.10, 12: 0.10 };
+    const PLANS = { 3: 40,   6: 30,   12: 20   };
 
     function fmtGHS(n) {
       return 'GH\u20B5' + Number(n).toLocaleString('en-GH', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -433,7 +433,9 @@
 
       if (!price || !months) { placeholder.style.display='block'; result.style.display='none'; return; }
 
-      const fee     = Math.round(price * FEE * 100) / 100;
+      const feePct  = FEES[months] || 0.05;
+      document.getElementById('fee-label').textContent = `Service Fee (${feePct * 100}%)`;
+      const fee     = Math.round(price * feePct * 100) / 100;
       const total   = Math.round((price + fee) * 100) / 100;
       const depPct  = PLANS[months];
       const deposit = Math.round(total * depPct / 100 * 100) / 100;
