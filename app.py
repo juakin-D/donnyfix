@@ -538,6 +538,11 @@ def customer_required(f):
 # PUBLIC ROUTES
 # ══════════════════════════════════════════════════════════════════════════════
 
+@app.route('/health')
+def health():
+    return {'status': 'ok', 'service': 'PhoneHub Ghana'}
+
+
 @app.route('/')
 def home():
     return render_template('index.html')
