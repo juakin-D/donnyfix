@@ -956,7 +956,8 @@ def admin_members():
         'id': c['id'], 'name': c['name'], 'phone': c['phone'], 'email': c['email'],
         'device_brand': c['device_brand'], 'device_model': c['device_model'],
         'tier': c['membership_tier'], 'expiry': c['membership_expiry'],
-        'status': membership_status(c['membership_expiry']), 'created_at': c['created_at'],
+        'status': membership_status(c['membership_expiry']),
+        'created_at': c['created_at'].strftime('%Y-%m-%d') if c['created_at'] else None,
     } for c in customers]
     total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
     return render_template('admin_members.html', members=members, search=search, tier=tier,
