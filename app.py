@@ -174,6 +174,27 @@ def init_db():
         expires_at TEXT NOT NULL,
         used INTEGER DEFAULT 0)''')
 
+    conn.execute("""CREATE TABLE IF NOT EXISTS inventory (
+        id            SERIAL PRIMARY KEY,
+        brand         TEXT NOT NULL,
+        model         TEXT NOT NULL,
+        imei          TEXT,
+        condition     TEXT DEFAULT 'New',
+        cost_price    REAL NOT NULL,
+        selling_price REAL NOT NULL,
+        status        TEXT DEFAULT 'In Stock',
+        color         TEXT,
+        storage       TEXT,
+        notes         TEXT,
+        added_by      TEXT DEFAULT 'admin',
+        sold_to       INTEGER,
+        plan_id       INTEGER,
+        created_at    TIMESTAMP DEFAULT NOW(),
+        updated_at    TIMESTAMP DEFAULT NOW(),
+        FOREIGN KEY (sold_to) REFERENCES customers(id),
+        FOREIGN KEY (plan_id) REFERENCES installment_plans(id)
+    )""")
+
     conn.commit()
     conn.close()
 
@@ -1511,6 +1532,287 @@ def extend_membership(customer_id):
                 session.get('admin_username'), customer_id, months, new_expiry)
     flash(f'Membership extended by {months} month(s). New expiry: {new_expiry}.', 'success')
     return redirect(url_for('admin_members'))
+
+
+# ─── INVENTORY ROUTES ─────────────────────────────────────────────────────────
+
+INVENTORY_CONDITIONS = ('New', 'Certified Pre-Owned', 'Good', 'Fair')
+INVENTORY_STATUSES   = ('In Stock', 'Reserved', 'Sold', 'Under Repair', 'Returned')
+
+
+@app.route('/admin/inventory')
+@admin_required
+def admin_inventory():
+    search           = request.args.get('search', '').strip()
+    status_filter    = request.args.get('status', '').strip()
+    condition_filter = request.args.get('condition', '').strip()
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except ValueError:
+        page = 1
+
+    conn = get_db()
+
+    # Stats
+    stats = conn.execute("""
+        SELECT
+          COUNT(*) FILTER (WHERE status='In Stock')                         AS total_stock,
+          COUNT(*) FILTER (WHERE status='Reserved')                         AS total_reserved,
+          COUNT(*) FILTER (WHERE status='Sold')                             AS total_sold,
+          COALESCE(SUM(cost_price)    FILTER (WHERE status IN ('In Stock','Reserved')), 0) AS stock_value,
+          COALESCE(SUM(selling_price) FILTER (WHERE status IN ('In Stock','Reserved')), 0) AS potential_revenue,
+          COALESCE(SUM(selling_price - cost_price) FILTER (
+              WHERE status='Sold'
+              AND DATE_TRUNC('month', updated_at) = DATE_TRUNC('month', NOW())
+          ), 0) AS monthly_profit
+        FROM inventory
+    """).fetchone()
+
+    # Main query
+    q      = 'SELECT i.*, c.name AS customer_name FROM inventory i LEFT JOIN customers c ON c.id=i.sold_to WHERE 1=1'
+    params = []
+    if search:
+        q += ' AND (i.brand ILIKE %s OR i.model ILIKE %s OR i.imei ILIKE %s)'
+        params += [f'%{search}%'] * 3
+    if status_filter:
+        q += ' AND i.status=%s'; params.append(status_filter)
+    if condition_filter:
+        q += ' AND i.condition=%s'; params.append(condition_filter)
+
+    total      = conn.execute(q.replace('SELECT i.*, c.name AS customer_name', 'SELECT COUNT(*) AS cnt'), params).fetchone()['cnt']
+    q         += ' ORDER BY i.created_at DESC LIMIT %s OFFSET %s'
+    items      = conn.execute(q, params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
+    # Active plans for reserve modal
+    active_plans = conn.execute(
+        "SELECT id, device_name FROM installment_plans WHERE status='Active' ORDER BY created_at DESC"
+    ).fetchall()
+    conn.close()
+
+    total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
+    return render_template('admin_inventory.html',
+        inventory=items, total_stock=stats['total_stock'],
+        total_reserved=stats['total_reserved'], total_sold=stats['total_sold'],
+        stock_value=stats['stock_value'], potential_revenue=stats['potential_revenue'],
+        monthly_profit=stats['monthly_profit'],
+        search=search, status_filter=status_filter, condition_filter=condition_filter,
+        page=page, total_pages=total_pages, total=total,
+        active_plans=active_plans,
+        conditions=INVENTORY_CONDITIONS, statuses=INVENTORY_STATUSES)
+
+
+@app.route('/admin/inventory/add', methods=['POST'])
+@admin_required
+def admin_inventory_add():
+    brand    = request.form.get('brand', '').strip()[:100]
+    model    = request.form.get('model', '').strip()[:100]
+    imei     = request.form.get('imei', '').strip()[:20] or None
+    cond     = request.form.get('condition', '').strip()
+    color    = request.form.get('color', '').strip() or None
+    storage  = request.form.get('storage', '').strip() or None
+    notes    = request.form.get('notes', '').strip() or None
+
+    if not brand or not model:
+        flash('Brand and model are required.', 'error')
+        return redirect(url_for('admin_inventory'))
+    if cond not in INVENTORY_CONDITIONS:
+        flash('Invalid condition value.', 'error')
+        return redirect(url_for('admin_inventory'))
+    try:
+        cost_price    = float(request.form.get('cost_price', 0))
+        selling_price = float(request.form.get('selling_price', 0))
+    except ValueError:
+        flash('Prices must be valid numbers.', 'error')
+        return redirect(url_for('admin_inventory'))
+    if cost_price <= 0 or selling_price <= 0:
+        flash('Prices must be greater than zero.', 'error')
+        return redirect(url_for('admin_inventory'))
+    if selling_price < cost_price:
+        flash('Selling price must be at least equal to cost price.', 'error')
+        return redirect(url_for('admin_inventory'))
+
+    conn = get_db()
+    if imei:
+        if conn.execute('SELECT id FROM inventory WHERE imei=%s', (imei,)).fetchone():
+            conn.close()
+            flash(f'IMEI {imei} already exists in inventory.', 'error')
+            return redirect(url_for('admin_inventory'))
+    conn.execute(
+        'INSERT INTO inventory (brand,model,imei,condition,cost_price,selling_price,color,storage,notes,added_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+        (brand, model, imei, cond, cost_price, selling_price, color, storage, notes, session.get('admin_username', 'admin')))
+    conn.commit(); conn.close()
+    logger.info('Admin %s added inventory: %s %s', session.get('admin_username'), brand, model)
+    flash('Device added to inventory.', 'success')
+    return redirect(url_for('admin_inventory'))
+
+
+@app.route('/admin/inventory/<int:item_id>/edit', methods=['POST'])
+@admin_required
+def admin_inventory_edit(item_id):
+    brand    = request.form.get('brand', '').strip()[:100]
+    model    = request.form.get('model', '').strip()[:100]
+    imei     = request.form.get('imei', '').strip()[:20] or None
+    cond     = request.form.get('condition', '').strip()
+    status   = request.form.get('status', '').strip()
+    color    = request.form.get('color', '').strip() or None
+    storage  = request.form.get('storage', '').strip() or None
+    notes    = request.form.get('notes', '').strip() or None
+
+    if not brand or not model:
+        flash('Brand and model are required.', 'error')
+        return redirect(url_for('admin_inventory'))
+    if cond not in INVENTORY_CONDITIONS:
+        flash('Invalid condition value.', 'error')
+        return redirect(url_for('admin_inventory'))
+    if status not in INVENTORY_STATUSES:
+        flash('Invalid status value.', 'error')
+        return redirect(url_for('admin_inventory'))
+    try:
+        cost_price    = float(request.form.get('cost_price', 0))
+        selling_price = float(request.form.get('selling_price', 0))
+    except ValueError:
+        flash('Prices must be valid numbers.', 'error')
+        return redirect(url_for('admin_inventory'))
+    if cost_price <= 0 or selling_price <= 0:
+        flash('Prices must be greater than zero.', 'error')
+        return redirect(url_for('admin_inventory'))
+    if selling_price < cost_price:
+        flash('Selling price must be at least equal to cost price.', 'error')
+        return redirect(url_for('admin_inventory'))
+
+    conn = get_db()
+    item = conn.execute('SELECT id FROM inventory WHERE id=%s', (item_id,)).fetchone()
+    if not item:
+        conn.close()
+        flash('Device not found.', 'error')
+        return redirect(url_for('admin_inventory'))
+    if imei:
+        dup = conn.execute('SELECT id FROM inventory WHERE imei=%s AND id!=%s', (imei, item_id)).fetchone()
+        if dup:
+            conn.close()
+            flash(f'IMEI {imei} already exists on another device.', 'error')
+            return redirect(url_for('admin_inventory'))
+    conn.execute(
+        'UPDATE inventory SET brand=%s,model=%s,imei=%s,condition=%s,cost_price=%s,selling_price=%s,color=%s,storage=%s,notes=%s,status=%s,updated_at=NOW() WHERE id=%s',
+        (brand, model, imei, cond, cost_price, selling_price, color, storage, notes, status, item_id))
+    conn.commit(); conn.close()
+    flash('Device updated.', 'success')
+    return redirect(url_for('admin_inventory'))
+
+
+@app.route('/admin/inventory/<int:item_id>/sell', methods=['POST'])
+@admin_required
+def admin_inventory_sell(item_id):
+    customer_id = request.form.get('customer_id', '').strip()
+    if not customer_id:
+        flash('Customer is required.', 'error')
+        return redirect(url_for('admin_inventory'))
+    try:
+        customer_id = int(customer_id)
+    except ValueError:
+        flash('Invalid customer.', 'error')
+        return redirect(url_for('admin_inventory'))
+
+    conn = get_db()
+    item = conn.execute('SELECT id, status FROM inventory WHERE id=%s', (item_id,)).fetchone()
+    if not item:
+        conn.close()
+        flash('Device not found.', 'error')
+        return redirect(url_for('admin_inventory'))
+    if item['status'] not in ('In Stock', 'Reserved'):
+        conn.close()
+        flash('Only In Stock or Reserved devices can be marked as sold.', 'error')
+        return redirect(url_for('admin_inventory'))
+    customer = conn.execute('SELECT id FROM customers WHERE id=%s', (customer_id,)).fetchone()
+    if not customer:
+        conn.close()
+        flash('Customer not found.', 'error')
+        return redirect(url_for('admin_inventory'))
+    conn.execute('UPDATE inventory SET status=%s,sold_to=%s,updated_at=NOW() WHERE id=%s',
+                 ('Sold', customer_id, item_id))
+    conn.commit(); conn.close()
+    flash('Device marked as sold.', 'success')
+    return redirect(url_for('admin_inventory'))
+
+
+@app.route('/admin/inventory/<int:item_id>/reserve', methods=['POST'])
+@admin_required
+def admin_inventory_reserve(item_id):
+    plan_id = request.form.get('plan_id', '').strip()
+    if not plan_id:
+        flash('Installment plan is required.', 'error')
+        return redirect(url_for('admin_inventory'))
+    try:
+        plan_id = int(plan_id)
+    except ValueError:
+        flash('Invalid plan.', 'error')
+        return redirect(url_for('admin_inventory'))
+
+    conn = get_db()
+    item = conn.execute('SELECT id FROM inventory WHERE id=%s', (item_id,)).fetchone()
+    if not item:
+        conn.close()
+        flash('Device not found.', 'error')
+        return redirect(url_for('admin_inventory'))
+    plan = conn.execute('SELECT id FROM installment_plans WHERE id=%s', (plan_id,)).fetchone()
+    if not plan:
+        conn.close()
+        flash('Plan not found.', 'error')
+        return redirect(url_for('admin_inventory'))
+    conn.execute('UPDATE inventory SET status=%s,plan_id=%s,updated_at=NOW() WHERE id=%s',
+                 ('Reserved', plan_id, item_id))
+    conn.commit(); conn.close()
+    flash(f'Device reserved for plan #{plan_id}.', 'success')
+    return redirect(url_for('admin_inventory'))
+
+
+@app.route('/admin/inventory/<int:item_id>/delete', methods=['POST'])
+@admin_required
+def admin_inventory_delete(item_id):
+    conn = get_db()
+    item = conn.execute('SELECT id, status FROM inventory WHERE id=%s', (item_id,)).fetchone()
+    if not item:
+        conn.close()
+        flash('Device not found.', 'error')
+        return redirect(url_for('admin_inventory'))
+    if item['status'] not in ('In Stock', 'Returned'):
+        conn.close()
+        flash('Cannot delete a sold or reserved device.', 'error')
+        return redirect(url_for('admin_inventory'))
+    conn.execute('DELETE FROM inventory WHERE id=%s', (item_id,))
+    conn.commit(); conn.close()
+    flash('Device removed from inventory.', 'success')
+    return redirect(url_for('admin_inventory'))
+
+
+@app.route('/admin/inventory/export')
+@admin_required
+def admin_inventory_export():
+    import csv, io
+    conn  = get_db()
+    items = conn.execute(
+        'SELECT id,brand,model,imei,condition,color,storage,cost_price,selling_price,status,notes,created_at,updated_at FROM inventory ORDER BY created_at DESC'
+    ).fetchall()
+    conn.close()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['ID','Brand','Model','IMEI','Condition','Color','Storage','Cost Price','Selling Price','Profit','Status','Notes','Added','Updated'])
+    for it in items:
+        writer.writerow([
+            it['id'], it['brand'], it['model'], it['imei'] or '',
+            it['condition'], it['color'] or '', it['storage'] or '',
+            it['cost_price'], it['selling_price'],
+            round(it['selling_price'] - it['cost_price'], 2),
+            it['status'], it['notes'] or '',
+            str(it['created_at'])[:10] if it['created_at'] else '',
+            str(it['updated_at'])[:10] if it['updated_at'] else '',
+        ])
+
+    today    = datetime.today().strftime('%Y-%m-%d')
+    response = make_response(buf.getvalue())
+    response.headers['Content-Type']        = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=phonehub-inventory-{today}.csv'
+    return response
 
 
 # ─── ERROR HANDLERS ───────────────────────────────────────────────────────────
