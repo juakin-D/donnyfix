@@ -102,6 +102,16 @@
     .action-card .ac-btn{display:inline-block;padding:11px 24px;background:var(--gold);color:var(--green-deep);font-family:'Syne',sans-serif;font-weight:700;font-size:14px;border-radius:9px;text-decoration:none;transition:all .2s;white-space:nowrap}
     .action-card .ac-btn:hover{transform:translateY(-1px)}
 
+    /* T&C summary */
+    .tc-summary{background:white;border:1px solid var(--warm-gray);border-radius:14px;padding:20px;margin-bottom:20px}
+    .tc-summary-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--warm-gray);display:flex;align-items:center;gap:8px}
+    .tc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+    .tc-item{background:var(--off-white);border-radius:8px;padding:10px 12px}
+    .tc-item-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--mid-gray);margin-bottom:3px}
+    .tc-item-val{font-size:13px;font-weight:500;color:var(--text)}
+    .tc-note{font-size:12px;color:var(--mid-gray);line-height:1.6;font-weight:300}
+    .tc-note strong{color:var(--text-soft);font-weight:500}
+
     .flash{padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:14px}
     .flash.success{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
     .flash.error{background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5}
@@ -266,6 +276,36 @@
       {% else %}
       <div class="no-payments">No payments recorded yet. Your first payment is due on {{ plan['next_due_date'] }}.</div>
       {% endif %}
+    </div>
+
+    <!-- TERMS SUMMARY -->
+    <div class="tc-summary">
+      <div class="tc-summary-title">📋 Your Plan Terms</div>
+      <div class="tc-grid">
+        <div class="tc-item">
+          <div class="tc-item-label">Plan Duration</div>
+          <div class="tc-item-val">{{ plan['plan_months'] }} months</div>
+        </div>
+        <div class="tc-item">
+          <div class="tc-item-label">Service Fee</div>
+          <div class="tc-item-val">{{ PLAN_CONFIG[plan['plan_months']]['fee_pct'] }}% ({{ fmt_ghs(plan['service_fee']) }})</div>
+        </div>
+        <div class="tc-item">
+          <div class="tc-item-label">Deposit Paid</div>
+          <div class="tc-item-val">{{ PLAN_CONFIG[plan['plan_months']]['deposit_pct'] }}% ({{ fmt_ghs(plan['deposit_amount']) }})</div>
+        </div>
+        <div class="tc-item">
+          <div class="tc-item-label">Monthly Due Date</div>
+          <div class="tc-item-val">{{ plan['next_due_date'][8:10] }}th of each month</div>
+        </div>
+      </div>
+      <p class="tc-note">
+        <strong>Key conditions:</strong> Monthly payments are due on time each month.
+        The device remains PhoneHub Ghana's property until the plan is <strong>fully paid</strong>.
+        Two or more missed payments may result in plan suspension.
+        Early full settlement is accepted with <strong>no penalty</strong>.
+        For payment confirmation or queries call <strong>0541057500</strong>.
+      </p>
     </div>
 
     <!-- ACTION -->

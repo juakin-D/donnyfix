@@ -113,6 +113,32 @@
     .payment-section{display:none}
     .payment-section.visible{display:block;animation:fadeUp .25s ease both}
 
+    /* T&C checkbox */
+    .tc-block{display:flex;align-items:flex-start;gap:12px;padding:16px;background:rgba(0,107,63,.04);border:1.5px solid rgba(0,107,63,.12);border-radius:12px;margin-bottom:16px}
+    .tc-check-wrap{flex-shrink:0;margin-top:1px}
+    .tc-check-wrap input[type=checkbox]{width:18px;height:18px;accent-color:var(--green);cursor:pointer}
+    .tc-text{font-size:13px;color:var(--text-soft);line-height:1.5}
+    .tc-text strong{color:var(--text);font-weight:500}
+    .tc-link{color:var(--green);font-weight:500;cursor:pointer;text-decoration:underline;text-underline-offset:2px;background:none;border:none;padding:0;font-family:inherit;font-size:inherit}
+
+    /* T&C modal */
+    .tc-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+    .tc-overlay.open{display:flex}
+    .tc-modal{background:white;border-radius:20px;max-width:620px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 32px 64px rgba(0,0,0,.2)}
+    .tc-modal-head{display:flex;align-items:center;justify-content:space-between;padding:22px 28px;border-bottom:1px solid var(--warm-gray);flex-shrink:0}
+    .tc-modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text)}
+    .tc-modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--mid-gray);line-height:1;padding:4px 8px;border-radius:8px;transition:background .15s}
+    .tc-modal-close:hover{background:var(--warm-gray)}
+    .tc-modal-body{overflow-y:auto;padding:24px 28px;flex:1;font-size:14px;color:var(--text-soft);line-height:1.7}
+    .tc-modal-body h3{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);margin:20px 0 6px}
+    .tc-modal-body h3:first-child{margin-top:0}
+    .tc-modal-body p{margin-bottom:10px}
+    .tc-modal-body ul{padding-left:18px;margin-bottom:10px}
+    .tc-modal-body ul li{margin-bottom:4px}
+    .tc-modal-foot{padding:16px 28px;border-top:1px solid var(--warm-gray);flex-shrink:0;display:flex;justify-content:flex-end}
+    .tc-modal-foot button{padding:10px 28px;background:var(--green);color:white;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+    .tc-modal-foot button:hover{background:var(--green-dark)}
+
     /* submit */
     .submit-btn{
       width:100%;padding:15px;background:var(--green);color:white;
@@ -120,6 +146,7 @@
       font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;
       display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px}
     .submit-btn:hover{background:var(--green-dark);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,107,63,.25)}
+    .submit-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
     .submit-note{text-align:center;font-size:13px;color:var(--mid-gray);margin-top:10px;font-weight:300}
 
     /* flash */
@@ -336,7 +363,19 @@
             </div>
           </div>
 
-          <button type="submit" class="submit-btn">Submit Plan Application →</button>
+          <!-- T&C Agreement -->
+          <div class="tc-block">
+            <div class="tc-check-wrap">
+              <input type="checkbox" id="tc-agree" name="tc_agree" required/>
+            </div>
+            <div class="tc-text">
+              <strong>I agree to the PhoneHub Ghana Installment Plan Terms &amp; Conditions.</strong><br>
+              I understand the deposit is non-refundable, monthly payments are due on time, and full ownership of the device transfers only after the plan is fully paid.
+              <br><button type="button" class="tc-link" onclick="openTC()">Read full Terms &amp; Conditions →</button>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submit-btn" disabled>Submit Plan Application →</button>
           <p class="submit-note">Our team will confirm your plan within 1 business day and collect the deposit.</p>
         </form>
       </div>
@@ -405,20 +444,76 @@
       <div class="sidebar-card">
         <div class="sc-title">Our Installment Promise</div>
         <ul class="glist">
-          <li><span class="gi">✓</span>No hidden charges — 5% for 3mo, 10% for 6mo, 15% for 12mo</li>
+          <li><span class="gi">✓</span>Low fees — 2.5% for 2mo, 5% for 3mo, 10% for 6mo. No hidden charges.</li>
           <li><span class="gi">✓</span>Pay by MoMo or bank transfer every month</li>
-          <li><span class="gi">✓</span>Take your device home after deposit is paid</li>
+          <li><span class="gi">✓</span>Take your device home after deposit is confirmed</li>
           <li><span class="gi">✓</span>No credit checks — open to all PhoneHub members</li>
-          <li><span class="gi">✓</span>Early full payment accepted, no penalty</li>
+          <li><span class="gi">✓</span>Early full settlement accepted, no penalty</li>
+          <li><span class="gi">✓</span>Full ownership transfers on final payment</li>
         </ul>
       </div>
 
     </div>
   </div>
 
+  <!-- TERMS & CONDITIONS MODAL -->
+  <div class="tc-overlay" id="tc-overlay" onclick="if(event.target===this)closeTC()">
+    <div class="tc-modal">
+      <div class="tc-modal-head">
+        <div class="tc-modal-title">Installment Plan — Terms &amp; Conditions</div>
+        <button class="tc-modal-close" type="button" onclick="closeTC()">×</button>
+      </div>
+      <div class="tc-modal-body">
+        <h3>1. Eligibility</h3>
+        <p>Applicants must be registered PhoneHub Ghana members, at least 18 years old, and provide a valid Ghana ID upon request. PhoneHub Ghana reserves the right to decline any application.</p>
+
+        <h3>2. Plan Options &amp; Fees</h3>
+        <ul>
+          <li><strong>2-Month Plan:</strong> 40% deposit, 2.5% one-time service fee on device price.</li>
+          <li><strong>3-Month Plan:</strong> 40% deposit, 5% one-time service fee on device price.</li>
+          <li><strong>6-Month Plan:</strong> 60% deposit, 10% one-time service fee on device price.</li>
+        </ul>
+        <p>The service fee is added to the device price to calculate the total payable. It is non-refundable once the plan is activated.</p>
+
+        <h3>3. Deposit</h3>
+        <p>The deposit must be paid in full before the device is released. Deposits are <strong>non-refundable</strong> once the device has been collected. If the deposit is not received within 3 business days of plan approval, the application may be cancelled.</p>
+
+        <h3>4. Monthly Payments</h3>
+        <p>Payments are due on the same calendar date each month following the deposit. The monthly amount is fixed for the duration of your plan. Payments must be confirmed by contacting PhoneHub Ghana at <strong>0541057500</strong> with your transaction reference.</p>
+
+        <h3>5. Late &amp; Missed Payments</h3>
+        <p>A payment is considered late if not received within 5 days of its due date. Two or more consecutive missed payments may result in plan suspension or default. PhoneHub Ghana will attempt to contact you before any action is taken.</p>
+
+        <h3>6. Default &amp; Repossession</h3>
+        <p>If a plan is declared in default due to non-payment, PhoneHub Ghana reserves the right to reclaim the device. Any amounts already paid (excluding the deposit) may be refunded at PhoneHub Ghana's discretion, minus applicable charges.</p>
+
+        <h3>7. Early Full Settlement</h3>
+        <p>You may pay the full outstanding balance at any time with <strong>no early settlement penalty</strong>. Contact us to obtain your final settlement figure before making payment.</p>
+
+        <h3>8. Device Ownership</h3>
+        <p>The device remains the property of PhoneHub Ghana until the installment plan is <strong>completely and fully paid</strong>. Ownership transfers automatically upon receipt of the final payment.</p>
+
+        <h3>9. Payment Methods</h3>
+        <p>Accepted payment methods: MTN MoMo, Vodafone Cash, AirtelTigo Money, and bank transfer to PhoneHub Ghana's designated account. Cash payments must be made in-store.</p>
+
+        <h3>10. Plan Amendments</h3>
+        <p>Plan terms (amount, duration, method) cannot be changed after activation. If you need to make changes, contact us at 0541057500 — amendments are at PhoneHub Ghana's sole discretion.</p>
+
+        <h3>11. Contact &amp; Dispute Resolution</h3>
+        <p>For any issues, contact PhoneHub Ghana at <strong>0541057500</strong> or visit us at Osu Oxford Street, Accra. Disputes will be resolved in good faith; unresolved disputes are subject to Ghanaian law.</p>
+
+        <h3>12. Acceptance</h3>
+        <p>By submitting this application and ticking the agreement checkbox, you confirm that you have read, understood, and accepted these Terms &amp; Conditions in full.</p>
+      </div>
+      <div class="tc-modal-foot">
+        <button type="button" onclick="acceptTC()">I Understand — Close</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const FEES  = { 3: 0.05, 6: 0.10, 12: 0.15 };
-    const PLANS = { 3: 40,   6: 30,   12: 20   };
+    const FEES  = { 2: 0.025, 3: 0.05, 6: 0.10 };
+    const PLANS = { 2: 40,    3: 40,   6: 60   };
 
     function fmtGHS(n) {
       return 'GH\u20B5' + Number(n).toLocaleString('en-GH', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -464,6 +559,27 @@
       document.getElementById('bank-section').classList.toggle('visible', !momo && document.getElementById('pm-bank').checked);
     }
     document.querySelectorAll('input[name=payment_method]').forEach(r => r.addEventListener('change', togglePayment));
+
+    // T&C checkbox enables/disables submit button
+    const tcCheck  = document.getElementById('tc-agree');
+    const submitBtn = document.getElementById('submit-btn');
+    tcCheck.addEventListener('change', () => {
+      submitBtn.disabled = !tcCheck.checked;
+    });
+
+    // T&C modal
+    function openTC() {
+      document.getElementById('tc-overlay').classList.add('open');
+    }
+    function closeTC() {
+      document.getElementById('tc-overlay').classList.remove('open');
+    }
+    function acceptTC() {
+      tcCheck.checked = true;
+      submitBtn.disabled = false;
+      closeTC();
+    }
+    document.addEventListener('keydown', e => { if(e.key === 'Escape') closeTC(); });
   </script>
 </body>
 </html>
