@@ -528,11 +528,12 @@
 
       if (!price || !months) { placeholder.style.display='block'; result.style.display='none'; return; }
 
-      const feePct  = FEES[months] || 0.05;
-      document.getElementById('fee-label').textContent = `Service Fee (${feePct * 100}%)`;
+      const feePct  = FEES[months] !== undefined ? FEES[months] : 0.05;
+      const feeDisplay = parseFloat((feePct * 100).toPrecision(6));
+      document.getElementById('fee-label').textContent = `Service Fee (${feeDisplay}%)`;
       const fee     = Math.round(price * feePct * 100) / 100;
       const total   = Math.round((price + fee) * 100) / 100;
-      const depPct  = PLANS[months];
+      const depPct  = PLANS[months] !== undefined ? PLANS[months] : 40;
       const deposit = Math.round(total * depPct / 100 * 100) / 100;
       const balance = Math.round((total - deposit) * 100) / 100;
       const monthly = Math.round(balance / months * 100) / 100;
