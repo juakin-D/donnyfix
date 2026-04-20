@@ -736,6 +736,36 @@ def dashboard():
                            now=datetime.today().strftime('%Y-%m-%d'))
 
 
+@app.route('/account/edit', methods=['GET', 'POST'])
+@customer_required
+def account_edit():
+    conn     = get_db()
+    customer = conn.execute('SELECT * FROM customers WHERE id=%s', (session['customer_id'],)).fetchone()
+    if request.method == 'POST':
+        name  = request.form.get('name', '').strip()
+        phone = request.form.get('phone', '').strip()
+        db    = request.form.get('device_brand', '').strip()[:100]
+        dm    = request.form.get('device_model', '').strip()[:100]
+        if not name or len(name) > 100:
+            conn.close()
+            flash('Please enter your full name (max 100 characters).', 'error')
+            return render_template('account_edit.html', customer=customer)
+        if not valid_gh_phone(phone):
+            conn.close()
+            flash('Enter a valid Ghanaian phone number (e.g. 024 000 0000).', 'error')
+            return render_template('account_edit.html', customer=customer)
+        conn.execute(
+            'UPDATE customers SET name=%s, phone=%s, device_brand=%s, device_model=%s WHERE id=%s',
+            (name, phone, db, dm, session['customer_id']))
+        conn.commit()
+        conn.close()
+        session['customer_name'] = name
+        flash('Your profile has been updated.', 'success')
+        return redirect(url_for('dashboard'))
+    conn.close()
+    return render_template('account_edit.html', customer=customer)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # INSTALLMENT ROUTES
 # ══════════════════════════════════════════════════════════════════════════════

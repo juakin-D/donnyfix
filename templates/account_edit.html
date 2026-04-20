@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Edit Profile — PhoneHub Ghana</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f4f9f6; min-height: 100vh; }
+
+    nav { background: #006B3F; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    nav .brand { color: white; font-size: 20px; font-weight: 800; text-decoration: none; }
+    nav .nav-right { display: flex; align-items: center; gap: 16px; }
+    nav .nav-right span { color: rgba(255,255,255,0.8); font-size: 14px; }
+    nav a.nav-btn { background: rgba(255,255,255,0.15); color: white; padding: 7px 16px; border-radius: 6px; font-size: 14px; text-decoration: none; transition: background 0.2s; }
+    nav a.nav-btn:hover { background: rgba(255,255,255,0.25); }
+
+    .page { max-width: 600px; margin: 0 auto; padding: 32px 20px; }
+
+    .breadcrumb { font-size: 13px; color: #9CA3AF; margin-bottom: 20px; }
+    .breadcrumb a { color: #006B3F; text-decoration: none; font-weight: 500; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb span { margin: 0 6px; }
+
+    .page-heading { margin-bottom: 24px; }
+    .page-heading h1 { font-size: 26px; font-weight: 800; color: #111827; }
+    .page-heading p { font-size: 14px; color: #6B7280; margin-top: 6px; line-height: 1.5; }
+
+    .flash { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+    .flash.success { background: #D1FAE5; color: #065F46; }
+    .flash.error   { background: #FEE2E2; color: #B91C1C; }
+
+    .card { background: white; border-radius: 12px; padding: 28px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+
+    .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #9CA3AF; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #F3F4F6; }
+
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 10px 14px; border: 1px solid #D1D5DB; border-radius: 8px;
+      font-size: 14px; color: #111827; background: white; font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+    }
+    .form-group input:focus, .form-group select:focus {
+      border-color: #006B3F; box-shadow: 0 0 0 3px rgba(0,107,63,0.1);
+    }
+    .form-hint { font-size: 12px; color: #9CA3AF; margin-top: 5px; }
+
+    .section-gap { margin-bottom: 28px; }
+
+    .helper-links { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; padding: 16px; background: #F9FAFB; border-radius: 8px; border: 1px solid #E5E7EB; }
+    .helper-links a { font-size: 13px; color: #006B3F; text-decoration: none; font-weight: 500; }
+    .helper-links a:hover { text-decoration: underline; }
+    .helper-links .helper-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 6px; }
+
+    .btn-submit {
+      width: 100%; padding: 13px; background: #006B3F; color: white;
+      border: none; border-radius: 8px; font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: background 0.2s; font-family: inherit;
+    }
+    .btn-submit:hover { background: #004D2D; }
+
+    .cancel-link { display: block; text-align: center; margin-top: 14px; font-size: 13px; color: #9CA3AF; text-decoration: none; }
+    .cancel-link:hover { color: #006B3F; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="brand">PhoneHub Ghana</a>
+    <div class="nav-right">
+      <span>👋 {{ session['customer_name'] }}</span>
+      <a href="/booking" class="nav-btn">Book a Repair</a>
+      <form method="POST" action="/logout" style="display:inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="nav-btn" style="background:none;border:none;cursor:pointer;padding:0">Log Out</button>
+      </form>
+    </div>
+  </nav>
+
+  <div class="page">
+
+    <div class="breadcrumb">
+      <a href="/">Home</a><span>›</span>
+      <a href="/dashboard">My Account</a><span>›</span>
+      Edit Profile
+    </div>
+
+    <div class="page-heading">
+      <h1>Edit Your Profile</h1>
+      <p>Update your details below. To change your email or password use the links below.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="card">
+
+      <form method="POST" action="/account/edit">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <div class="section-gap">
+          <div class="section-label">Personal Details</div>
+
+          <div class="form-group">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" name="name" maxlength="100" required
+              value="{{ customer['name'] }}" placeholder="Your full name"/>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" required
+              value="{{ customer['phone'] }}" placeholder="024 000 0000"/>
+            <div class="form-hint">Ghanaian number e.g. 024 123 4567</div>
+          </div>
+        </div>
+
+        <div class="section-gap">
+          <div class="section-label">Your Device</div>
+
+          <div class="form-group">
+            <label for="device_brand">Brand</label>
+            <select id="device_brand" name="device_brand">
+              <option value="">-- Select --</option>
+              {% for brand in ['Tecno','Infinix','Samsung','Itel','iPhone','Xiaomi','Huawei','Other'] %}
+                <option value="{{ brand }}" {% if customer['device_brand'] == brand %}selected{% endif %}>{{ brand }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="device_model">Model</label>
+            <input type="text" id="device_model" name="device_model" maxlength="100"
+              value="{{ customer['device_model'] or '' }}" placeholder="e.g. Spark 20, A54"/>
+          </div>
+        </div>
+
+        <div class="helper-links">
+          <div class="helper-label">Other Account Actions</div>
+          <a href="/forgot-password">🔑 Change your password</a>
+          <a href="mailto:hello@phonehubghana.com">✉️ Email us to update your email address</a>
+        </div>
+
+        <button type="submit" class="btn-submit">Save Changes</button>
+      </form>
+
+      <a href="/dashboard" class="cancel-link">Cancel — back to dashboard</a>
+
+    </div>
+
+  </div>
+
+</body>
+</html>
