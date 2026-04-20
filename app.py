@@ -979,16 +979,19 @@ def admin_members():
     cust_ids = [c['id'] for c in customers]
     plans_map = {}
     if cust_ids:
-        placeholders = ','.join(['%s'] * len(cust_ids))
-        plans_rows = conn.execute(
-            f'''SELECT DISTINCT ON (customer_id) customer_id, id, status, device_name
-                FROM installment_plans
-                WHERE customer_id IN ({placeholders})
-                  AND status IN ('Active','Paused','Defaulted')
-                ORDER BY customer_id, created_at DESC''',
-            cust_ids).fetchall()
-        for p in plans_rows:
-            plans_map[p['customer_id']] = {'plan_id': p['id'], 'plan_status': p['status'], 'plan_device': p['device_name']}
+        try:
+            placeholders = ','.join(['%s'] * len(cust_ids))
+            plans_rows = conn.execute(
+                f'''SELECT DISTINCT ON (customer_id) customer_id, id, status, device_name
+                    FROM installment_plans
+                    WHERE customer_id IN ({placeholders})
+                      AND status IN ('Active','Paused','Defaulted')
+                    ORDER BY customer_id, created_at DESC''',
+                cust_ids).fetchall()
+            for p in plans_rows:
+                plans_map[p['customer_id']] = {'plan_id': p['id'], 'plan_status': p['status'], 'plan_device': p['device_name']}
+        except Exception as exc:
+            logger.error('admin_members plan lookup failed: %s', exc)
     conn.close()
     members = [{
         'id': c['id'], 'name': c['name'], 'phone': c['phone'], 'email': c['email'],
