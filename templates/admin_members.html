@@ -313,6 +313,7 @@
                 <th>Tier</th>
                 <th>Expires</th>
                 <th>Status</th>
+                <th>Installment</th>
                 <th>Joined</th>
                 <th>Actions</th>
               </tr>
@@ -346,6 +347,28 @@
                     <span class="badge badge-expired">✕ Expired</span>
                   {% else %}
                     <span class="badge badge-inactive">{{ m.status }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if m.plan_id %}
+                    <div style="display:flex;flex-direction:column;gap:4px">
+                      {% if m.plan_status == 'Active' %}
+                        <span class="badge badge-active" style="font-size:11px">● Active</span>
+                      {% elif m.plan_status == 'Paused' %}
+                        <span class="badge" style="background:rgba(245,200,66,.1);color:var(--gold);border:1px solid rgba(245,200,66,.25);font-size:11px">⏸ Paused</span>
+                      {% elif m.plan_status == 'Defaulted' %}
+                        <span class="badge badge-expired" style="font-size:11px">✕ Defaulted</span>
+                      {% endif %}
+                      <button class="act-btn edit" style="font-size:11px;padding:3px 8px"
+                          data-plan-id="{{ m.plan_id }}"
+                          data-plan-name="{{ m.name }}"
+                          data-plan-device="{{ m.plan_device or '' }}"
+                          data-plan-status="{{ m.plan_status }}"
+                          onclick="openPlanModal(this)"
+                          title="Update plan status">⚙ Plan</button>
+                    </div>
+                  {% else %}
+                    <span style="color:var(--text-muted);font-size:12px">—</span>
                   {% endif %}
                 </td>
                 <td class="td-mono">{{ m.created_at[:10] if m.created_at else '—' }}</td>
@@ -433,7 +456,51 @@
     </div>
   </div>
 
+  <!-- PLAN STATUS MODAL -->
+  <div class="modal-overlay" id="plan-modal" onclick="if(event.target===this)closePlanModal()">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">Update Installment Plan</div>
+        <button class="modal-close" type="button" onclick="closePlanModal()">×</button>
+      </div>
+      <div id="plan-modal-info" style="font-size:13px;color:var(--text-soft);margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)"></div>
+      <form method="POST" id="plan-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="admin_members">
+        <label class="modal-label">Plan Status</label>
+        <select class="modal-select" name="status" id="plan-status-select">
+          <option value="Active">Active</option>
+          <option value="Paused">Paused</option>
+          <option value="Completed">Completed</option>
+          <option value="Defaulted">Defaulted</option>
+        </select>
+        <p style="font-size:12px;color:var(--text-muted);margin:10px 0 18px">
+          <strong style="color:var(--gold)">Defaulted</strong> blocks the member from applying for new plans.<br>
+          <strong style="color:#94A3B8">Paused</strong> suspends the plan temporarily.
+        </p>
+        <button class="modal-submit" type="submit">Save Status</button>
+      </form>
+    </div>
+  </div>
+
   <script>
+    function openPlanModal(btn) {
+      const planId  = btn.dataset.planId;
+      const name    = btn.dataset.planName;
+      const device  = btn.dataset.planDevice;
+      const status  = btn.dataset.planStatus;
+      document.getElementById('plan-form').action = `/admin/installments/${planId}/update-status`;
+      document.getElementById('plan-modal-info').textContent = `${name}${device ? ' — ' + device : ''}`;
+      const sel = document.getElementById('plan-status-select');
+      for (let i = 0; i < sel.options.length; i++) {
+        sel.options[i].selected = sel.options[i].value === status;
+      }
+      document.getElementById('plan-modal').classList.add('open');
+    }
+    function closePlanModal() {
+      document.getElementById('plan-modal').classList.remove('open');
+    }
+
     function openMemberModal(btn) {
       const id     = btn.dataset.id;
       const name   = btn.dataset.name;
@@ -453,7 +520,9 @@
     function closeMemberModal() {
       document.getElementById('member-modal').classList.remove('open');
     }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMemberModal(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { closeMemberModal(); closePlanModal(); }
+    });
   </script>
 
 </body>

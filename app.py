@@ -975,6 +975,20 @@ def admin_members():
     total    = conn.execute(q.replace('SELECT *', 'SELECT COUNT(*) AS cnt'), params).fetchone()['cnt']
     q       += ' ORDER BY created_at DESC LIMIT %s OFFSET %s'
     customers = conn.execute(q, params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
+    # Fetch latest non-completed plan per customer (single query)
+    cust_ids = [c['id'] for c in customers]
+    plans_map = {}
+    if cust_ids:
+        placeholders = ','.join(['%s'] * len(cust_ids))
+        plans_rows = conn.execute(
+            f'''SELECT DISTINCT ON (customer_id) customer_id, id, status, device_name
+                FROM installment_plans
+                WHERE customer_id IN ({placeholders})
+                  AND status IN ('Active','Paused','Defaulted')
+                ORDER BY customer_id, created_at DESC''',
+            cust_ids).fetchall()
+        for p in plans_rows:
+            plans_map[p['customer_id']] = {'plan_id': p['id'], 'plan_status': p['status'], 'plan_device': p['device_name']}
     conn.close()
     members = [{
         'id': c['id'], 'name': c['name'], 'phone': c['phone'], 'email': c['email'],
@@ -982,6 +996,7 @@ def admin_members():
         'tier': c['membership_tier'], 'expiry': c['membership_expiry'],
         'status': membership_status(c['membership_expiry']),
         'created_at': c['created_at'].strftime('%Y-%m-%d') if c['created_at'] else None,
+        **plans_map.get(c['id'], {'plan_id': None, 'plan_status': None, 'plan_device': None}),
     } for c in customers]
     total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
     return render_template('admin_members.html', members=members, search=search, tier=tier,
@@ -1161,6 +1176,9 @@ def update_plan_status(plan_id):
     conn.commit(); conn.close()
     logger.info('Admin %s set plan #%d status to %s', session.get('admin_username'), plan_id, new_status)
     flash(f'Plan #{plan_id} updated to {new_status}.', 'success')
+    back = request.form.get('next', 'admin_installments')
+    if back == 'admin_members':
+        return redirect(url_for('admin_members'))
     return redirect(url_for('admin_installments'))
 
 
