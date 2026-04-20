@@ -158,6 +158,9 @@
     .act-btn.extend:hover{border-color:var(--green);color:var(--green);background:var(--green-glow)}
     .act-btn.delete{width:30px;padding:0}
     .act-btn.delete:hover{border-color:var(--red);color:var(--red);background:var(--red-dim)}
+    .act-btn.plan-active{border-color:rgba(0,196,106,.4);color:var(--green);font-size:11px}
+    .act-btn.plan-paused{border-color:rgba(245,200,66,.4);color:var(--gold);font-size:11px}
+    .act-btn.plan-defaulted{border-color:rgba(232,64,64,.4);color:var(--red);font-size:11px}
 
     /* ── PAGINATION ──────────────────────────── */
     .pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);flex-wrap:wrap;gap:10px}
@@ -313,7 +316,6 @@
                 <th>Tier</th>
                 <th>Expires</th>
                 <th>Status</th>
-                <th>Installment</th>
                 <th>Joined</th>
                 <th>Actions</th>
               </tr>
@@ -349,31 +351,20 @@
                     <span class="badge badge-inactive">{{ m.status }}</span>
                   {% endif %}
                 </td>
-                <td>
-                  {% if m.plan_id %}
-                    <div style="display:flex;flex-direction:column;gap:4px">
-                      {% if m.plan_status == 'Active' %}
-                        <span class="badge badge-active" style="font-size:11px">● Active</span>
-                      {% elif m.plan_status == 'Paused' %}
-                        <span class="badge" style="background:rgba(245,200,66,.1);color:var(--gold);border:1px solid rgba(245,200,66,.25);font-size:11px">⏸ Paused</span>
-                      {% elif m.plan_status == 'Defaulted' %}
-                        <span class="badge badge-expired" style="font-size:11px">✕ Defaulted</span>
-                      {% endif %}
-                      <button class="act-btn edit" style="font-size:11px;padding:3px 8px"
-                          data-plan-id="{{ m.plan_id }}"
-                          data-plan-name="{{ m.name }}"
-                          data-plan-device="{{ m.plan_device or '' }}"
-                          data-plan-status="{{ m.plan_status }}"
-                          onclick="openPlanModal(this)"
-                          title="Update plan status">⚙ Plan</button>
-                    </div>
-                  {% else %}
-                    <span style="color:var(--text-muted);font-size:12px">—</span>
-                  {% endif %}
-                </td>
                 <td class="td-mono">{{ m.created_at[:10] if m.created_at else '—' }}</td>
                 <td>
                   <div class="action-cell">
+                    {% if m.plan_id %}
+                    <button class="act-btn plan-{{ m.plan_status | lower }}"
+                        data-plan-id="{{ m.plan_id }}"
+                        data-plan-name="{{ m.name }}"
+                        data-plan-device="{{ m.plan_device or '' }}"
+                        data-plan-status="{{ m.plan_status }}"
+                        onclick="openPlanModal(this)"
+                        title="Update installment plan status">
+                      {% if m.plan_status == 'Active' %}● Plan{% elif m.plan_status == 'Paused' %}⏸ Plan{% else %}✕ Plan{% endif %}
+                    </button>
+                    {% endif %}
                     <button class="act-btn edit"
                         data-id="{{ m.id }}"
                         data-name="{{ m.name }}"

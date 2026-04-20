@@ -383,7 +383,11 @@
                   {% if p.payments_made > 0 %}
                   <a class="act-btn" href="/receipt/payment/plan/{{ p.id }}/latest" target="_blank" title="Download latest payment receipt">🧾</a>
                   {% endif %}
-                  <button class="act-btn icon-only" title="Change status" onclick="openStatusModal({{ p.id }}, {{ p.status|tojson }})">⋯</button>
+                  <button class="act-btn icon-only"
+                      title="Change status"
+                      data-id="{{ p.id }}"
+                      data-status="{{ p.status }}"
+                      onclick="openStatusModal(this.dataset.id, this.dataset.status)">⋯</button>
                 </div>
               </td>
             </tr>
