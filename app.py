@@ -509,7 +509,7 @@ def _safe_redirect(fallback):
 def set_security_headers(response):
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data:; "
@@ -1812,6 +1812,224 @@ def admin_inventory_export():
     response = make_response(buf.getvalue())
     response.headers['Content-Type']        = 'text/csv'
     response.headers['Content-Disposition'] = f'attachment; filename=phonehub-inventory-{today}.csv'
+    return response
+
+
+# ─── REVENUE ROUTES ───────────────────────────────────────────────────────────
+
+@app.route('/admin/revenue')
+@admin_required
+def admin_revenue():
+    conn = get_db()
+    try:
+        this_month_collections = float(conn.execute(
+            "SELECT COALESCE(SUM(amount),0) AS total FROM payments "
+            "WHERE DATE_TRUNC('month',paid_on::date)=DATE_TRUNC('month',CURRENT_DATE)"
+        ).fetchone()['total'])
+
+        this_month_repairs = int(conn.execute(
+            "SELECT COUNT(*) AS count FROM bookings WHERE status='Complete' "
+            "AND DATE_TRUNC('month',date::date)=DATE_TRUNC('month',CURRENT_DATE)"
+        ).fetchone()['count'])
+
+        this_month_members = int(conn.execute(
+            "SELECT COUNT(*) AS count FROM customers "
+            "WHERE DATE_TRUNC('month',created_at)=DATE_TRUNC('month',NOW())"
+        ).fetchone()['count'])
+
+        outstanding_balance = float(conn.execute(
+            "SELECT COALESCE(SUM(balance_remaining),0) AS total "
+            "FROM installment_plans WHERE status='Active'"
+        ).fetchone()['total'])
+
+        overdue_count = int(conn.execute(
+            "SELECT COUNT(*) AS count FROM installment_plans "
+            "WHERE status='Active' AND next_due_date<CURRENT_DATE::text"
+        ).fetchone()['count'])
+
+        active_plans = int(conn.execute(
+            "SELECT COUNT(*) AS count FROM installment_plans WHERE status='Active'"
+        ).fetchone()['count'])
+
+        device_profit = float(conn.execute(
+            "SELECT COALESCE(SUM(selling_price-cost_price),0) AS profit FROM inventory "
+            "WHERE status='Sold' AND DATE_TRUNC('month',updated_at)=DATE_TRUNC('month',NOW())"
+        ).fetchone()['profit'])
+
+        monthly_collections = [
+            {'month': r['month'], 'total': float(r['total'])}
+            for r in conn.execute(
+                "SELECT TO_CHAR(DATE_TRUNC('month',paid_on::date),'Mon YYYY') AS month,"
+                "COALESCE(SUM(amount),0) AS total FROM payments "
+                "WHERE paid_on::date>=CURRENT_DATE-INTERVAL '6 months' "
+                "GROUP BY DATE_TRUNC('month',paid_on::date) "
+                "ORDER BY DATE_TRUNC('month',paid_on::date)"
+            ).fetchall()
+        ]
+
+        monthly_repairs = [
+            {'month': r['month'], 'count': int(r['count'])}
+            for r in conn.execute(
+                "SELECT TO_CHAR(DATE_TRUNC('month',date::date),'Mon YYYY') AS month,"
+                "COUNT(*) AS count FROM bookings WHERE status='Complete' "
+                "AND date::date>=CURRENT_DATE-INTERVAL '6 months' "
+                "GROUP BY DATE_TRUNC('month',date::date) "
+                "ORDER BY DATE_TRUNC('month',date::date)"
+            ).fetchall()
+        ]
+
+        monthly_members = [
+            {'month': r['month'], 'count': int(r['count'])}
+            for r in conn.execute(
+                "SELECT TO_CHAR(DATE_TRUNC('month',created_at),'Mon YYYY') AS month,"
+                "COUNT(*) AS count FROM customers "
+                "WHERE created_at>=NOW()-INTERVAL '6 months' "
+                "GROUP BY DATE_TRUNC('month',created_at) "
+                "ORDER BY DATE_TRUNC('month',created_at)"
+            ).fetchall()
+        ]
+
+        recent_payments = [dict(r) for r in conn.execute(
+            "SELECT p.id,p.amount,p.paid_on,p.payment_method,p.reference,p.created_at,"
+            "ip.device_name,c.name AS customer_name "
+            "FROM payments p "
+            "JOIN installment_plans ip ON ip.id=p.plan_id "
+            "JOIN customers c ON c.id=ip.customer_id "
+            "ORDER BY p.created_at DESC LIMIT 10"
+        ).fetchall()]
+
+        top_services = [dict(r) for r in conn.execute(
+            "SELECT service,COUNT(*) AS count FROM bookings "
+            "GROUP BY service ORDER BY count DESC LIMIT 5"
+        ).fetchall()]
+
+        expiring_members = [dict(r) for r in conn.execute(
+            "SELECT name,phone,membership_expiry FROM customers "
+            "WHERE membership_expiry::date BETWEEN CURRENT_DATE "
+            "AND CURRENT_DATE+INTERVAL '30 days' "
+            "ORDER BY membership_expiry LIMIT 10"
+        ).fetchall()]
+
+    except Exception as exc:
+        logger.error('admin_revenue query failed: %s', exc)
+        conn.close()
+        flash('Error loading revenue data.', 'error')
+        return redirect(url_for('admin'))
+
+    conn.close()
+    return render_template('admin_revenue.html',
+        this_month_collections=this_month_collections,
+        this_month_repairs=this_month_repairs,
+        this_month_members=this_month_members,
+        outstanding_balance=outstanding_balance,
+        overdue_count=overdue_count,
+        active_plans=active_plans,
+        device_profit=device_profit,
+        monthly_collections=monthly_collections,
+        monthly_repairs=monthly_repairs,
+        monthly_members=monthly_members,
+        recent_payments=recent_payments,
+        top_services=top_services,
+        expiring_members=expiring_members,
+        current_month=datetime.today().strftime('%B %Y'),
+    )
+
+
+@app.route('/admin/revenue/export')
+@admin_required
+def admin_revenue_export():
+    import csv, io
+    conn = get_db()
+
+    monthly_summary = conn.execute("""
+        SELECT
+            months.month_start,
+            COALESCE(p.collections, 0)   AS collections,
+            COALESCE(b.repairs, 0)       AS repairs,
+            COALESCE(c.new_members, 0)   AS new_members,
+            COALESCE(i.device_profit, 0) AS device_profit
+        FROM (
+            SELECT generate_series(
+                DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months'),
+                DATE_TRUNC('month', CURRENT_DATE),
+                INTERVAL '1 month'
+            ) AS month_start
+        ) months
+        LEFT JOIN (
+            SELECT DATE_TRUNC('month', paid_on::date) AS m, SUM(amount) AS collections
+            FROM payments GROUP BY m
+        ) p ON p.m = months.month_start
+        LEFT JOIN (
+            SELECT DATE_TRUNC('month', date::date) AS m, COUNT(*) AS repairs
+            FROM bookings WHERE status='Complete' GROUP BY m
+        ) b ON b.m = months.month_start
+        LEFT JOIN (
+            SELECT DATE_TRUNC('month', created_at) AS m, COUNT(*) AS new_members
+            FROM customers GROUP BY m
+        ) c ON c.m = months.month_start
+        LEFT JOIN (
+            SELECT DATE_TRUNC('month', updated_at) AS m,
+                   SUM(selling_price - cost_price) AS device_profit
+            FROM inventory WHERE status='Sold' GROUP BY m
+        ) i ON i.m = months.month_start
+        ORDER BY months.month_start
+    """).fetchall()
+
+    all_payments = conn.execute(
+        "SELECT p.id,p.plan_id,c.name AS customer_name,ip.device_name,"
+        "p.amount,p.payment_method,p.reference,p.paid_on "
+        "FROM payments p "
+        "JOIN installment_plans ip ON ip.id=p.plan_id "
+        "JOIN customers c ON c.id=ip.customer_id "
+        "ORDER BY p.paid_on DESC"
+    ).fetchall()
+
+    all_bookings = conn.execute(
+        "SELECT id,name,device,service,date FROM bookings "
+        "WHERE status='Complete' ORDER BY date DESC"
+    ).fetchall()
+
+    conn.close()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+
+    writer.writerow(['=== SECTION 1: Monthly Summary (Last 12 Months) ==='])
+    writer.writerow(['Month', 'Installment Collections', 'Completed Repairs',
+                     'New Members', 'Device Sales Profit'])
+    for row in monthly_summary:
+        ms = row['month_start']
+        label = ms.strftime('%B %Y') if hasattr(ms, 'strftime') else str(ms)[:7]
+        writer.writerow([
+            label,
+            round(float(row['collections']), 2),
+            int(row['repairs']),
+            int(row['new_members']),
+            round(float(row['device_profit']), 2),
+        ])
+
+    writer.writerow([])
+    writer.writerow(['=== SECTION 2: All Payments ==='])
+    writer.writerow(['Payment ID', 'Plan ID', 'Customer', 'Device',
+                     'Amount', 'Method', 'Reference', 'Date'])
+    for p in all_payments:
+        writer.writerow([
+            p['id'], p['plan_id'], p['customer_name'], p['device_name'],
+            round(float(p['amount']), 2), p['payment_method'],
+            p['reference'] or '', p['paid_on'],
+        ])
+
+    writer.writerow([])
+    writer.writerow(['=== SECTION 3: All Completed Bookings ==='])
+    writer.writerow(['Booking ID', 'Customer', 'Device', 'Service', 'Date'])
+    for b in all_bookings:
+        writer.writerow([b['id'], b['name'], b['device'], b['service'], b['date']])
+
+    today = datetime.today().strftime('%Y-%m-%d')
+    response = make_response(buf.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = (
+        f'attachment; filename=phonehub-revenue-report-{today}.csv')
     return response
 
 

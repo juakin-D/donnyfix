@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Revenue — PhoneHub Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0E1210;--surface:#161C18;--surface2:#1D2521;
+      --border:#2A3330;--border2:#374440;
+      --green:#00C46A;--green-glow:rgba(0,196,106,.12);
+      --gold:#F5C842;--gold-dim:rgba(245,200,66,.12);
+      --red:#E84040;--red-dim:rgba(232,64,64,.12);
+      --amber:#F59E0B;--amber-dim:rgba(245,158,11,.12);
+      --blue:#3B9EE8;--blue-dim:rgba(59,158,232,.12);
+      --text:#E8F0EC;--text-soft:#7A9088;--text-muted:#4A5E58;
+    }
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+    /* ── SIDEBAR ── */
+    .sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+    .sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid var(--border)}
+    .logo-mark{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+    .logo-mark span{color:var(--gold)}
+    .logo-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+    .nav-section{padding:16px 12px 8px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:2px 8px;border-radius:8px;color:var(--text-soft);text-decoration:none;font-size:14px;transition:all .15s}
+    .nav-item:hover{background:var(--surface2);color:var(--text)}
+    .nav-item.active{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.15)}
+    .nav-icon{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+    .sidebar-footer{margin-top:auto;padding:16px 12px;border-top:1px solid var(--border)}
+    .admin-user{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--surface2)}
+    .admin-avatar{width:32px;height:32px;border-radius:50%;background:var(--green-glow);border:1px solid rgba(0,196,106,.2);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--green);flex-shrink:0}
+    .admin-name{font-size:13px;font-weight:500;color:var(--text)}
+    .admin-role{font-size:11px;color:var(--text-muted)}
+    .logout-btn{display:block;width:100%;margin-top:8px;padding:9px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;text-align:center}
+    .logout-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-dim)}
+
+    /* ── LAYOUT ── */
+    .main{flex:1;min-width:0;display:flex;flex-direction:column}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:64px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+    .topbar-left{display:flex;align-items:center;gap:12px}
+    .topbar-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text)}
+    .topbar-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:.5px}
+    .topbar-right{display:flex;align-items:center;gap:10px}
+    .content{flex:1;overflow-y:auto;padding:28px 32px}
+
+    /* ── FLASH ── */
+    .flash{padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;display:flex;align-items:center;gap:10px}
+    .flash.success{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.2)}
+    .flash.error{background:var(--red-dim);color:var(--red);border:1px solid rgba(232,64,64,.2)}
+
+    /* ── STATS ROW 1 ── */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;position:relative;overflow:hidden;transition:border-color .2s}
+    .stat-card:hover{border-color:var(--border2)}
+    .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+    .stat-card.green::before{background:var(--green)}
+    .stat-card.amber::before{background:var(--amber)}
+    .stat-card.blue::before{background:var(--blue)}
+    .stat-card.gold::before{background:var(--gold)}
+    .stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+    .stat-value{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;line-height:1;margin-bottom:4px}
+    .stat-card.green .stat-value{color:var(--green)}
+    .stat-card.amber .stat-value{color:var(--amber);font-size:20px}
+    .stat-card.blue  .stat-value{color:var(--blue)}
+    .stat-card.gold  .stat-value{color:var(--gold);font-size:18px}
+    .stat-sub{font-size:12px;color:var(--text-muted)}
+
+    /* ── MINI STATS ROW 2 ── */
+    .mini-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .mini-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:border-color .2s}
+    .mini-card:hover{border-color:var(--border2)}
+    .mini-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px}
+    .mini-value{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--text);line-height:1}
+    .mini-value.red{color:var(--red)}
+    .mini-value.amber{color:var(--amber)}
+    .mini-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+
+    /* ── CHARTS ── */
+    .charts-grid{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:24px}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px}
+    .chart-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+    .chart-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px}
+    .chart-sub{font-size:11px;color:var(--text-muted)}
+    .chart-container{position:relative;height:220px}
+
+    /* ── TABLE CARDS ── */
+    .table-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px}
+    .table-card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .table-card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text)}
+    .table-card-meta{font-size:12px;color:var(--text-muted)}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:480px}
+    thead tr{border-bottom:1px solid var(--border)}
+    th{padding:11px 14px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.2px;background:var(--surface2);white-space:nowrap}
+    td{padding:11px 14px;font-size:13px;color:var(--text-soft);border-bottom:1px solid var(--border);vertical-align:middle}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover td{background:var(--surface2);color:var(--text)}
+    .td-mono{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)}
+    .td-name{font-weight:500;color:var(--text)}
+    .td-amount{font-family:'DM Mono',monospace;font-size:13px;color:var(--green);font-weight:500}
+
+    /* ── BOTTOM GRID ── */
+    .bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px}
+
+    /* ── SERVICES ── */
+    .service-row{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--border)}
+    .service-row:last-child{border-bottom:none}
+    .service-name{flex:1;font-size:13px;color:var(--text);font-weight:500;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .service-count{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-soft);min-width:24px;text-align:right}
+
+    /* ── EXPIRING ── */
+    .expiring-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+    .expiring-row:last-child{border-bottom:none}
+    .expiring-name{font-size:13px;font-weight:500;color:var(--text)}
+    .expiring-phone{font-size:11px;color:var(--text-muted);margin-top:2px}
+    .expiring-date{font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);white-space:nowrap}
+    .btn-extend{padding:4px 11px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-soft);font-size:11px;text-decoration:none;transition:all .15s;display:inline-block;white-space:nowrap}
+    .btn-extend:hover{border-color:var(--green);color:var(--green);background:var(--green-glow)}
+
+    /* ── MISC ── */
+    .empty-muted{padding:28px;text-align:center;font-size:13px;color:var(--text-muted)}
+    .export-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:13px;text-decoration:none;transition:all .15s;font-weight:500}
+    .export-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-glow)}
+    .status-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--green-glow);border:1px solid rgba(0,196,106,.2);font-size:12px;color:var(--green)}
+    .status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    .inner-pad{padding:16px 20px}
+
+    @media(max-width:1200px){.charts-grid{grid-template-columns:1fr}}
+    @media(max-width:900px){
+      .sidebar{display:none}
+      .content{padding:20px}
+      .stats-row,.mini-stats-row{grid-template-columns:1fr 1fr}
+      .topbar{padding:0 20px}
+      .bottom-grid{grid-template-columns:1fr}
+    }
+    @media(max-width:560px){
+      .stats-row,.mini-stats-row{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">Phone<span>Hub</span></div>
+      <div class="logo-sub">Admin Console</div>
+    </div>
+    <div class="nav-section">Operations</div>
+    <a href="/admin" class="nav-item"><span class="nav-icon">📋</span>Bookings</a>
+    <a href="/admin/members" class="nav-item"><span class="nav-icon">👤</span>Members</a>
+    <a href="/admin/installments" class="nav-item"><span class="nav-icon">💳</span>Installments</a>
+    <a href="/admin/inventory" class="nav-item"><span class="nav-icon">📦</span>Inventory</a>
+    <a href="/admin/revenue" class="nav-item active"><span class="nav-icon">📊</span>Revenue</a>
+    <div class="nav-section">Quick Links</div>
+    <a href="/" class="nav-item" target="_blank"><span class="nav-icon">🌐</span>View Site</a>
+    <a href="/register" class="nav-item" target="_blank"><span class="nav-icon">➕</span>Register</a>
+    <div class="sidebar-footer">
+      <div class="admin-user">
+        <div class="admin-avatar">AD</div>
+        <div>
+          <div class="admin-name">{{ session.get('admin_username','Admin') }}</div>
+          <div class="admin-role">Administrator</div>
+        </div>
+      </div>
+      <form method="POST" action="/admin/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="logout-btn" type="submit">Sign Out</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="topbar-title">Revenue Dashboard</div>
+          <div class="topbar-sub">{{ current_month }}</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a href="/admin/revenue/export" class="export-btn">&#11015; Export CSV</a>
+        <div class="status-pill"><span class="status-dot"></span>Live</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">
+            <span>{% if category=='success' %}✓{% else %}✕{% endif %}</span>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      <!-- ── ROW 1: Main Stats ── -->
+      <div class="stats-row">
+        <div class="stat-card green">
+          <div class="stat-label">Installment Collections</div>
+          <div class="stat-value">{{ fmt_ghs(this_month_collections) }}</div>
+          <div class="stat-sub">collected this month</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Outstanding Balance</div>
+          <div class="stat-value">{{ fmt_ghs(outstanding_balance) }}</div>
+          <div class="stat-sub">across active plans</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Repairs Completed</div>
+          <div class="stat-value">{{ this_month_repairs }}</div>
+          <div class="stat-sub">this month</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-label">Device Sales Profit</div>
+          <div class="stat-value">{{ fmt_ghs(device_profit) }}</div>
+          <div class="stat-sub">this month</div>
+        </div>
+      </div>
+
+      <!-- ── ROW 2: Mini Stats ── -->
+      <div class="mini-stats-row">
+        <div class="mini-card">
+          <div class="mini-label">New Members</div>
+          <div class="mini-value">{{ this_month_members }}</div>
+          <div class="mini-sub">joined this month</div>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">Active Plans</div>
+          <div class="mini-value">{{ active_plans }}</div>
+          <div class="mini-sub">installment plans</div>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">Overdue Plans</div>
+          <div class="mini-value {% if overdue_count > 0 %}red{% endif %}">{{ overdue_count }}</div>
+          <div class="mini-sub">past due date</div>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">Expiring (30 days)</div>
+          <div class="mini-value {% if expiring_members|length > 0 %}amber{% endif %}">{{ expiring_members|length }}</div>
+          <div class="mini-sub">memberships</div>
+        </div>
+      </div>
+
+      <!-- ── CHARTS ── -->
+      <div class="charts-grid">
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Collections Over 6 Months</div>
+              <div class="chart-sub">Installment payments received</div>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="collectionsChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">New Members per Month</div>
+              <div class="chart-sub">Last 6 months</div>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="membersChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── RECENT PAYMENTS ── -->
+      <div class="table-card">
+        <div class="table-card-header">
+          <div class="table-card-title">Recent Payments</div>
+          <div class="table-card-meta">Last 10 payments recorded</div>
+        </div>
+        <div class="table-wrap">
+          {% if recent_payments %}
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Device</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Reference</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in recent_payments %}
+              <tr>
+                <td class="td-mono">{{ p.paid_on }}</td>
+                <td class="td-name">{{ p.customer_name }}</td>
+                <td>{{ p.device_name }}</td>
+                <td class="td-amount">{{ fmt_ghs(p.amount) }}</td>
+                <td>{{ p.payment_method }}</td>
+                <td class="td-mono">{{ p.reference or '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="empty-muted">No payments recorded yet.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ── BOTTOM GRID: Top Services | Expiring Members ── -->
+      <div class="bottom-grid">
+
+        <!-- TOP SERVICES -->
+        <div class="table-card" style="margin-bottom:0">
+          <div class="table-card-header">
+            <div class="table-card-title">Most Popular Services</div>
+            <div class="table-card-meta">Top 5 by bookings</div>
+          </div>
+          <div class="inner-pad">
+            {% if top_services %}
+              {% for item in top_services %}
+              <div class="service-row">
+                <div class="service-name">{{ item.service }}</div>
+                <div style="height:6px;background:var(--border);border-radius:3px;width:110px;flex-shrink:0">
+                  <div style="height:100%;width:{{ (item.count / top_services[0].count * 100)|int }}%;background:var(--green);border-radius:3px"></div>
+                </div>
+                <div class="service-count">{{ item.count }}</div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-muted">No bookings yet.</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- EXPIRING MEMBERS -->
+        <div class="table-card" style="margin-bottom:0">
+          <div class="table-card-header">
+            <div class="table-card-title">Memberships Expiring (Next 30 Days)</div>
+          </div>
+          <div class="inner-pad">
+            {% if expiring_members %}
+              {% for m in expiring_members %}
+              <div class="expiring-row">
+                <div>
+                  <div class="expiring-name">{{ m.name }}</div>
+                  <div class="expiring-phone">{{ m.phone }}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                  <span class="expiring-date">{{ m.membership_expiry }}</span>
+                  <a href="/admin/members" class="btn-extend">Extend</a>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-muted">No memberships expiring in the next 30 days.</div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div><!-- end bottom-grid -->
+
+    </div><!-- end content -->
+  </div><!-- end main -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script>
+    const collectionsData = {{ monthly_collections|tojson }};
+    const membersData     = {{ monthly_members|tojson }};
+
+    const sharedScales = {
+      x: { ticks: { color: '#4A5E58' }, grid: { color: '#2A3330' } },
+      y: { ticks: { color: '#4A5E58' }, grid: { color: '#2A3330' } }
+    };
+
+    const sharedPlugins = {
+      legend: { labels: { color: '#7A9088', font: { size: 12 } } }
+    };
+
+    /* LINE CHART — Collections */
+    const cLabels = collectionsData.map(function(d){ return d.month; });
+    const cValues = collectionsData.map(function(d){ return d.total; });
+
+    new Chart(document.getElementById('collectionsChart'), {
+      type: 'line',
+      data: {
+        labels: cLabels,
+        datasets: [
+          {
+            label: 'Installment Collections',
+            data: cValues,
+            borderColor: '#00C46A',
+            backgroundColor: 'transparent',
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#00C46A',
+            borderWidth: 2,
+          },
+          {
+            label: 'Repair Revenue (coming soon)',
+            data: [],
+            borderColor: '#3B9EE8',
+            backgroundColor: 'transparent',
+            tension: 0.4,
+            pointRadius: 4,
+            borderWidth: 2,
+            borderDash: [5, 5],
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: Object.assign({}, sharedPlugins, {
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                return 'GH\u20B5' + ctx.parsed.y.toLocaleString('en-GH', {
+                  minimumFractionDigits: 2, maximumFractionDigits: 2
+                });
+              }
+            }
+          }
+        }),
+        scales: sharedScales
+      }
+    });
+
+    /* BAR CHART — Members */
+    const mLabels = membersData.map(function(d){ return d.month; });
+    const mValues = membersData.map(function(d){ return d.count; });
+
+    new Chart(document.getElementById('membersChart'), {
+      type: 'bar',
+      data: {
+        labels: mLabels,
+        datasets: [{
+          label: 'New Members',
+          data: mValues,
+          backgroundColor: 'rgba(0,196,106,.25)',
+          borderColor: '#00C46A',
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: sharedScales
+      }
+    });
+  </script>
+
+</body>
+</html>
