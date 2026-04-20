@@ -753,13 +753,16 @@ def installment_apply():
 
     # Block if member already has an active plan
     conn2 = get_db()
-    active_plan = conn2.execute(
-        "SELECT id FROM installment_plans WHERE customer_id=%s AND status='Active' LIMIT 1",
+    blocking_plan = conn2.execute(
+        "SELECT id, status FROM installment_plans WHERE customer_id=%s AND status IN ('Active','Defaulted') LIMIT 1",
         (session['customer_id'],)).fetchone()
     conn2.close()
-    if active_plan:
+    if blocking_plan:
+        if blocking_plan['status'] == 'Defaulted':
+            flash('Your previous installment plan was defaulted. You are not eligible to apply for a new plan. Please contact us at 0541057500 to resolve this.', 'error')
+            return redirect(url_for('installment_detail', plan_id=blocking_plan['id']))
         flash('You already have an active installment plan. Please complete your current plan before applying for a new one.', 'error')
-        return redirect(url_for('installment_detail', plan_id=active_plan['id']))
+        return redirect(url_for('installment_detail', plan_id=blocking_plan['id']))
 
     if request.method == 'POST':
         try:
