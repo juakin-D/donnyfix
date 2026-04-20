@@ -128,8 +128,25 @@
 
     .tier-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
     .tier-Standard{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.2)}
-    .tier-Premium {background:var(--gold-dim);color:var(--gold);border:1px solid rgba(245,200,66,.2)}
-    .tier-VIP     {background:var(--purple-dim);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+    .tier-Silver  {background:rgba(148,163,184,.12);color:#94A3B8;border:1px solid rgba(148,163,184,.25)}
+    .tier-Gold    {background:var(--gold-dim);color:var(--gold);border:1px solid rgba(245,200,66,.2)}
+    .tier-Premium {background:var(--purple-dim);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+
+    /* ── MEMBERSHIP MODAL ───────────────────────── */
+    .modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;width:100%;max-width:400px;animation:mpop .2s ease}
+    @keyframes mpop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)}
+    .modal-close{background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;border-radius:6px;transition:background .15s}
+    .modal-close:hover{background:var(--surface2);color:var(--text)}
+    .modal-label{display:block;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:7px}
+    .modal-select,.modal-input{width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;margin-bottom:16px}
+    .modal-select:focus,.modal-input:focus{border-color:rgba(0,196,106,.4)}
+    .modal-submit{width:100%;padding:12px;background:var(--green);border:none;border-radius:9px;color:#0E1210;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s}
+    .modal-submit:hover{opacity:.9}
+    .act-btn.edit:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-dim)}
 
     /* ── ACTION BUTTONS ──────────────────────── */
     .action-cell{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -334,6 +351,13 @@
                 <td class="td-mono">{{ m.created_at[:10] if m.created_at else '—' }}</td>
                 <td>
                   <div class="action-cell">
+                    <button class="act-btn edit"
+                        data-id="{{ m.id }}"
+                        data-name="{{ m.name }}"
+                        data-tier="{{ m.tier }}"
+                        data-expiry="{{ m.expiry or '' }}"
+                        onclick="openMemberModal(this)"
+                        title="Update membership">✏ Edit</button>
                     <form class="extend-form" method="POST" action="/admin/members/{{ m.id }}/extend">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <select class="extend-select" name="months">
@@ -384,6 +408,53 @@
 
     </div><!-- /content -->
   </div><!-- /main -->
+
+  <!-- MEMBERSHIP UPDATE MODAL -->
+  <div class="modal-overlay" id="member-modal" onclick="if(event.target===this)closeMemberModal()">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">Update Membership</div>
+        <button class="modal-close" type="button" onclick="closeMemberModal()">×</button>
+      </div>
+      <div id="modal-member-name" style="font-size:13px;color:var(--text-soft);margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)"></div>
+      <form method="POST" id="member-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="modal-label">Membership Tier</label>
+        <select class="modal-select" name="tier" id="modal-tier">
+          <option value="Standard">Standard</option>
+          <option value="Silver">Silver</option>
+          <option value="Gold">Gold</option>
+          <option value="Premium">Premium</option>
+        </select>
+        <label class="modal-label">Expiry Date</label>
+        <input class="modal-input" type="date" name="expiry" id="modal-expiry" required/>
+        <button class="modal-submit" type="submit">Save Changes</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openMemberModal(btn) {
+      const id     = btn.dataset.id;
+      const name   = btn.dataset.name;
+      const tier   = btn.dataset.tier;
+      const expiry = btn.dataset.expiry;
+
+      document.getElementById('member-form').action = `/admin/members/${id}/update-membership`;
+      document.getElementById('modal-member-name').textContent = name;
+
+      const sel = document.getElementById('modal-tier');
+      for (let i = 0; i < sel.options.length; i++) {
+        sel.options[i].selected = sel.options[i].value === tier;
+      }
+      document.getElementById('modal-expiry').value = expiry;
+      document.getElementById('member-modal').classList.add('open');
+    }
+    function closeMemberModal() {
+      document.getElementById('member-modal').classList.remove('open');
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMemberModal(); });
+  </script>
 
 </body>
 </html>

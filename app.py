@@ -1404,6 +1404,34 @@ def reset_password(token):
 
 # ─── ADMIN MEMBERSHIP EXTENSION ───────────────────────────────────────────────
 
+@app.route('/admin/members/<int:customer_id>/update-membership', methods=['POST'])
+@admin_required
+def update_membership(customer_id):
+    tier   = request.form.get('tier', '').strip()
+    expiry = request.form.get('expiry', '').strip()
+    if tier not in ('Standard', 'Silver', 'Gold', 'Premium'):
+        flash('Invalid membership tier.', 'error')
+        return redirect(url_for('admin_members'))
+    try:
+        datetime.strptime(expiry, '%Y-%m-%d')
+    except ValueError:
+        flash('Invalid expiry date.', 'error')
+        return redirect(url_for('admin_members'))
+    conn = get_db()
+    customer = conn.execute('SELECT id FROM customers WHERE id=%s', (customer_id,)).fetchone()
+    if not customer:
+        conn.close()
+        flash('Member not found.', 'error')
+        return redirect(url_for('admin_members'))
+    conn.execute('UPDATE customers SET membership_tier=%s, membership_expiry=%s WHERE id=%s',
+                 (tier, expiry, customer_id))
+    conn.commit(); conn.close()
+    logger.info('Admin %s updated membership for customer #%d: tier=%s expiry=%s',
+                session.get('admin_username'), customer_id, tier, expiry)
+    flash(f'Membership updated — {tier}, expires {expiry}.', 'success')
+    return redirect(url_for('admin_members'))
+
+
 @app.route('/admin/members/<int:customer_id>/extend', methods=['POST'])
 @admin_required
 def extend_membership(customer_id):
