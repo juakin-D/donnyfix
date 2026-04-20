@@ -369,10 +369,14 @@
               <td>
                 <div class="action-cell">
                   {% if p.status == 'Active' %}
-                  <button class="act-btn pay" onclick="openPayModal(
-                      {{ p.id }}, {{ p.customer_name|tojson }}, {{ p.device_name|tojson }},
-                      {{ p.monthly_amount }}, {{ p.balance_remaining }},
-                      {{ p.payment_method|tojson }})">
+                  <button class="act-btn pay"
+                      data-id="{{ p.id }}"
+                      data-name="{{ p.customer_name }}"
+                      data-device="{{ p.device_name }}"
+                      data-monthly="{{ p.monthly_amount }}"
+                      data-balance="{{ p.balance_remaining }}"
+                      data-method="{{ p.payment_method }}"
+                      onclick="openPayModal(this)">
                     + Record Payment
                   </button>
                   {% endif %}
@@ -487,16 +491,23 @@
       return 'GH\u20B5' + Number(n).toLocaleString('en-GH',{minimumFractionDigits:2,maximumFractionDigits:2});
     }
 
-    function openPayModal(planId, name, device, monthly, balance, method) {
+    function openPayModal(btn) {
+      const planId  = btn.dataset.id;
+      const name    = btn.dataset.name;
+      const device  = btn.dataset.device;
+      const monthly = parseFloat(btn.dataset.monthly) || 0;
+      const balance = parseFloat(btn.dataset.balance) || 0;
+      const method  = btn.dataset.method || '';
+
       document.getElementById('pay-form').action = `/admin/installments/${planId}/record-payment`;
-      document.getElementById('pay-amount').value = (monthly || 0).toFixed(2);
+      document.getElementById('pay-amount').value = monthly.toFixed(2);
       document.getElementById('pay-date').value = today;
-      // set default method
+      // pre-select payment method
       const sel = document.getElementById('pay-method');
-      const methodLc = method ? String(method).toLowerCase() : '';
-      for(let i=0;i<sel.options.length;i++){
+      const methodLc = method.toLowerCase();
+      for(let i = 0; i < sel.options.length; i++){
         if(methodLc && sel.options[i].value.toLowerCase().includes(methodLc)){
-          sel.selectedIndex=i; break;
+          sel.selectedIndex = i; break;
         }
       }
       document.getElementById('modal-summary').innerHTML = `
