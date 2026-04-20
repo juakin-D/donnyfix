@@ -71,9 +71,9 @@ BANK_DETAILS = {
 
 # Plan config: months -> deposit %, fee %, label, min device price
 PLAN_CONFIG = {
-    3:  {'deposit_pct': 40, 'fee_pct': 5,  'label': '3 Months',  'min_price': 500},
-    6:  {'deposit_pct': 30, 'fee_pct': 10, 'label': '6 Months',  'min_price': 1500},
-    12: {'deposit_pct': 20, 'fee_pct': 15, 'label': '12 Months', 'min_price': 3000},
+    2:  {'deposit_pct': 40, 'fee_pct': 2.5, 'label': '2 Months', 'min_price': 500},
+    3:  {'deposit_pct': 40, 'fee_pct': 5,   'label': '3 Months', 'min_price': 500},
+    6:  {'deposit_pct': 60, 'fee_pct': 10,  'label': '6 Months', 'min_price': 1500},
 }
 
 
