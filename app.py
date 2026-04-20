@@ -751,6 +751,16 @@ def installment_apply():
         flash('Your membership has expired or is inactive. Please renew to apply for an installment plan.', 'error')
         return redirect(url_for('dashboard'))
 
+    # Block if member already has an active plan
+    conn2 = get_db()
+    active_plan = conn2.execute(
+        "SELECT id FROM installment_plans WHERE customer_id=%s AND status='Active' LIMIT 1",
+        (session['customer_id'],)).fetchone()
+    conn2.close()
+    if active_plan:
+        flash('You already have an active installment plan. Please complete your current plan before applying for a new one.', 'error')
+        return redirect(url_for('installment_detail', plan_id=active_plan['id']))
+
     if request.method == 'POST':
         try:
             device_name    = request.form.get('device_name', '').strip()
