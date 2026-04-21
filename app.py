@@ -1061,10 +1061,31 @@ def admin_members():
 @admin_required
 def delete_member(customer_id):
     conn = get_db()
-    conn.execute('DELETE FROM customers WHERE id=%s', (customer_id,))
-    conn.commit(); conn.close()
-    logger.warning('Admin %s deleted member #%d', session.get('admin_username'), customer_id)
-    flash('Member deleted.', 'success')
+    customer = conn.execute('SELECT id, name, email FROM customers WHERE id=%s', (customer_id,)).fetchone()
+    if not customer:
+        conn.close()
+        flash('Member not found.', 'error')
+        return redirect(url_for('admin_members'))
+    try:
+        # Delete in FK-safe order: payments → plans → bookings → inventory ref → tokens → customer
+        conn.execute(
+            'DELETE FROM payments WHERE plan_id IN '
+            '(SELECT id FROM installment_plans WHERE customer_id=%s)',
+            (customer_id,))
+        conn.execute('DELETE FROM installment_plans WHERE customer_id=%s', (customer_id,))
+        conn.execute('DELETE FROM bookings WHERE customer_id=%s', (customer_id,))
+        conn.execute('UPDATE inventory SET sold_to=NULL WHERE sold_to=%s', (customer_id,))
+        conn.execute('DELETE FROM email_verification_tokens WHERE customer_id=%s', (customer_id,))
+        conn.execute('DELETE FROM customers WHERE id=%s', (customer_id,))
+        conn.commit()
+        logger.warning('Admin %s deleted member #%d (%s)', session.get('admin_username'), customer_id, customer['email'])
+        flash(f'Member "{customer["name"]}" and all related records deleted.', 'success')
+    except Exception as exc:
+        conn.rollback()
+        logger.error('delete_member #%d failed: %s', customer_id, exc)
+        flash('Could not delete member — please try again.', 'error')
+    finally:
+        conn.close()
     return redirect(url_for('admin_members'))
 
 
