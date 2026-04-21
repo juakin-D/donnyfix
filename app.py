@@ -741,6 +741,11 @@ def customer_logout():
 def dashboard():
     conn     = get_db()
     customer = conn.execute('SELECT * FROM customers WHERE id=%s', (session['customer_id'],)).fetchone()
+    if not customer:
+        conn.close()
+        session.clear()
+        flash('Your account no longer exists. Please register or contact us.', 'error')
+        return redirect(url_for('customer_login'))
     bookings = conn.execute(
         'SELECT * FROM bookings WHERE customer_id=%s ORDER BY date DESC',
         (session['customer_id'],)).fetchall()
@@ -762,6 +767,11 @@ def dashboard():
 def account_edit():
     conn     = get_db()
     customer = conn.execute('SELECT * FROM customers WHERE id=%s', (session['customer_id'],)).fetchone()
+    if not customer:
+        conn.close()
+        session.clear()
+        flash('Your account no longer exists.', 'error')
+        return redirect(url_for('customer_login'))
     if request.method == 'POST':
         name  = request.form.get('name', '').strip()
         phone = request.form.get('phone', '').strip()
