@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Staff Accounts — PhoneHub Ghana</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0E1210;--surface:#161C18;--surface2:#1D2521;
+      --border:#2A3330;--border2:#374440;
+      --green:#00C46A;--green-glow:rgba(0,196,106,.12);
+      --gold:#F5C842;--gold-dim:rgba(245,200,66,.12);
+      --red:#E84040;--red-dim:rgba(232,64,64,.12);
+      --amber:#F59E0B;--amber-dim:rgba(245,158,11,.12);
+      --blue:#3B9EE8;--blue-dim:rgba(59,158,232,.12);
+      --text:#E8F0EC;--text-soft:#7A9088;--text-muted:#4A5E58;
+    }
+    html{height:100%}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+    /* SIDEBAR */
+    .sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+    .sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid var(--border)}
+    .logo-mark{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+    .logo-mark span{color:var(--gold)}
+    .logo-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+    .nav-section{padding:16px 12px 8px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:2px 8px;border-radius:8px;color:var(--text-soft);text-decoration:none;font-size:14px;transition:all .15s;cursor:pointer}
+    .nav-item:hover{background:var(--surface2);color:var(--text)}
+    .nav-item.active{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.15)}
+    .nav-icon{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+    .sidebar-footer{margin-top:auto;padding:16px 12px;border-top:1px solid var(--border)}
+    .admin-user{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--surface2)}
+    .admin-avatar{width:32px;height:32px;border-radius:50%;background:var(--green-glow);border:1px solid rgba(0,196,106,.2);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--green);flex-shrink:0}
+    .admin-name{font-size:13px;font-weight:500;color:var(--text)}
+    .admin-role{font-size:11px;color:var(--text-muted)}
+    .logout-btn{display:block;width:100%;margin-top:8px;padding:9px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;text-align:center}
+    .logout-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-dim)}
+
+    /* MAIN */
+    .main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:64px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+    .topbar-left{display:flex;align-items:center;gap:12px}
+    .topbar-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text)}
+    .topbar-subtitle{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:.5px}
+    .topbar-right{display:flex;align-items:center;gap:10px}
+    .status-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--green-glow);border:1px solid rgba(0,196,106,.2);font-size:12px;color:var(--green)}
+    .status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    .content{flex:1;overflow-y:auto;padding:28px 32px}
+
+    /* STATS */
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;position:relative;overflow:hidden;transition:border-color .2s}
+    .stat-card:hover{border-color:var(--border2)}
+    .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+    .stat-card.green::before{background:var(--green)}
+    .stat-card.gold::before{background:var(--gold)}
+    .stat-card.blue::before{background:var(--blue)}
+    .stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+    .stat-value{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1;margin-bottom:6px}
+    .stat-card.green .stat-value{color:var(--green)}
+    .stat-card.gold .stat-value{color:var(--gold)}
+    .stat-card.blue .stat-value{color:var(--blue)}
+    .stat-sub{font-size:12px;color:var(--text-muted)}
+
+    /* FLASH */
+    .flash{padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;display:flex;align-items:center;gap:10px}
+    .flash.success{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.2)}
+    .flash.error{background:var(--red-dim);color:var(--red);border:1px solid rgba(232,64,64,.2)}
+
+    /* ADD FORM PANEL */
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:24px;overflow:hidden}
+    .panel-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;user-select:none}
+    .panel-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text)}
+    .panel-toggle{font-size:13px;color:var(--green);font-weight:500;background:var(--green-glow);border:1px solid rgba(0,196,106,.2);border-radius:7px;padding:6px 14px;cursor:pointer;transition:all .15s}
+    .panel-toggle:hover{background:rgba(0,196,106,.2)}
+    .panel-body{padding:20px;border-top:1px solid var(--border);display:none}
+    .panel-body.open{display:block}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase}
+    .field-input,.field-select{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s}
+    .field-input::placeholder{color:var(--text-muted)}
+    .field-input:focus,.field-select:focus{border-color:rgba(0,196,106,.4);box-shadow:0 0 0 3px rgba(0,196,106,.06)}
+    .field-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234A5E58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+    .form-actions{margin-top:20px;display:flex;gap:10px}
+    .btn-primary{padding:10px 22px;background:var(--green);border:none;border-radius:8px;color:#0E1210;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
+    .btn-primary:hover{opacity:.88}
+    .btn-ghost{padding:10px 18px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s}
+    .btn-ghost:hover{color:var(--text);border-color:var(--text-soft)}
+
+    /* TABLE */
+    .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .section-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)}
+    .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:28px}
+    table{width:100%;border-collapse:collapse}
+    thead tr{border-bottom:1px solid var(--border)}
+    th{padding:12px 16px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.2px;background:var(--surface2);white-space:nowrap}
+    td{padding:13px 16px;font-size:14px;color:var(--text-soft);border-bottom:1px solid var(--border);vertical-align:middle}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr{transition:background .12s}
+    tbody tr:hover td{background:var(--surface2);color:var(--text)}
+    tbody tr.you-row{outline:1px solid rgba(0,196,106,.25);outline-offset:-1px}
+    .td-name{font-weight:500;color:var(--text)}
+    .td-mono{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)}
+    .td-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+
+    /* BADGES */
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+    .badge-owner{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(245,200,66,.25)}
+    .badge-manager{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,158,232,.25)}
+    .badge-technician{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.25)}
+    .badge-sales{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+    .badge-active{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.2)}
+    .badge-inactive{background:var(--red-dim);color:var(--red);border:1px solid rgba(232,64,64,.2)}
+    .badge-you{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.2);font-size:10px;padding:2px 7px;margin-left:6px}
+
+    /* ACTION BUTTONS */
+    .action-cell{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+    .act-btn{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 10px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text-muted);white-space:nowrap;transition:all .15s}
+    .act-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+    .act-btn.edit:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-dim)}
+    .act-btn.danger:hover{border-color:var(--red);color:var(--red);background:var(--red-dim)}
+    .act-btn.warn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+
+    /* PERMISSIONS REFERENCE */
+    .perms-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .perms-header{padding:16px 20px;border-bottom:1px solid var(--border)}
+    .perms-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text)}
+    .perms-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:3px}
+    .perms-table{width:100%;border-collapse:collapse}
+    .perms-table th{padding:10px 14px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;background:var(--surface2);border-bottom:1px solid var(--border)}
+    .perms-table td{padding:9px 14px;font-size:13px;border-bottom:1px solid var(--border);color:var(--text-soft)}
+    .perms-table tbody tr:last-child td{border-bottom:none}
+    .perms-table tbody tr:hover td{background:var(--surface2)}
+    .check-yes{color:var(--green);font-size:15px}
+    .check-no{color:var(--red);opacity:.7;font-size:15px}
+
+    /* MODAL */
+    .modal-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;max-width:440px;width:90%;animation:modalPop .2s ease}
+    @keyframes modalPop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+    .modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px}
+    .modal-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1;float:right;margin-top:-4px}
+    .modal-field{margin-bottom:14px}
+    .modal-label{display:block;font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+    .modal-input,.modal-select{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s}
+    .modal-input:focus,.modal-select:focus{border-color:rgba(0,196,106,.4)}
+    .modal-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234A5E58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+    .modal-checkbox-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .modal-checkbox-row label{font-size:14px;color:var(--text-soft);cursor:pointer}
+    .modal-actions{display:flex;gap:10px;margin-top:20px}
+    .modal-submit{flex:1;padding:10px;background:var(--green);border:none;border-radius:8px;color:#0E1210;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
+    .modal-submit:hover{opacity:.88}
+    .modal-cancel{padding:10px 16px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s}
+    .modal-cancel:hover{color:var(--text)}
+    .modal-submit.danger{background:var(--red)}
+
+    .empty-state{text-align:center;padding:64px 32px}
+    .empty-icon{font-size:40px;margin-bottom:14px;opacity:.4}
+    .empty-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text-soft);margin-bottom:6px}
+    .empty-sub{font-size:14px;color:var(--text-muted)}
+
+    @media(max-width:900px){.sidebar{display:none}.content{padding:20px}.stats-row{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.topbar{padding:0 20px}table{display:block;overflow-x:auto}}
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">Phone<span>Hub</span></div>
+      <div class="logo-sub">Admin Console</div>
+    </div>
+    <div class="nav-section">Operations</div>
+    <a href="/admin" class="nav-item"><span class="nav-icon">📋</span>Bookings</a>
+    <a href="/admin/members" class="nav-item"><span class="nav-icon">👤</span>Members</a>
+    <a href="/admin/installments" class="nav-item"><span class="nav-icon">💳</span>Installments</a>
+    <a href="/admin/inventory" class="nav-item"><span class="nav-icon">📦</span>Inventory</a>
+    <a href="/admin/revenue" class="nav-item"><span class="nav-icon">📊</span>Revenue</a>
+    <a href="/admin/staff" class="nav-item active"><span class="nav-icon">👥</span>Staff</a>
+    <div class="nav-section">Quick Links</div>
+    <a href="/" class="nav-item" target="_blank"><span class="nav-icon">🌐</span>View Site</a>
+    <div class="sidebar-footer">
+      <div class="admin-user">
+        <div class="admin-avatar">{{ (session.get('admin_username', 'AD')[:2])|upper }}</div>
+        <div>
+          <div class="admin-name">{{ session.get('admin_username', 'Admin') }}</div>
+          <div class="admin-role">{{ session.get('admin_role', 'admin')|capitalize }}</div>
+        </div>
+      </div>
+      <form method="POST" action="/admin/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="logout-btn" type="submit">Sign Out</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="topbar-title">Staff Accounts</div>
+          <div class="topbar-subtitle">Role-based access management</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="status-pill"><span class="status-dot"></span>Live</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);font-size:12px;color:var(--text-soft);">
+          {{ session.get('admin_username') }}
+          <span style="{% if session.get('admin_role') == 'owner' %}color:var(--gold){% elif session.get('admin_role') == 'manager' %}color:var(--blue){% elif session.get('admin_role') == 'technician' %}color:var(--green){% else %}color:var(--amber){% endif %};font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;">{{ session.get('admin_role', 'admin') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">
+            <span>{% if category == 'success' %}✓{% else %}✕{% endif %}</span>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      <!-- STATS ROW -->
+      {% set active_count = staff_list | selectattr('is_active', 'equalto', 1) | list | length %}
+      {% set role_counts = {} %}
+      {% for s in staff_list %}{% if s.role in role_counts %}{% set _ = role_counts.update({s.role: role_counts[s.role] + 1}) %}{% else %}{% set _ = role_counts.update({s.role: 1}) %}{% endif %}{% endfor %}
+      <div class="stats-row">
+        <div class="stat-card green">
+          <div class="stat-label">Total Staff</div>
+          <div class="stat-value">{{ staff_list | length }}</div>
+          <div class="stat-sub">All accounts</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Active</div>
+          <div class="stat-value">{{ active_count }}</div>
+          <div class="stat-sub">{{ staff_list | length - active_count }} inactive</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-label">Roles</div>
+          <div class="stat-value" style="font-size:18px;margin-top:4px;">
+            {% for role, count in role_counts.items() %}
+              <span class="badge badge-{{ role }}" style="font-size:11px;margin-right:4px;">{{ count }} {{ role }}</span>
+            {% endfor %}
+            {% if not role_counts %}—{% endif %}
+          </div>
+          <div class="stat-sub">Role distribution</div>
+        </div>
+      </div>
+
+      <!-- ADD STAFF FORM -->
+      <div class="panel" id="add-panel">
+        <div class="panel-header" onclick="togglePanel()">
+          <div class="panel-title">+ Add Staff Member</div>
+          <button type="button" class="panel-toggle" id="panel-toggle-btn">Show Form</button>
+        </div>
+        <div class="panel-body" id="panel-body">
+          <form method="POST" action="/admin/staff/add">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-grid">
+              <div class="field">
+                <label class="field-label">Full Name *</label>
+                <input class="field-input" type="text" name="name" placeholder="e.g. Kwame Asante" maxlength="100" required>
+              </div>
+              <div class="field">
+                <label class="field-label">Email Address *</label>
+                <input class="field-input" type="email" name="email" placeholder="staff@phonehubghana.com" required>
+              </div>
+              <div class="field">
+                <label class="field-label">Phone (optional)</label>
+                <input class="field-input" type="text" name="phone" placeholder="024 000 0000">
+              </div>
+              <div class="field">
+                <label class="field-label">Role *</label>
+                <select class="field-select" name="role" required>
+                  <option value="">Select role…</option>
+                  {% if session.get('admin_is_master') %}
+                  <option value="owner">Owner</option>
+                  {% endif %}
+                  <option value="manager">Manager</option>
+                  <option value="technician">Technician</option>
+                  <option value="sales">Sales</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field-label">Password * (min 8 chars)</label>
+                <input class="field-input" type="password" name="password" placeholder="••••••••" minlength="8" required>
+              </div>
+              <div class="field">
+                <label class="field-label">Confirm Password *</label>
+                <input class="field-input" type="password" name="confirm_password" placeholder="••••••••" minlength="8" required>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Create Staff Account</button>
+              <button type="button" class="btn-ghost" onclick="togglePanel()">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- STAFF TABLE -->
+      <div class="section-header">
+        <div class="section-title">
+          All Staff
+          <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px;">{{ staff_list | length }} account{{ 's' if staff_list | length != 1 else '' }}</span>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        {% if staff_list %}
+        <table>
+          <thead>
+            <tr>
+              <th>Name / Email</th>
+              <th>Phone</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Last Login</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in staff_list %}
+            <tr {% if s.id == current_staff_id %}class="you-row"{% endif %}>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div>
+                    <div class="td-name">
+                      {{ s.name }}
+                      {% if s.id == current_staff_id %}
+                        <span class="badge badge-you">You</span>
+                      {% endif %}
+                    </div>
+                    <div class="td-sub">{{ s.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="td-mono">{{ s.phone or '—' }}</span></td>
+              <td><span class="badge badge-{{ s.role }}">{{ s.role }}</span></td>
+              <td>
+                {% if s.is_active %}
+                  <span class="badge badge-active">Active</span>
+                {% else %}
+                  <span class="badge badge-inactive">Inactive</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="td-mono">
+                  {% if s.last_login %}
+                    {{ s.last_login.strftime('%Y-%m-%d %H:%M') if s.last_login.strftime is defined else s.last_login | string | truncate(16, True, '') }}
+                  {% else %}
+                    Never
+                  {% endif %}
+                </span>
+              </td>
+              <td><span class="td-mono">{{ s.created_at.strftime('%Y-%m-%d') if s.created_at else '—' }}</span></td>
+              <td>
+                <div class="action-cell">
+                  {% if s.id != current_staff_id %}
+                  <button class="act-btn edit"
+                    onclick="openEditModal({{ s.id }}, {{ s.name|tojson }}, {{ (s.phone or '')|tojson }}, {{ s.role|tojson }}, {{ s.is_active }})">
+                    ✏ Edit
+                  </button>
+                  {% endif %}
+                  {% if session.get('admin_is_master') or session.get('admin_role') == 'owner' %}
+                  <button class="act-btn edit"
+                    onclick="openResetModal({{ s.id }}, {{ s.name|tojson }})">
+                    🔑 Reset
+                  </button>
+                  {% endif %}
+                  {% if s.is_active and s.id != current_staff_id %}
+                  <form method="POST" action="/admin/staff/{{ s.id }}/deactivate"
+                        onsubmit="return confirm('Deactivate {{ s.name|e }}?')" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="act-btn warn">⏸ Deactivate</button>
+                  </form>
+                  {% endif %}
+                  {% if session.get('admin_is_master') and s.id != current_staff_id %}
+                  <form method="POST" action="/admin/staff/{{ s.id }}/delete"
+                        onsubmit="return confirm('Permanently delete {{ s.name|e }}? This cannot be undone.')" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="act-btn danger">🗑 Delete</button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <div class="empty-title">No staff accounts yet</div>
+          <div class="empty-sub">Use the form above to add your first staff member.</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- PERMISSIONS REFERENCE CARD -->
+      <div class="perms-card">
+        <div class="perms-header">
+          <div class="perms-title">Role Permissions Reference</div>
+          <div class="perms-sub">Read-only overview of what each role can access</div>
+        </div>
+        <table class="perms-table">
+          <thead>
+            <tr>
+              <th>Permission</th>
+              <th style="color:var(--gold)">Owner</th>
+              <th style="color:var(--blue)">Manager</th>
+              <th style="color:var(--green)">Technician</th>
+              <th style="color:var(--amber)">Sales</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>View Bookings</td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td></tr>
+            <tr><td>Edit Bookings</td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td></tr>
+            <tr><td>Delete Bookings</td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td></tr>
+            <tr><td>View Members</td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td><td><span class="check-yes">✓</span></td></tr>
+            <tr><td>Edit Members</td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td></tr>
+            <tr><td>Delete Members</td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td></tr>
+            <tr><td>View Installments</td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td><td><span class="check-yes">✓</span></td></tr>
+            <tr><td>Record Payment</td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td></tr>
+            <tr><td>View Revenue</td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td></tr>
+            <tr><td>Manage Staff</td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td></tr>
+            <tr><td>Send Reminders</td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td></tr>
+            <tr><td>Extend Membership</td><td><span class="check-yes">✓</span></td><td><span class="check-yes">✓</span></td><td><span class="check-no">✗</span></td><td><span class="check-no">✗</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div><!-- end .content -->
+  </div><!-- end .main -->
+
+  <!-- EDIT MODAL -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('edit-modal')">×</button>
+      <div class="modal-title">Edit Staff Member</div>
+      <form method="POST" id="edit-form" action="">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-field">
+          <label class="modal-label">Full Name</label>
+          <input class="modal-input" type="text" name="name" id="edit-name" maxlength="100" required>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">Phone</label>
+          <input class="modal-input" type="text" name="phone" id="edit-phone" placeholder="024 000 0000">
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">Role</label>
+          <select class="modal-select" name="role" id="edit-role">
+            {% if session.get('admin_is_master') %}
+            <option value="owner">Owner</option>
+            {% endif %}
+            <option value="manager">Manager</option>
+            <option value="technician">Technician</option>
+            <option value="sales">Sales</option>
+          </select>
+        </div>
+        <div class="modal-checkbox-row">
+          <input type="checkbox" name="is_active" id="edit-active" value="1">
+          <label for="edit-active">Account is active</label>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="modal-submit">Save Changes</button>
+          <button type="button" class="modal-cancel" onclick="closeModal('edit-modal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- RESET PASSWORD MODAL -->
+  <div class="modal-overlay" id="reset-modal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('reset-modal')">×</button>
+      <div class="modal-title" id="reset-modal-title">Reset Password</div>
+      <form method="POST" id="reset-form" action="">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-field">
+          <label class="modal-label">New Password (min 8 chars)</label>
+          <input class="modal-input" type="password" name="new_password" placeholder="••••••••" minlength="8" required>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">Confirm Password</label>
+          <input class="modal-input" type="password" name="confirm_password" placeholder="••••••••" minlength="8" required>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="modal-submit">Reset Password</button>
+          <button type="button" class="modal-cancel" onclick="closeModal('reset-modal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function togglePanel() {
+      const body = document.getElementById('panel-body');
+      const btn  = document.getElementById('panel-toggle-btn');
+      const open = body.classList.toggle('open');
+      btn.textContent = open ? 'Hide Form' : 'Show Form';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    function openEditModal(id, name, phone, role, isActive) {
+      document.getElementById('edit-form').action = `/admin/staff/${id}/edit`;
+      document.getElementById('edit-name').value  = name;
+      document.getElementById('edit-phone').value = phone || '';
+      const roleSelect = document.getElementById('edit-role');
+      for (let i = 0; i < roleSelect.options.length; i++) {
+        if (roleSelect.options[i].value === role) { roleSelect.selectedIndex = i; break; }
+      }
+      document.getElementById('edit-active').checked = isActive === 1;
+      document.getElementById('edit-modal').classList.add('open');
+    }
+
+    function openResetModal(id, name) {
+      document.getElementById('reset-form').action = `/admin/staff/${id}/reset-password`;
+      document.getElementById('reset-modal-title').textContent = `Reset Password — ${name}`;
+      document.getElementById('reset-modal').classList.add('open');
+    }
+
+    // Close modals on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('open');
+      });
+    });
+  </script>
+
+</body>
+</html>

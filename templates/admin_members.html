@@ -207,6 +207,9 @@
     <a href="/admin/installments" class="nav-item"><span class="nav-icon">💳</span>Installments</a>
     <a href="/admin/inventory" class="nav-item"><span class="nav-icon">📦</span>Inventory</a>
     <a href="/admin/revenue" class="nav-item"><span class="nav-icon">📊</span>Revenue</a>
+    {% if has_permission('manage_staff') %}
+    <a href="/admin/staff" class="nav-item"><span class="nav-icon">👥</span>Staff</a>
+    {% endif %}
 
     <div class="nav-section">Quick Links</div>
     <a href="/" class="nav-item" target="_blank"><span class="nav-icon">🌐</span>View Site</a>
@@ -214,10 +217,10 @@
 
     <div class="sidebar-footer">
       <div class="admin-user">
-        <div class="admin-avatar">AD</div>
+        <div class="admin-avatar">{{ (session.get('admin_username', 'AD')[:2])|upper }}</div>
         <div>
           <div class="admin-name">{{ session.get('admin_username', 'Admin') }}</div>
-          <div class="admin-role">Administrator</div>
+          <div class="admin-role">{{ session.get('admin_role', 'admin')|capitalize }}</div>
         </div>
       </div>
       <form method="POST" action="/admin/logout">
@@ -240,6 +243,10 @@
       </div>
       <div class="topbar-right">
         <div class="status-pill"><span class="status-dot"></span>Live</div>
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);font-size:12px;color:var(--text-soft);">
+          {{ session.get('admin_username') }}
+          <span style="{% if session.get('admin_role') == 'owner' %}color:var(--gold){% elif session.get('admin_role') == 'manager' %}color:#3B9EE8{% elif session.get('admin_role') == 'technician' %}color:var(--green){% else %}color:var(--amber){% endif %};font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;">{{ session.get('admin_role', 'admin') }}</span>
+        </div>
       </div>
     </div>
 
@@ -376,6 +383,7 @@
                         data-expiry="{{ m.expiry or '' }}"
                         onclick="openMemberModal(this)"
                         title="Update membership">✏ Edit</button>
+                    {% if has_permission('extend_membership') %}
                     <form class="extend-form" method="POST" action="/admin/members/{{ m.id }}/extend">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <select class="extend-select" name="months">
@@ -386,11 +394,14 @@
                       </select>
                       <button class="act-btn extend" type="submit">Extend</button>
                     </form>
+                    {% endif %}
+                    {% if has_permission('delete_members') %}
                     <form method="POST" action="/admin/members/delete/{{ m.id }}"
                           onsubmit="return confirm('Delete member {{ m.name|e }}?')">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button class="act-btn delete" type="submit" title="Delete member">🗑</button>
                     </form>
+                    {% endif %}
                   </div>
                 </td>
               </tr>

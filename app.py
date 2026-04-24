@@ -76,6 +76,89 @@ PLAN_CONFIG = {
     6:  {'deposit_pct': 60, 'fee_pct': 10,  'label': '6 Months', 'min_price': 1500},
 }
 
+ROLE_PERMISSIONS = {
+    'owner': {
+        'view_bookings':      True,
+        'edit_bookings':      True,
+        'delete_bookings':    True,
+        'view_members':       True,
+        'edit_members':       True,
+        'delete_members':     True,
+        'view_installments':  True,
+        'edit_installments':  True,
+        'view_inventory':     True,
+        'edit_inventory':     True,
+        'delete_inventory':   True,
+        'view_revenue':       True,
+        'manage_staff':       True,
+        'send_reminders':     True,
+        'extend_membership':  True,
+        'record_payment':     True,
+    },
+    'manager': {
+        'view_bookings':      True,
+        'edit_bookings':      True,
+        'delete_bookings':    False,
+        'view_members':       True,
+        'edit_members':       True,
+        'delete_members':     False,
+        'view_installments':  True,
+        'edit_installments':  True,
+        'view_inventory':     True,
+        'edit_inventory':     True,
+        'delete_inventory':   False,
+        'view_revenue':       True,
+        'manage_staff':       False,
+        'send_reminders':     True,
+        'extend_membership':  True,
+        'record_payment':     True,
+    },
+    'technician': {
+        'view_bookings':      True,
+        'edit_bookings':      True,
+        'delete_bookings':    False,
+        'view_members':       False,
+        'edit_members':       False,
+        'delete_members':     False,
+        'view_installments':  False,
+        'edit_installments':  False,
+        'view_inventory':     True,
+        'edit_inventory':     False,
+        'delete_inventory':   False,
+        'view_revenue':       False,
+        'manage_staff':       False,
+        'send_reminders':     False,
+        'extend_membership':  False,
+        'record_payment':     False,
+    },
+    'sales': {
+        'view_bookings':      True,
+        'edit_bookings':      False,
+        'delete_bookings':    False,
+        'view_members':       True,
+        'edit_members':       False,
+        'delete_members':     False,
+        'view_installments':  True,
+        'edit_installments':  False,
+        'view_inventory':     True,
+        'edit_inventory':     False,
+        'delete_inventory':   False,
+        'view_revenue':       False,
+        'manage_staff':       False,
+        'send_reminders':     False,
+        'extend_membership':  False,
+        'record_payment':     False,
+    },
+}
+
+
+def has_permission(permission):
+    """Check if current session user has a permission."""
+    if session.get('admin_is_master'):
+        return True
+    role = session.get('admin_role', '')
+    return ROLE_PERMISSIONS.get(role, {}).get(permission, False)
+
 
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
 
@@ -193,6 +276,19 @@ def init_db():
         updated_at    TIMESTAMP DEFAULT NOW(),
         FOREIGN KEY (sold_to) REFERENCES customers(id),
         FOREIGN KEY (plan_id) REFERENCES installment_plans(id)
+    )""")
+
+    conn.execute("""CREATE TABLE IF NOT EXISTS staff (
+        id            SERIAL PRIMARY KEY,
+        name          TEXT NOT NULL,
+        email         TEXT NOT NULL UNIQUE,
+        phone         TEXT,
+        password_hash TEXT NOT NULL,
+        role          TEXT NOT NULL DEFAULT 'technician',
+        is_active     INTEGER DEFAULT 1,
+        created_by    TEXT DEFAULT 'owner',
+        last_login    TIMESTAMP,
+        created_at    TIMESTAMP DEFAULT NOW()
     )""")
 
     conn.commit()
@@ -527,7 +623,8 @@ def set_security_headers(response):
 @app.context_processor
 def inject_helpers():
     return dict(membership_status=membership_status,
-                fmt_ghs=fmt_ghs, PLAN_CONFIG=PLAN_CONFIG)
+                fmt_ghs=fmt_ghs, PLAN_CONFIG=PLAN_CONFIG,
+                has_permission=has_permission)
 
 
 # ─── AUTH DECORATORS ──────────────────────────────────────────────────────────
@@ -940,13 +1037,41 @@ def admin_login():
     if request.method == 'POST':
         u = request.form.get('username', '').strip()
         p = request.form.get('password', '')
+
+        # Check master admin first (env var — never in DB)
         if u == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, p):
-            session['admin_logged_in']    = True
-            session['admin_username']     = u
+            session['admin_logged_in']     = True
+            session['admin_username']      = u
+            session['admin_role']          = 'owner'
+            session['admin_is_master']     = True
             session['admin_last_activity'] = datetime.now(timezone.utc).isoformat()
-            flash('Login successful.', 'success')
+            flash('Welcome back.', 'success')
             return redirect(url_for('admin'))
-        flash('Invalid username or password.', 'error')
+
+        # Check staff accounts in database
+        conn = get_db()
+        staff = conn.execute(
+            'SELECT * FROM staff WHERE email=%s AND is_active=1',
+            (u,)).fetchone()
+        conn.close()
+
+        if staff and check_password_hash(staff['password_hash'], p):
+            conn2 = get_db()
+            conn2.execute(
+                'UPDATE staff SET last_login=NOW() WHERE id=%s',
+                (staff['id'],))
+            conn2.commit()
+            conn2.close()
+            session['admin_logged_in']     = True
+            session['admin_username']      = staff['name']
+            session['admin_role']          = staff['role']
+            session['admin_staff_id']      = staff['id']
+            session['admin_is_master']     = False
+            session['admin_last_activity'] = datetime.now(timezone.utc).isoformat()
+            flash(f'Welcome, {staff["name"]}.', 'success')
+            return redirect(url_for('admin'))
+
+        flash('Invalid credentials.', 'error')
     return render_template('admin_login.html')
 
 
@@ -986,6 +1111,9 @@ def admin():
 @app.route('/admin/delete/<int:booking_id>', methods=['POST'])
 @admin_required
 def delete_booking(booking_id):
+    if not has_permission('delete_bookings'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     conn = get_db()
     conn.execute('DELETE FROM bookings WHERE id=%s', (booking_id,))
     conn.commit(); conn.close()
@@ -997,6 +1125,9 @@ def delete_booking(booking_id):
 @app.route('/admin/bookings/<int:booking_id>/status', methods=['POST'])
 @admin_required
 def update_booking_status(booking_id):
+    if not has_permission('edit_bookings'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     new_status = request.form.get('status', '')
     if new_status not in ('Pending', 'In Progress', 'Complete', 'Cancelled'):
         flash('Invalid status.', 'error')
@@ -1019,6 +1150,9 @@ def update_booking_status(booking_id):
 @app.route('/admin/members')
 @admin_required
 def admin_members():
+    if not has_permission('view_members'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     search = request.args.get('search', '').strip()
     tier   = request.args.get('tier', '').strip()
     try:
@@ -1070,6 +1204,9 @@ def admin_members():
 @app.route('/admin/members/delete/<int:customer_id>', methods=['POST'])
 @admin_required
 def delete_member(customer_id):
+    if not has_permission('delete_members'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     conn = get_db()
     customer = conn.execute('SELECT id, name, email FROM customers WHERE id=%s', (customer_id,)).fetchone()
     if not customer:
@@ -1102,6 +1239,9 @@ def delete_member(customer_id):
 @app.route('/admin/installments')
 @admin_required
 def admin_installments():
+    if not has_permission('view_installments'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     status_filter = request.args.get('status', '').strip()
     search        = request.args.get('search', '').strip()
     try:
@@ -1156,6 +1296,9 @@ def admin_installments():
 @app.route('/admin/installments/<int:plan_id>/record-payment', methods=['POST'])
 @admin_required
 def record_payment(plan_id):
+    if not has_permission('record_payment'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     try:
         amount = float(request.form['amount'])
     except (ValueError, KeyError):
@@ -1252,6 +1395,9 @@ def record_payment(plan_id):
 @app.route('/admin/installments/<int:plan_id>/update-status', methods=['POST'])
 @admin_required
 def update_plan_status(plan_id):
+    if not has_permission('edit_installments'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     new_status = request.form.get('status', '')
     if new_status not in ('Active', 'Paused', 'Completed', 'Defaulted'):
         flash('Invalid status value.', 'error')
@@ -1293,6 +1439,9 @@ def booking_receipt(booking_id):
 @app.route('/receipt/payment/<int:payment_id>')
 @admin_required
 def payment_receipt(payment_id):
+    if not has_permission('view_installments'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     conn    = get_db()
     payment = conn.execute('SELECT * FROM payments WHERE id=%s', (payment_id,)).fetchone()
     if not payment:
@@ -1343,6 +1492,9 @@ def latest_payment_receipt(plan_id):
 @app.route('/admin/installments/send-reminders', methods=['POST'])
 @admin_required
 def send_payment_reminders():
+    if not has_permission('send_reminders'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     days    = int(request.form.get('days', 3))
     today   = datetime.today()
     cutoff  = (today + timedelta(days=days)).strftime('%Y-%m-%d')
@@ -1510,6 +1662,9 @@ def reset_password(token):
 @app.route('/admin/members/<int:customer_id>/update-membership', methods=['POST'])
 @admin_required
 def update_membership(customer_id):
+    if not has_permission('edit_members'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     tier   = request.form.get('tier', '').strip()
     expiry = request.form.get('expiry', '').strip()
     if tier not in ('Standard', 'Silver', 'Gold', 'Premium'):
@@ -1538,6 +1693,9 @@ def update_membership(customer_id):
 @app.route('/admin/members/<int:customer_id>/extend', methods=['POST'])
 @admin_required
 def extend_membership(customer_id):
+    if not has_permission('extend_membership'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
     try:
         months = int(request.form.get('months', 0))
     except ValueError:
@@ -2062,6 +2220,211 @@ def admin_revenue_export():
     response.headers['Content-Disposition'] = (
         f'attachment; filename=phonehub-revenue-report-{today}.csv')
     return response
+
+
+# ─── STAFF MANAGEMENT ROUTES ─────────────────────────────────────────────────
+
+@app.route('/admin/staff')
+@admin_required
+def admin_staff():
+    if not has_permission('manage_staff'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
+    conn = get_db()
+    staff_list = conn.execute('SELECT * FROM staff ORDER BY created_at DESC').fetchall()
+    conn.close()
+    return render_template('admin_staff.html',
+                           staff_list=staff_list,
+                           current_staff_id=session.get('admin_staff_id'))
+
+
+@app.route('/admin/staff/add', methods=['POST'])
+@admin_required
+def admin_staff_add():
+    if not has_permission('manage_staff'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
+
+    name     = request.form.get('name', '').strip()
+    email    = request.form.get('email', '').strip().lower()
+    phone    = request.form.get('phone', '').strip() or None
+    role     = request.form.get('role', '').strip()
+    password = request.form.get('password', '')
+    confirm  = request.form.get('confirm_password', '')
+
+    valid_roles = ['manager', 'technician', 'sales']
+    if session.get('admin_is_master'):
+        valid_roles.append('owner')
+
+    errors = []
+    if not name or len(name) > 100:
+        errors.append('Name is required (max 100 characters).')
+    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        errors.append('Enter a valid email address.')
+    if phone and not valid_gh_phone(phone):
+        errors.append('Enter a valid Ghanaian phone number.')
+    if role not in valid_roles:
+        errors.append('Invalid role selected.')
+    if role == 'owner' and not session.get('admin_is_master'):
+        errors.append('Only the master admin can create owner accounts.')
+    if len(password) < 8:
+        errors.append('Password must be at least 8 characters.')
+    if password != confirm:
+        errors.append('Passwords do not match.')
+
+    if errors:
+        for e in errors:
+            flash(e, 'error')
+        return redirect(url_for('admin_staff'))
+
+    conn = get_db()
+    if conn.execute('SELECT id FROM staff WHERE email=%s', (email,)).fetchone():
+        conn.close()
+        flash('An account with that email already exists.', 'error')
+        return redirect(url_for('admin_staff'))
+    conn.execute(
+        'INSERT INTO staff (name, email, phone, password_hash, role, created_by) VALUES (%s, %s, %s, %s, %s, %s)',
+        (name, email, phone, generate_password_hash(password), role, session.get('admin_username')))
+    conn.commit()
+    conn.close()
+    logger.info('Admin %s created staff account for %s (%s)', session.get('admin_username'), name, role)
+    flash(f'Staff account created for {name}.', 'success')
+    return redirect(url_for('admin_staff'))
+
+
+@app.route('/admin/staff/<int:staff_id>/edit', methods=['POST'])
+@admin_required
+def admin_staff_edit(staff_id):
+    if not has_permission('manage_staff'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
+
+    name      = request.form.get('name', '').strip()
+    phone     = request.form.get('phone', '').strip() or None
+    role      = request.form.get('role', '').strip()
+    is_active = 1 if request.form.get('is_active') else 0
+
+    current_staff_id = session.get('admin_staff_id')
+    if current_staff_id and current_staff_id == staff_id:
+        flash('You cannot edit your own role.', 'error')
+        return redirect(url_for('admin_staff'))
+
+    valid_roles = ['manager', 'technician', 'sales']
+    if session.get('admin_is_master'):
+        valid_roles.append('owner')
+
+    if role not in valid_roles:
+        flash('Invalid role.', 'error')
+        return redirect(url_for('admin_staff'))
+    if role == 'owner' and not session.get('admin_is_master'):
+        flash('Only the master admin can assign owner role.', 'error')
+        return redirect(url_for('admin_staff'))
+    if not name or len(name) > 100:
+        flash('Name is required.', 'error')
+        return redirect(url_for('admin_staff'))
+    if phone and not valid_gh_phone(phone):
+        flash('Enter a valid Ghanaian phone number.', 'error')
+        return redirect(url_for('admin_staff'))
+
+    conn = get_db()
+    conn.execute(
+        'UPDATE staff SET name=%s, phone=%s, role=%s, is_active=%s WHERE id=%s',
+        (name, phone, role, is_active, staff_id))
+    conn.commit()
+    conn.close()
+    logger.info('Admin %s edited staff #%d', session.get('admin_username'), staff_id)
+    flash('Staff account updated.', 'success')
+    return redirect(url_for('admin_staff'))
+
+
+@app.route('/admin/staff/<int:staff_id>/reset-password', methods=['POST'])
+@admin_required
+def admin_staff_reset_password(staff_id):
+    if not has_permission('manage_staff'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
+    if not (session.get('admin_is_master') or session.get('admin_role') == 'owner'):
+        flash('Only owner accounts can reset staff passwords.', 'error')
+        return redirect(url_for('admin_staff'))
+
+    new_password = request.form.get('new_password', '')
+    confirm      = request.form.get('confirm_password', '')
+
+    if len(new_password) < 8:
+        flash('Password must be at least 8 characters.', 'error')
+        return redirect(url_for('admin_staff'))
+    if new_password != confirm:
+        flash('Passwords do not match.', 'error')
+        return redirect(url_for('admin_staff'))
+
+    conn = get_db()
+    staff = conn.execute('SELECT name FROM staff WHERE id=%s', (staff_id,)).fetchone()
+    if not staff:
+        conn.close()
+        flash('Staff member not found.', 'error')
+        return redirect(url_for('admin_staff'))
+    conn.execute('UPDATE staff SET password_hash=%s WHERE id=%s',
+                 (generate_password_hash(new_password), staff_id))
+    conn.commit()
+    conn.close()
+    logger.info('Admin %s reset password for staff #%d (%s)', session.get('admin_username'), staff_id, staff['name'])
+    flash(f'Password reset for {staff["name"]}.', 'success')
+    return redirect(url_for('admin_staff'))
+
+
+@app.route('/admin/staff/<int:staff_id>/deactivate', methods=['POST'])
+@admin_required
+def admin_staff_deactivate(staff_id):
+    if not has_permission('manage_staff'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
+
+    current_staff_id = session.get('admin_staff_id')
+    if current_staff_id and current_staff_id == staff_id:
+        flash('You cannot deactivate your own account.', 'error')
+        return redirect(url_for('admin_staff'))
+
+    conn = get_db()
+    staff = conn.execute('SELECT name FROM staff WHERE id=%s', (staff_id,)).fetchone()
+    if not staff:
+        conn.close()
+        flash('Staff member not found.', 'error')
+        return redirect(url_for('admin_staff'))
+    conn.execute('UPDATE staff SET is_active=0 WHERE id=%s', (staff_id,))
+    conn.commit()
+    conn.close()
+    logger.info('Admin %s deactivated staff #%d (%s)', session.get('admin_username'), staff_id, staff['name'])
+    flash(f"{staff['name']}'s account has been deactivated.", 'success')
+    return redirect(url_for('admin_staff'))
+
+
+@app.route('/admin/staff/<int:staff_id>/delete', methods=['POST'])
+@admin_required
+def admin_staff_delete(staff_id):
+    if not has_permission('manage_staff'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
+    if not session.get('admin_is_master'):
+        flash('Only the master admin can permanently delete staff accounts.', 'error')
+        return redirect(url_for('admin_staff'))
+
+    current_staff_id = session.get('admin_staff_id')
+    if current_staff_id and current_staff_id == staff_id:
+        flash('You cannot delete your own account.', 'error')
+        return redirect(url_for('admin_staff'))
+
+    conn = get_db()
+    staff = conn.execute('SELECT name FROM staff WHERE id=%s', (staff_id,)).fetchone()
+    if not staff:
+        conn.close()
+        flash('Staff member not found.', 'error')
+        return redirect(url_for('admin_staff'))
+    conn.execute('DELETE FROM staff WHERE id=%s', (staff_id,))
+    conn.commit()
+    conn.close()
+    logger.info('Master admin permanently deleted staff #%d (%s)', staff_id, staff['name'])
+    flash(f"Staff account for {staff['name']} permanently deleted.", 'success')
+    return redirect(url_for('admin_staff'))
 
 
 # ─── ERROR HANDLERS ───────────────────────────────────────────────────────────
