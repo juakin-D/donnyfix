@@ -133,6 +133,13 @@
     @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
     .inner-pad{padding:16px 20px}
 
+    .admin-mobile-nav{display:none;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .admin-mobile-nav::-webkit-scrollbar{display:none}
+    .amn-inner{display:flex;padding:6px 12px;gap:2px;white-space:nowrap}
+    .amn-link{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 12px;border-radius:8px;font-size:11px;font-weight:500;color:var(--text-soft);text-decoration:none;transition:all 0.2s;flex-shrink:0;border:1px solid transparent}
+    .amn-link:hover{background:var(--surface2);color:var(--text)}
+    .amn-link.active{background:var(--green-glow);color:var(--green);border-color:rgba(0,196,106,0.2)}
+    .amn-icon{font-size:16px;line-height:1}
     @media(max-width:1200px){.charts-grid{grid-template-columns:1fr}}
     @media(max-width:900px){
       .sidebar{display:none}
@@ -140,9 +147,12 @@
       .stats-row,.mini-stats-row{grid-template-columns:1fr 1fr}
       .topbar{padding:0 20px}
       .bottom-grid{grid-template-columns:1fr}
+      table{display:block;overflow-x:auto}
+      .admin-mobile-nav{display:block}
     }
     @media(max-width:560px){
       .stats-row,.mini-stats-row{grid-template-columns:1fr}
+      .topbar-subtitle{display:none}
     }
   </style>
 </head>
@@ -199,6 +209,21 @@
           {{ session.get('admin_username') }}
           <span style="{% if session.get('admin_role') == 'owner' %}color:var(--gold){% elif session.get('admin_role') == 'manager' %}color:#3B9EE8{% elif session.get('admin_role') == 'technician' %}color:var(--green){% else %}color:var(--amber){% endif %};font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;">{{ session.get('admin_role', 'admin') }}</span>
         </div>
+      </div>
+    </div>
+
+    <!-- Mobile Admin Nav -->
+    <div class="admin-mobile-nav">
+      <div class="amn-inner">
+        <a href="/admin" class="amn-link"><span class="amn-icon">📋</span>Bookings</a>
+        <a href="/admin/members" class="amn-link"><span class="amn-icon">👤</span>Members</a>
+        <a href="/admin/installments" class="amn-link"><span class="amn-icon">💳</span>Plans</a>
+        <a href="/admin/inventory" class="amn-link"><span class="amn-icon">📦</span>Inventory</a>
+        <a href="/admin/revenue" class="amn-link active"><span class="amn-icon">📊</span>Revenue</a>
+        <a href="/admin/shop" class="amn-link"><span class="amn-icon">🛍️</span>Shop</a>
+        {% if has_permission('manage_staff') %}
+        <a href="/admin/staff" class="amn-link"><span class="amn-icon">👥</span>Staff</a>
+        {% endif %}
       </div>
     </div>
 

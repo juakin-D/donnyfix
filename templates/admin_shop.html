@@ -109,6 +109,25 @@ tr:hover td{background:var(--surface2)}
 
 /* NEW BADGE */
 .new-badge{background:rgba(245,200,66,.15);color:var(--gold);font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:10px}
+
+/* MOBILE ADMIN NAV */
+.admin-mobile-nav{display:none;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.admin-mobile-nav::-webkit-scrollbar{display:none}
+.amn-inner{display:flex;padding:6px 12px;gap:2px;white-space:nowrap}
+.amn-link{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 12px;border-radius:8px;font-size:11px;font-weight:500;color:var(--muted);text-decoration:none;transition:all .2s;flex-shrink:0;border:1px solid transparent}
+.amn-link:hover{background:var(--surface2);color:var(--text)}
+.amn-link.active{background:rgba(0,196,106,.12);color:var(--green);border-color:rgba(0,196,106,.2)}
+.amn-icon{font-size:16px;line-height:1}
+@media(max-width:900px){
+  .sidebar{display:none}
+  .main{margin-left:0}
+  .content{padding:20px}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .topbar{padding:0 20px}
+  table{display:block;overflow-x:auto}
+  .admin-mobile-nav{display:block}
+}
+@media(max-width:600px){.stats-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -160,6 +179,21 @@ tr:hover td{background:var(--surface2)}
         {% if session.get('admin_is_master') %}Master{% else %}{{ session.get('admin_role','—') }}{% endif %}
       </span>
       <a href="/shop" target="_blank" style="color:var(--muted);font-size:.82rem;text-decoration:none">View Public Shop ↗</a>
+    </div>
+  </div>
+
+  <!-- Mobile Admin Nav -->
+  <div class="admin-mobile-nav">
+    <div class="amn-inner">
+      <a href="/admin" class="amn-link"><span class="amn-icon">📋</span>Bookings</a>
+      <a href="/admin/members" class="amn-link"><span class="amn-icon">👥</span>Members</a>
+      <a href="/admin/installments" class="amn-link"><span class="amn-icon">💳</span>Plans</a>
+      <a href="/admin/inventory" class="amn-link"><span class="amn-icon">📦</span>Inventory</a>
+      <a href="/admin/shop" class="amn-link active"><span class="amn-icon">🛍️</span>Shop</a>
+      <a href="/admin/revenue" class="amn-link"><span class="amn-icon">📊</span>Revenue</a>
+      {% if has_permission('manage_staff') %}
+      <a href="/admin/staff" class="amn-link"><span class="amn-icon">🔐</span>Staff</a>
+      {% endif %}
     </div>
   </div>
 

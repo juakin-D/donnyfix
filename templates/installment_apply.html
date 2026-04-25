@@ -184,15 +184,114 @@
 
     @media(max-width:900px){
       .page{grid-template-columns:1fr;gap:28px;padding:28px 20px 60px}
-      nav{padding:0 20px}
       .plan-grid{grid-template-columns:repeat(3,1fr)}
       .frow{grid-template-columns:1fr}
-      .sidebar{position:static}
+      .sidebar{display:none}
+    }
+    /* MOBILE NAV */
+    .mobile-topbar{display:none;position:sticky;top:0;z-index:100;height:60px;background:rgba(247,245,240,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--warm-gray);padding:0 20px;align-items:center;justify-content:space-between}
+    .mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--green);text-decoration:none}
+    .mtb-brand span{color:var(--gold)}
+    .mtb-actions{display:flex;gap:4px;align-items:center}
+    .mobile-icon-btn{width:40px;height:40px;background:none;border:none;font-size:20px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;transition:background 0.2s}
+    .mobile-icon-btn:hover{background:var(--warm-gray)}
+    .menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;backdrop-filter:blur(2px)}
+    .menu-overlay.open{display:block}
+    .menu-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,85vw);background:#fff;z-index:201;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);overflow-y:auto;display:flex;flex-direction:column}
+    .menu-drawer.open{transform:translateX(0)}
+    .drawer-header{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1px solid var(--warm-gray);flex-shrink:0}
+    .drawer-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--green)}
+    .drawer-logo span{color:var(--gold)}
+    .drawer-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--mid-gray);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background 0.2s}
+    .drawer-close:hover{background:var(--warm-gray)}
+    .drawer-user{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--off-white);border-bottom:1px solid var(--warm-gray);flex-shrink:0}
+    .drawer-avatar{width:40px;height:40px;border-radius:50%;background:var(--green);color:#fff;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .drawer-username{font-size:15px;font-weight:500;color:var(--text)}
+    .drawer-role{font-size:12px;color:var(--green);font-weight:500}
+    .drawer-nav{padding:8px 0}
+    .drawer-link{display:flex;align-items:center;gap:14px;padding:13px 20px;color:var(--text-soft);text-decoration:none;font-size:15px;transition:all 0.15s;border-left:3px solid transparent}
+    .drawer-link:hover,.drawer-link.active{background:rgba(0,107,63,0.06);color:var(--green);border-left-color:var(--green)}
+    .dl-icon{width:24px;text-align:center;font-size:16px;flex-shrink:0}
+    .drawer-divider{height:1px;background:var(--warm-gray);margin:8px 0}
+    .drawer-auth{padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+    .drawer-btn-primary{display:block;text-align:center;padding:13px 20px;background:var(--green);color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;border-radius:10px;text-decoration:none;transition:background 0.2s}
+    .drawer-btn-primary:hover{background:var(--green-dark)}
+    .drawer-btn-outline{display:block;text-align:center;padding:12px 20px;border:1.5px solid var(--warm-gray);color:var(--text);border-radius:10px;text-decoration:none;font-size:15px;font-weight:500;transition:all 0.2s}
+    .drawer-btn-outline:hover{border-color:var(--green);color:var(--green)}
+    .drawer-logout{width:100%;padding:12px;background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5;border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:16px;transition:all 0.2s}
+    .drawer-contact{padding:16px 20px;display:flex;flex-direction:column;gap:8px;margin-top:auto;border-top:1px solid var(--warm-gray);flex-shrink:0}
+    .drawer-contact a{color:var(--mid-gray);font-size:14px;text-decoration:none;display:flex;align-items:center;gap:8px;transition:color 0.2s}
+    .drawer-contact a:hover{color:var(--green)}
+    .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:150;height:64px;background:#fff;border-top:1px solid var(--warm-gray);box-shadow:0 -4px 20px rgba(0,0,0,0.08);align-items:stretch;justify-content:space-around}
+    .bn-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;text-decoration:none;color:var(--mid-gray);font-size:10px;font-weight:500;font-family:'DM Sans',sans-serif;background:none;border:none;cursor:pointer;padding:8px 4px;transition:color 0.2s;-webkit-tap-highlight-color:transparent}
+    .bn-item:hover,.bn-item.bn-active{color:var(--green)}
+    .bn-icon{font-size:20px;line-height:1;display:block}
+    .bn-label{font-size:10px}
+    .bn-item-center .bn-center-dot{width:44px;height:44px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 12px rgba(0,107,63,0.4);margin-top:-20px;border:3px solid #fff;transition:transform 0.2s}
+    .bn-item-center:hover .bn-center-dot,.bn-item-center.bn-active .bn-center-dot{transform:scale(1.08)}
+    .bn-item-center .bn-label{margin-top:2px;color:var(--green);font-weight:600}
+    @media(max-width:768px){
+      .mobile-topbar{display:flex}.desktop-nav{display:none!important}.bottom-nav{display:flex}
+      body{padding-bottom:64px}.wa-float{bottom:80px!important}
+      .plan-grid{grid-template-columns:1fr 1fr}
     }
   </style>
 </head>
 <body>
-  <nav>
+  <!-- Mobile Topbar -->
+  <div class="mobile-topbar" id="mobileTopbar">
+    <a href="/" class="mtb-brand">Phone<span>Hub</span> Ghana</a>
+    <div class="mtb-actions">
+      <a href="/dashboard" class="mobile-icon-btn" title="Dashboard">📊</a>
+      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Open menu">☰</button>
+    </div>
+  </div>
+
+  <!-- Overlay + Drawer -->
+  <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+  <div class="menu-drawer" id="menuDrawer">
+    <div class="drawer-header">
+      <span class="drawer-logo">Phone<span>Hub</span> Ghana</span>
+      <button class="drawer-close" onclick="closeMenu()" aria-label="Close">✕</button>
+    </div>
+    {% if session.get('customer_id') %}
+    <div class="drawer-user">
+      <div class="drawer-avatar">{{ (session.get('customer_name') or 'U')[0].upper() }}</div>
+      <div>
+        <div class="drawer-username">{{ session.get('customer_name','') }}</div>
+        <div class="drawer-role">Member</div>
+      </div>
+    </div>
+    {% endif %}
+    <nav class="drawer-nav">
+      <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
+      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Buy a Phone</a>
+      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book Repair</a>
+      <a href="/installment/apply" class="drawer-link active"><span class="dl-icon">💳</span>Installment Plans</a>
+      <div class="drawer-divider"></div>
+      {% if session.get('customer_id') %}
+      <a href="/dashboard" class="drawer-link"><span class="dl-icon">📊</span>My Dashboard</a>
+      <div class="drawer-divider"></div>
+      <div class="drawer-auth">
+        <form method="POST" action="/logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="drawer-logout">Log Out</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="drawer-auth">
+        <a href="/login" class="drawer-btn-primary">Log In</a>
+        <a href="/register" class="drawer-btn-outline">Create Account</a>
+      </div>
+      {% endif %}
+    </nav>
+    <div class="drawer-contact">
+      <a href="tel:+233541057500">📞 +233 54 105 7500</a>
+      <a href="mailto:info@phonehubghana.com">✉ info@phonehubghana.com</a>
+    </div>
+  </div>
+
+  <nav class="desktop-nav">
     <a href="/" class="nav-logo">Phone<span>Hub</span> Ghana</a>
     <div class="nav-right">
       <a href="/dashboard">My Account</a>
@@ -581,6 +680,20 @@
       closeTC();
     }
     document.addEventListener('keydown', e => { if(e.key === 'Escape') closeTC(); });
+  </script>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="/" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">Home</span></a>
+    <a href="/shop" class="bn-item"><span class="bn-icon">📱</span><span class="bn-label">Shop</span></a>
+    <a href="/booking" class="bn-item bn-cta"><span class="bn-icon">🔧</span><span class="bn-label">Repair</span></a>
+    <a href="/dashboard" class="bn-item"><span class="bn-icon">📊</span><span class="bn-label">Account</span></a>
+    <a href="/installment/apply" class="bn-item bn-active"><span class="bn-icon">💳</span><span class="bn-label">Plans</span></a>
+  </nav>
+  <script>
+    function openMenu(){document.getElementById('menuDrawer').classList.add('open');document.getElementById('menuOverlay').classList.add('open');document.body.style.overflow='hidden'}
+    function closeMenu(){document.getElementById('menuDrawer').classList.remove('open');document.getElementById('menuOverlay').classList.remove('open');document.body.style.overflow=''}
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
   </script>
 </body>
 </html>

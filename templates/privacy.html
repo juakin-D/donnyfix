@@ -169,11 +169,85 @@
     footer a { color: rgba(255,255,255,0.8); font-weight: 400; }
     footer a:hover { color: white; text-decoration: underline; }
     .footer-links { display: flex; justify-content: center; gap: 20px; margin-top: 10px; flex-wrap: wrap; }
+
+    /* MOBILE NAV */
+    .mobile-topbar{display:none;position:sticky;top:0;z-index:100;height:60px;background:var(--green);padding:0 20px;align-items:center;justify-content:space-between}
+    .mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:#fff;text-decoration:none}
+    .mtb-brand span{color:var(--gold)}
+    .mtb-actions{display:flex;gap:4px;align-items:center}
+    .mobile-icon-btn{width:40px;height:40px;background:none;border:none;font-size:20px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:rgba(255,255,255,0.85);-webkit-tap-highlight-color:transparent;transition:background 0.2s}
+    .mobile-icon-btn:hover{background:rgba(255,255,255,0.15)}
+    .menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;backdrop-filter:blur(2px)}
+    .menu-overlay.open{display:block}
+    .menu-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,85vw);background:#fff;z-index:201;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);overflow-y:auto;display:flex;flex-direction:column}
+    .menu-drawer.open{transform:translateX(0)}
+    .drawer-header{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1px solid var(--warm-gray);flex-shrink:0}
+    .drawer-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--green)}
+    .drawer-logo span{color:var(--gold)}
+    .drawer-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--mid-gray);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background 0.2s}
+    .drawer-close:hover{background:var(--warm-gray)}
+    .drawer-nav{padding:8px 0}
+    .drawer-link{display:flex;align-items:center;gap:14px;padding:13px 20px;color:var(--text-soft);text-decoration:none;font-size:15px;font-weight:400;transition:all 0.15s;border-left:3px solid transparent}
+    .drawer-link:hover,.drawer-link.active{background:rgba(0,107,63,0.06);color:var(--green);border-left-color:var(--green)}
+    .dl-icon{width:24px;text-align:center;font-size:16px;flex-shrink:0}
+    .drawer-divider{height:1px;background:var(--warm-gray);margin:8px 0}
+    .drawer-auth{padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+    .drawer-btn-primary{display:block;text-align:center;padding:13px 20px;background:var(--green);color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;border-radius:10px;text-decoration:none;transition:background 0.2s}
+    .drawer-btn-outline{display:block;text-align:center;padding:12px 20px;border:1.5px solid var(--warm-gray);color:var(--text);border-radius:10px;text-decoration:none;font-size:15px;font-weight:500;transition:all 0.2s}
+    .drawer-contact{padding:16px 20px;display:flex;flex-direction:column;gap:8px;margin-top:auto;border-top:1px solid var(--warm-gray);flex-shrink:0}
+    .drawer-contact a{color:var(--mid-gray);font-size:14px;text-decoration:none;display:flex;align-items:center;gap:8px;transition:color 0.2s}
+    .drawer-contact a:hover{color:var(--green)}
+    .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:150;height:64px;background:#fff;border-top:1px solid var(--warm-gray);box-shadow:0 -4px 20px rgba(0,0,0,0.08);align-items:stretch;justify-content:space-around}
+    .bn-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;text-decoration:none;color:var(--mid-gray);font-size:10px;font-weight:500;font-family:'DM Sans',sans-serif;background:none;border:none;cursor:pointer;padding:8px 4px;transition:color 0.2s;-webkit-tap-highlight-color:transparent}
+    .bn-item:hover,.bn-item.bn-active{color:var(--green)}
+    .bn-icon{font-size:20px;line-height:1;display:block}
+    .bn-label{font-size:10px}
+    @media(max-width:768px){
+      body{padding-bottom:64px}
+      .desktop-nav{display:none !important}
+      .mobile-topbar{display:flex}
+      .bottom-nav{display:flex}
+      .hero-band{padding:32px 20px 28px}
+      .hero-band h1{font-size:26px}
+      .page{padding:24px 20px 40px}
+    }
   </style>
 </head>
 <body>
 
-  <nav>
+  <!-- Mobile Topbar -->
+  <div class="mobile-topbar" id="mobileTopbar">
+    <a href="/" class="mtb-brand">Phone<span>Hub</span> Ghana</a>
+    <div class="mtb-actions">
+      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Open menu">☰</button>
+    </div>
+  </div>
+
+  <!-- Overlay + Drawer -->
+  <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+  <div class="menu-drawer" id="menuDrawer">
+    <div class="drawer-header">
+      <span class="drawer-logo">Phone<span>Hub</span> Ghana</span>
+      <button class="drawer-close" onclick="closeMenu()" aria-label="Close">✕</button>
+    </div>
+    <nav class="drawer-nav">
+      <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
+      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Buy a Phone</a>
+      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book Repair</a>
+      <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
+      <div class="drawer-divider"></div>
+      <div class="drawer-auth">
+        <a href="/login" class="drawer-btn-primary">Log In</a>
+        <a href="/register" class="drawer-btn-outline">Join Free</a>
+      </div>
+    </nav>
+    <div class="drawer-contact">
+      <a href="tel:+233541057500">📞 +233 54 105 7500</a>
+      <a href="mailto:info@phonehubghana.com">✉ info@phonehubghana.com</a>
+    </div>
+  </div>
+
+  <nav class="desktop-nav">
     <a href="/" class="brand">Phone<span>Hub</span> Ghana</a>
     <div class="nav-links">
       <a href="/" class="nav-link">Home</a>
@@ -401,5 +475,18 @@
     </div>
   </footer>
 
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="/" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">Home</span></a>
+    <a href="/shop" class="bn-item"><span class="bn-icon">📱</span><span class="bn-label">Shop</span></a>
+    <a href="/booking" class="bn-item"><span class="bn-icon">🔧</span><span class="bn-label">Repair</span></a>
+    <a href="/register" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">Join Free</span></a>
+    <a href="/installment/apply" class="bn-item"><span class="bn-icon">💳</span><span class="bn-label">Plans</span></a>
+  </nav>
+  <script>
+    function openMenu(){document.getElementById('menuDrawer').classList.add('open');document.getElementById('menuOverlay').classList.add('open');document.body.style.overflow='hidden'}
+    function closeMenu(){document.getElementById('menuDrawer').classList.remove('open');document.getElementById('menuOverlay').classList.remove('open');document.body.style.overflow=''}
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
+  </script>
 </body>
 </html>

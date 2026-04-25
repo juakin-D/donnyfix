@@ -92,12 +92,102 @@ footer a{color:var(--gold);text-decoration:none}
 .wa-float{position:fixed;bottom:28px;right:28px;z-index:999;background:#25D366;color:#fff;border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 4px 16px rgba(0,0,0,.25);text-decoration:none;transition:transform .2s}
 .wa-float:hover{transform:scale(1.1)}
 
-@media(max-width:600px){.form-row{grid-template-columns:1fr}.devices-grid{grid-template-columns:1fr}}
+/* ── MOBILE NAV ─────────────────────────────────────── */
+.mobile-topbar{display:none;position:sticky;top:0;z-index:100;height:60px;background:rgba(247,245,240,0.95);backdrop-filter:blur(12px);border-bottom:1px solid #E8E4DC;padding:0 20px;align-items:center;justify-content:space-between}
+.mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:#006B3F;text-decoration:none}
+.mtb-brand span{color:#FCD116}
+.mtb-actions{display:flex;gap:4px;align-items:center}
+.mobile-icon-btn{width:40px;height:40px;background:none;border:none;font-size:20px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;transition:background 0.2s}
+.mobile-icon-btn:hover{background:#E8E4DC}
+.menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;backdrop-filter:blur(2px)}
+.menu-overlay.open{display:block}
+.menu-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,85vw);background:#fff;z-index:201;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);overflow-y:auto;display:flex;flex-direction:column}
+.menu-drawer.open{transform:translateX(0)}
+.drawer-header{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1px solid #E8E4DC;flex-shrink:0}
+.drawer-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#006B3F}
+.drawer-logo span{color:#FCD116}
+.drawer-close{background:none;border:none;font-size:20px;cursor:pointer;color:#8C8880;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background 0.2s}
+.drawer-close:hover{background:#E8E4DC}
+.drawer-user{display:flex;align-items:center;gap:12px;padding:16px 20px;background:#F7F5F0;border-bottom:1px solid #E8E4DC;flex-shrink:0}
+.drawer-avatar{width:40px;height:40px;border-radius:50%;background:#006B3F;color:#fff;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.drawer-username{font-size:15px;font-weight:500;color:#111008}
+.drawer-role{font-size:12px;color:#006B3F;font-weight:500}
+.drawer-nav{padding:8px 0}
+.drawer-link{display:flex;align-items:center;gap:14px;padding:13px 20px;color:#4A4740;text-decoration:none;font-size:15px;transition:all 0.15s;border-left:3px solid transparent}
+.drawer-link:hover,.drawer-link.active{background:rgba(0,107,63,0.06);color:#006B3F;border-left-color:#006B3F}
+.dl-icon{width:24px;text-align:center;font-size:16px;flex-shrink:0}
+.drawer-divider{height:1px;background:#E8E4DC;margin:8px 0}
+.drawer-auth{padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.drawer-btn-primary{display:block;text-align:center;padding:13px 20px;background:#006B3F;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;border-radius:10px;text-decoration:none;transition:background 0.2s}
+.drawer-btn-primary:hover{background:#004D2D}
+.drawer-btn-outline{display:block;text-align:center;padding:12px 20px;border:1.5px solid #E8E4DC;color:#111008;border-radius:10px;text-decoration:none;font-size:15px;font-weight:500;transition:all 0.2s}
+.drawer-btn-outline:hover{border-color:#006B3F;color:#006B3F}
+.drawer-logout{width:100%;padding:12px;background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5;border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:16px;transition:all 0.2s}
+.drawer-logout:hover{background:#FECACA}
+.drawer-contact{padding:16px 20px;display:flex;flex-direction:column;gap:8px;margin-top:auto;border-top:1px solid #E8E4DC;flex-shrink:0}
+.drawer-contact a{color:#8C8880;font-size:14px;text-decoration:none;display:flex;align-items:center;gap:8px;transition:color 0.2s}
+.drawer-contact a:hover{color:#006B3F}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:150;height:64px;background:#fff;border-top:1px solid #E8E4DC;box-shadow:0 -4px 20px rgba(0,0,0,0.08);align-items:stretch;justify-content:space-around}
+.bn-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;text-decoration:none;color:#8C8880;font-size:10px;font-weight:500;font-family:'DM Sans',sans-serif;background:none;border:none;cursor:pointer;padding:8px 4px;transition:color 0.2s;-webkit-tap-highlight-color:transparent}
+.bn-item:hover,.bn-item.bn-active{color:#006B3F}
+.bn-icon{font-size:20px;line-height:1;display:block}
+.bn-label{font-size:10px}
+.bn-item-center .bn-center-dot{width:44px;height:44px;background:#006B3F;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 12px rgba(0,107,63,0.4);margin-top:-20px;border:3px solid #fff;transition:transform 0.2s}
+.bn-item-center:hover .bn-center-dot,.bn-item-center.bn-active .bn-center-dot{transform:scale(1.08)}
+.bn-item-center .bn-label{margin-top:2px;color:#006B3F;font-weight:600}
+@media(max-width:768px){
+  .mobile-topbar{display:flex}.desktop-nav{display:none!important}.bottom-nav{display:flex}
+  body{padding-bottom:64px}.wa-float{bottom:80px!important}
+  .filters-bar{position:static;top:auto;flex-wrap:wrap;gap:8px}
+  .devices-grid{grid-template-columns:1fr 1fr}.count-badge{display:none}
+  .enquiry-section{padding:40px 16px}.form-row{grid-template-columns:1fr}
+}
+@media(max-width:480px){.devices-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<nav>
+<!-- MOBILE TOPBAR -->
+<div class="mobile-topbar">
+  <a href="/" class="mtb-brand">Phone<span>Hub</span></a>
+  <div class="mtb-actions">
+    {% if session.get('customer_id') %}<a href="/dashboard" class="mobile-icon-btn">👤</a>{% endif %}
+    <button class="mobile-icon-btn" onclick="openMenu()">☰</button>
+  </div>
+</div>
+<div class="menu-overlay" id="menuOverlay"></div>
+<div class="menu-drawer" id="menuDrawer">
+  <div class="drawer-header"><span class="drawer-logo">PhoneHub<span>Ghana</span></span><button class="drawer-close" onclick="closeMenu()">✕</button></div>
+  {% if session.get('customer_id') %}<div class="drawer-user"><div class="drawer-avatar">{{ session.get('customer_name','U')[0]|upper }}</div><div><div class="drawer-username">{{ session.get('customer_name') }}</div><div class="drawer-role">Standard Member</div></div></div>{% endif %}
+  <nav class="drawer-nav">
+    <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
+    <a href="/shop" class="drawer-link active"><span class="dl-icon">📱</span>Shop Phones</a>
+    <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book a Repair</a>
+    <a href="/#membership" class="drawer-link"><span class="dl-icon">🎁</span>Membership</a>
+    <a href="/privacy" class="drawer-link"><span class="dl-icon">📄</span>Privacy Policy</a>
+  </nav>
+  <div class="drawer-divider"></div>
+  {% if session.get('customer_id') %}
+  <nav class="drawer-nav">
+    <a href="/dashboard" class="drawer-link"><span class="dl-icon">📊</span>My Dashboard</a>
+    <a href="/shop/reservations" class="drawer-link"><span class="dl-icon">📦</span>My Reservations</a>
+    <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
+  </nav>
+  <div class="drawer-divider"></div>
+  <form method="POST" action="/logout" style="padding:0 16px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button type="submit" class="drawer-logout">Log Out</button></form>
+  {% else %}
+  <div class="drawer-auth">
+    <a href="/register" class="drawer-btn-primary">Join Free — Get 12 Months</a>
+    <a href="/login" class="drawer-btn-outline">Log In</a>
+  </div>
+  {% endif %}
+  <div class="drawer-contact">
+    <a href="tel:+233541057500">📞 054 105 7500</a>
+    <a href="https://wa.me/233541057500" target="_blank" rel="noopener">💬 WhatsApp Us</a>
+  </div>
+</div>
+
+<nav class="desktop-nav">
   <a class="brand" href="/"><span>Phone</span>Hub Ghana</a>
   <div class="nav-links">
     <a href="/#services">Services</a>
@@ -238,9 +328,22 @@ footer a{color:var(--gold);text-decoration:none}
   <p>&copy; {{ 2025 }} PhoneHub Ghana &mdash; <a href="/booking">Book a Repair</a> &mdash; <a href="/#membership">Membership</a></p>
 </footer>
 
+<nav class="bottom-nav">
+  <a href="/" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">Home</span></a>
+  <a href="/shop" class="bn-item bn-active"><span class="bn-icon">📱</span><span class="bn-label">Shop</span></a>
+  <a href="/booking" class="bn-item bn-item-center"><div class="bn-center-dot">🔧</div><span class="bn-label">Repair</span></a>
+  {% if session.get('customer_id') %}<a href="/dashboard" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">Account</span></a>
+  {% else %}<a href="/register" class="bn-item"><span class="bn-icon">🎁</span><span class="bn-label">Join Free</span></a>{% endif %}
+  <button class="bn-item" onclick="openMenu()"><span class="bn-icon">☰</span><span class="bn-label">More</span></button>
+</nav>
+
 <a class="wa-float" href="https://wa.me/233541057500" target="_blank" rel="noopener" title="Chat on WhatsApp">💬</a>
 
 <script>
+function openMenu(){document.getElementById('menuDrawer').classList.add('open');document.getElementById('menuOverlay').classList.add('open');document.body.style.overflow='hidden'}
+function closeMenu(){document.getElementById('menuDrawer').classList.remove('open');document.getElementById('menuOverlay').classList.remove('open');document.body.style.overflow=''}
+document.getElementById('menuOverlay').addEventListener('click',closeMenu);
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
 function filterDevices(){
   const brand = document.getElementById('brand-filter').value.toLowerCase();
   const cond  = document.getElementById('condition-filter').value.toLowerCase();
