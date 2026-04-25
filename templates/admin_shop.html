@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shop Management — PhoneHub Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0E1210;--surface:#161C18;--surface2:#1D2521;--surface3:#242E29;
+  --green:#00C46A;--green-dim:#00935;--gold:#F5C842;
+  --text:#E8EDE9;--muted:#7A8F80;--border:#2A3830;--radius:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+/* SIDEBAR */
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:100vh;position:fixed;left:0;top:0}
+.sidebar-brand{padding:20px 20px 16px;border-bottom:1px solid var(--border)}
+.sidebar-brand .logo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--text);letter-spacing:-.5px}
+.sidebar-brand .logo span{color:var(--green)}
+.sidebar-brand .role-text{font-size:.75rem;color:var(--muted);margin-top:2px}
+.nav-section{padding:16px 12px 8px;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:.9rem;font-weight:500;transition:all .2s;margin:2px 8px}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface2);color:var(--green)}
+.nav-icon{font-size:1rem;width:20px;text-align:center}
+.sidebar-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border)}
+.staff-info{display:flex;align-items:center;gap:10px}
+.staff-avatar{width:36px;height:36px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;color:#000;flex-shrink:0}
+.staff-name{font-size:.85rem;font-weight:600;color:var(--text)}
+.staff-role{font-size:.75rem;color:var(--muted)}
+.logout-btn{display:block;margin-top:10px;text-align:center;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:7px;font-size:.82rem;cursor:pointer;text-decoration:none;font-family:inherit;transition:all .2s;width:100%}
+.logout-btn:hover{border-color:#ef4444;color:#ef4444}
+
+/* MAIN */
+.main{margin-left:240px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* TOPBAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.page-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.status-pill{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(0,196,106,.2)}
+.role-badge{font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:.5px}
+
+/* CONTENT */
+.content{padding:28px;flex:1}
+
+/* FLASH */
+.flash{padding:12px 18px;border-radius:8px;font-size:.88rem;font-weight:500;margin-bottom:16px}
+.flash.success{background:rgba(0,196,106,.12);color:#4ade80;border:1px solid rgba(0,196,106,.3)}
+.flash.error{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px}
+.stat-label{font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.stat-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--text)}
+.stat-value.green{color:var(--green)}
+.stat-value.gold{color:var(--gold)}
+
+/* TABS */
+.tab-bar{display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:4px;margin-bottom:24px;width:fit-content}
+.tab-btn{padding:8px 20px;border-radius:6px;font-size:.88rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:inherit;transition:all .2s}
+.tab-btn.active{background:var(--surface);color:var(--green)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* TABLE */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:28px}
+.table-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.table-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:11px 16px;font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);background:var(--surface2)}
+td{padding:13px 16px;font-size:.88rem;border-bottom:1px solid rgba(42,56,48,.5);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.device-cell{font-weight:600;color:var(--text)}
+.device-sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.customer-cell{font-weight:500}
+.customer-sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+
+/* BADGES */
+.badge{display:inline-block;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px}
+.badge.pending{background:rgba(245,200,66,.15);color:var(--gold)}
+.badge.confirmed{background:rgba(0,196,106,.15);color:var(--green)}
+.badge.completed{background:rgba(96,165,250,.15);color:#60a5fa}
+.badge.cancelled,.badge.expired{background:rgba(156,163,175,.12);color:#6b7280}
+
+/* ACTIONS */
+.action-btns{display:flex;gap:6px;flex-wrap:wrap}
+.btn{padding:5px 12px;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;border:none;font-family:inherit;text-decoration:none;display:inline-block;transition:background .2s}
+.btn-confirm{background:rgba(0,196,106,.15);color:var(--green)}
+.btn-confirm:hover{background:rgba(0,196,106,.3)}
+.btn-complete{background:rgba(96,165,250,.15);color:#60a5fa}
+.btn-complete:hover{background:rgba(96,165,250,.3)}
+.btn-cancel{background:rgba(239,68,68,.12);color:#f87171}
+.btn-cancel:hover{background:rgba(239,68,68,.25)}
+.btn-delete{background:rgba(239,68,68,.12);color:#f87171}
+.btn-delete:hover{background:rgba(239,68,68,.25)}
+
+/* COUNTDOWN */
+.countdown{font-size:.75rem;color:var(--gold);background:rgba(245,200,66,.08);padding:2px 8px;border-radius:4px;display:inline-block;margin-top:4px;font-weight:600}
+.countdown.urgent{color:#f87171;background:rgba(239,68,68,.08)}
+
+/* EMPTY */
+.empty-row td{text-align:center;color:var(--muted);padding:36px;font-style:italic}
+
+/* NEW BADGE */
+.new-badge{background:rgba(245,200,66,.15);color:var(--gold);font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:10px}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo"><span>Phone</span>Hub Admin</div>
+    <div class="role-text">
+      {% if session.get('admin_is_master') %}Master Admin{% else %}{{ session.get('admin_role','staff')|title }}{% endif %}
+    </div>
+  </div>
+
+  <div class="nav-section">Menu</div>
+  <a class="nav-item" href="/admin"><span class="nav-icon">📋</span>Bookings</a>
+  <a class="nav-item" href="/admin/members"><span class="nav-icon">👥</span>Members</a>
+  <a class="nav-item" href="/admin/installments"><span class="nav-icon">💳</span>Installments</a>
+  <a class="nav-item" href="/admin/inventory"><span class="nav-icon">📦</span>Inventory</a>
+  <a class="nav-item active" href="/admin/shop"><span class="nav-icon">🛍️</span>Shop</a>
+  <a class="nav-item" href="/admin/revenue"><span class="nav-icon">📊</span>Revenue</a>
+  {% if has_permission('manage_staff') %}
+  <a class="nav-item" href="/admin/staff"><span class="nav-icon">🔐</span>Staff</a>
+  {% endif %}
+
+  <div class="sidebar-footer">
+    <div class="staff-info">
+      <div class="staff-avatar">{{ (session.get('admin_name') or session.get('admin_username','A'))[0]|upper }}</div>
+      <div>
+        <div class="staff-name">{{ session.get('admin_name') or session.get('admin_username','Admin') }}</div>
+        <div class="staff-role">
+          {% if session.get('admin_is_master') %}Master Admin{% else %}{{ session.get('admin_role','staff')|title }}{% endif %}
+        </div>
+      </div>
+    </div>
+    <form method="POST" action="/admin/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="logout-btn" type="submit">Sign Out</button>
+    </form>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <span class="page-title">🛍️ Shop Management</span>
+    <div class="topbar-right">
+      <div class="status-pill"></div>
+      <span class="role-badge" style="{% if session.get('admin_is_master') %}background:rgba(245,200,66,.15);color:var(--gold){% elif session.get('admin_role')=='owner' %}background:rgba(245,200,66,.15);color:var(--gold){% elif session.get('admin_role')=='manager' %}background:rgba(0,196,106,.15);color:var(--green){% else %}background:rgba(122,143,128,.15);color:var(--muted){% endif %}">
+        {% if session.get('admin_is_master') %}Master{% else %}{{ session.get('admin_role','—') }}{% endif %}
+      </span>
+      <a href="/shop" target="_blank" style="color:var(--muted);font-size:.82rem;text-decoration:none">View Public Shop ↗</a>
+    </div>
+  </div>
+
+  <div class="content">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}
+        <div class="flash {{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value gold">{{ stats.pending or 0 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Confirmed</div>
+        <div class="stat-value green">{{ stats.confirmed or 0 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Completed Sales</div>
+        <div class="stat-value">{{ stats.completed or 0 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Cancelled/Expired</div>
+        <div class="stat-value" style="color:var(--muted)">{{ (stats.cancelled or 0) + (stats.expired or 0) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Deposit Revenue</div>
+        <div class="stat-value green" style="font-size:1.1rem">{{ fmt_ghs(stats.total_deposits or 0) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">New Enquiries</div>
+        <div class="stat-value gold">{{ enq_new }}</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="showTab('reservations',this)">Reservations</button>
+      <button class="tab-btn" onclick="showTab('enquiries',this)">Enquiries{% if enq_new %} <span class="new-badge">{{ enq_new }}</span>{% endif %}</button>
+    </div>
+
+    <!-- RESERVATIONS TAB -->
+    <div class="tab-panel active" id="tab-reservations">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">All Reservations</span>
+          <span style="font-size:.82rem;color:var(--muted)">{{ reservations|length }} total</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Device</th>
+              <th>Customer</th>
+              <th>Deposit</th>
+              <th>Payment</th>
+              <th>Status</th>
+              <th>Expires</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if reservations %}
+              {% for r in reservations %}
+                <tr>
+                  <td style="color:var(--muted);font-size:.8rem">{{ r.id }}</td>
+                  <td>
+                    <div class="device-cell">{{ r.brand }} {{ r.model }}</div>
+                    <div class="device-sub">
+                      {% if r.storage %}{{ r.storage }}{% endif %}
+                      {% if r.color %} &bull; {{ r.color }}{% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="customer-cell">{{ r.customer_name }}</div>
+                    <div class="customer-sub">{{ r.customer_phone }}</div>
+                    <div class="customer-sub">{{ r.customer_email }}</div>
+                  </td>
+                  <td style="font-weight:600;color:var(--green)">{{ fmt_ghs(r.deposit_amount) }}</td>
+                  <td>
+                    {{ r.payment_method }}
+                    {% if r.momo_number %}
+                      <div class="device-sub">{{ r.momo_number }}{% if r.momo_network %} ({{ r.momo_network }}){% endif %}</div>
+                    {% endif %}
+                    {% if r.bank_reference %}
+                      <div class="device-sub">Ref: {{ r.bank_reference }}</div>
+                    {% endif %}
+                  </td>
+                  <td><span class="badge {{ r.status|lower }}">{{ r.status }}</span></td>
+                  <td>
+                    {% if r.expires_at and r.status == 'Pending' %}
+                      <div class="countdown" id="acd-{{ r.id }}"
+                           data-expires="{{ r.expires_at.isoformat() }}">…</div>
+                    {% elif r.expires_at %}
+                      <span style="font-size:.78rem;color:var(--muted)">
+                        {{ r.expires_at.strftime('%d %b %H:%M') if r.expires_at else '—' }}
+                      </span>
+                    {% else %}—{% endif %}
+                  </td>
+                  <td>
+                    <div class="action-btns">
+                      {% if r.status == 'Pending' %}
+                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/confirm">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <button class="btn btn-confirm" type="submit"
+                                  onclick="return confirm('Confirm this reservation?')">Confirm</button>
+                        </form>
+                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/cancel">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <button class="btn btn-cancel" type="submit"
+                                  onclick="return confirm('Cancel and return device to stock?')">Cancel</button>
+                        </form>
+                      {% elif r.status == 'Confirmed' %}
+                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/complete">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <button class="btn btn-complete" type="submit"
+                                  onclick="return confirm('Mark as sold and complete this sale?')">Complete Sale</button>
+                        </form>
+                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/cancel">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <button class="btn btn-cancel" type="submit"
+                                  onclick="return confirm('Cancel this confirmed reservation?')">Cancel</button>
+                        </form>
+                      {% else %}
+                        <span style="font-size:.78rem;color:var(--muted)">No actions</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr class="empty-row"><td colspan="8">No reservations yet</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ENQUIRIES TAB -->
+    <div class="tab-panel" id="tab-enquiries">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Device Enquiries</span>
+          <span style="font-size:.82rem;color:var(--muted)">{{ enquiries|length }} total{% if enq_new %} &mdash; <span style="color:var(--gold)">{{ enq_new }} new</span>{% endif %}</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer</th>
+              <th>Device Wanted</th>
+              <th>Budget</th>
+              <th>Message</th>
+              <th>Status</th>
+              <th>Date</th>
+              {% if has_permission('delete_inventory') %}<th>Actions</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% if enquiries %}
+              {% for e in enquiries %}
+                <tr>
+                  <td style="color:var(--muted);font-size:.8rem">{{ e.id }}</td>
+                  <td>
+                    <div class="customer-cell">{{ e.customer_name }}</div>
+                    <div class="customer-sub">{{ e.customer_phone }}</div>
+                    <div class="customer-sub">{{ e.customer_email }}</div>
+                  </td>
+                  <td style="font-weight:600">{{ e.device_type }}</td>
+                  <td>{{ e.budget or '—' }}</td>
+                  <td style="max-width:220px;white-space:pre-wrap;font-size:.83rem;color:var(--muted)">{{ e.message }}</td>
+                  <td>
+                    {% if e.status == 'New' %}
+                      <span class="badge pending">New</span>
+                    {% else %}
+                      <span class="badge" style="background:rgba(122,143,128,.1);color:var(--muted)">{{ e.status }}</span>
+                    {% endif %}
+                  </td>
+                  <td style="font-size:.8rem;color:var(--muted)">
+                    {{ e.created_at.strftime('%d %b %Y') if e.created_at else '—' }}
+                  </td>
+                  {% if has_permission('delete_inventory') %}
+                  <td>
+                    <form method="POST" action="/admin/shop/enquiries/{{ e.id }}/delete">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-delete" type="submit"
+                              onclick="return confirm('Delete this enquiry?')">Delete</button>
+                    </form>
+                  </td>
+                  {% endif %}
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr class="empty-row">
+                <td colspan="{% if has_permission('delete_inventory') %}8{% else %}7{% endif %}">No enquiries yet</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(id, btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// Admin countdown timers
+document.querySelectorAll('.countdown[data-expires]').forEach(function(el){
+  var expires = new Date(el.dataset.expires);
+  function tick(){
+    var diff = expires - new Date();
+    if(diff <= 0){ el.textContent='Expired'; el.classList.add('urgent'); return; }
+    var h = Math.floor(diff/3600000);
+    var m = Math.floor((diff%3600000)/60000);
+    el.textContent = h + 'h ' + m + 'm left';
+    if(diff < 3600000) el.classList.add('urgent');
+    setTimeout(tick, 30000);
+  }
+  tick();
+});
+</script>
+</body>
+</html>

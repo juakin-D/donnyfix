@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Reservations — PhoneHub Ghana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#006B3F;--gold:#FCD116;--off-white:#F7F5F0;
+  --text:#1A1A1A;--muted:#5A5A5A;--border:#DDD;
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
+
+nav{background:var(--green);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.brand{font-family:'Syne',sans-serif;font-weight:800;font-size:1.25rem;color:#fff;text-decoration:none;letter-spacing:-.5px}
+.brand span{color:var(--gold)}
+.nav-links{display:flex;gap:8px;align-items:center}
+.nav-links a{color:rgba(255,255,255,.85);text-decoration:none;font-size:.9rem;font-weight:500;padding:6px 14px;border-radius:6px;transition:background .2s}
+.nav-links a:hover{background:rgba(255,255,255,.12);color:#fff}
+.nav-links a.active{background:rgba(255,255,255,.18);color:#fff}
+.nav-cta{background:var(--gold)!important;color:#1A1A1A!important;font-weight:600!important}
+
+.container{max-width:900px;margin:0 auto;padding:32px 24px}
+h1{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;margin-bottom:6px}
+.subtitle{color:var(--muted);margin-bottom:28px}
+
+/* FLASH */
+.flash{padding:12px 18px;border-radius:8px;font-size:.9rem;font-weight:500;margin-bottom:16px}
+.flash.success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.flash.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+
+/* RESERVATION CARD */
+.res-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden}
+.res-card-header{padding:18px 20px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border)}
+.res-device{flex:1}
+.res-device-brand{font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px}
+.res-device-model{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700}
+.res-device-specs{font-size:.83rem;color:var(--muted);margin-top:4px}
+.status-badge{display:inline-block;font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:12px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.status-badge.pending{background:#fef3c7;color:#92400e}
+.status-badge.confirmed{background:#dcfce7;color:#166534}
+.status-badge.completed{background:#dbeafe;color:#1e40af}
+.status-badge.cancelled,.status-badge.expired{background:#f3f4f6;color:#6b7280}
+
+.res-card-body{padding:18px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.res-stat-label{font-size:.76rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.res-stat-value{font-size:.95rem;font-weight:600}
+.res-price{color:var(--green)}
+
+.countdown{font-size:.82rem;color:#b45309;background:#fef3c7;padding:4px 10px;border-radius:6px;display:inline-block;margin-top:4px;font-weight:600}
+.countdown.urgent{color:#991b1b;background:#fee2e2}
+
+.res-card-footer{padding:12px 20px;background:#fafafa;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;justify-content:flex-end}
+.cancel-form button{background:transparent;border:1.5px solid #dc2626;color:#dc2626;padding:7px 16px;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.cancel-form button:hover{background:#dc2626;color:#fff}
+.wa-link{display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:7px 16px;border-radius:8px;font-size:.85rem;font-weight:600;text-decoration:none;transition:background .2s}
+.wa-link:hover{background:#1da851}
+
+/* EMPTY */
+.empty{text-align:center;padding:80px 24px;color:var(--muted)}
+.empty .icon{font-size:3.5rem;margin-bottom:16px}
+.empty h2{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;color:var(--text);margin-bottom:8px}
+.empty a{display:inline-block;margin-top:16px;background:var(--green);color:#fff;padding:12px 28px;border-radius:8px;font-weight:600;text-decoration:none;transition:background .2s}
+.empty a:hover{background:#004d2d}
+
+/* WA */
+.wa-float{position:fixed;bottom:28px;right:28px;z-index:999;background:#25D366;color:#fff;border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 4px 16px rgba(0,0,0,.25);text-decoration:none;transition:transform .2s}
+.wa-float:hover{transform:scale(1.1)}
+
+footer{background:var(--green);color:rgba(255,255,255,.7);text-align:center;padding:24px;font-size:.85rem;margin-top:48px}
+footer a{color:var(--gold);text-decoration:none}
+
+@media(max-width:600px){.res-card-body{grid-template-columns:1fr 1fr}.res-card-header{flex-direction:column}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/"><span>Phone</span>Hub Ghana</a>
+  <div class="nav-links">
+    <a href="/#services">Services</a>
+    <a href="/#membership">Membership</a>
+    <a href="/shop">Shop</a>
+    <a href="/dashboard" class="active">My Account</a>
+    <a href="/logout" onclick="return confirm('Log out?')">Log Out</a>
+  </div>
+</nav>
+
+<div class="container">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <h1>My Device Reservations</h1>
+  <p class="subtitle">Track your reserved phones and deposit status.</p>
+
+  {% if reservations %}
+    {% for r in reservations %}
+      <div class="res-card">
+        <div class="res-card-header">
+          <div class="res-device">
+            <div class="res-device-brand">{{ r.brand }}</div>
+            <div class="res-device-model">{{ r.model }}</div>
+            <div class="res-device-specs">
+              {% if r.storage %}{{ r.storage }}{% endif %}
+              {% if r.storage and r.color %} &bull; {% endif %}
+              {% if r.color %}{{ r.color }}{% endif %}
+            </div>
+          </div>
+          <span class="status-badge {{ r.status|lower }}">{{ r.status }}</span>
+        </div>
+
+        <div class="res-card-body">
+          <div>
+            <div class="res-stat-label">Device Price</div>
+            <div class="res-stat-value res-price">{{ fmt_ghs(r.selling_price) }}</div>
+          </div>
+          <div>
+            <div class="res-stat-label">Deposit Paid</div>
+            <div class="res-stat-value">{{ fmt_ghs(r.deposit_amount) }}</div>
+            <div style="font-size:.78rem;color:var(--muted)">via {{ r.payment_method }}</div>
+          </div>
+          <div>
+            <div class="res-stat-label">Reserved On</div>
+            <div class="res-stat-value">{{ r.created_at.strftime('%d %b %Y') if r.created_at else '—' }}</div>
+            {% if r.status == 'Pending' %}
+              <div class="countdown" id="cd-{{ r.id }}"
+                   data-expires="{{ r.expires_at.isoformat() if r.expires_at else '' }}">
+                Calculating…
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="res-card-footer">
+          {% if r.status == 'Pending' %}
+            <form class="cancel-form" method="POST"
+                  action="/shop/reservations/{{ r.id }}/cancel"
+                  onsubmit="return confirm('Cancel this reservation? The device will return to stock.')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Cancel Reservation</button>
+            </form>
+          {% endif %}
+          {% if r.status in ('Pending', 'Confirmed') %}
+            <a class="wa-link"
+               href="https://wa.me/233541057500?text=Hi!+I+reserved+the+{{ r.brand|urlencode }}+{{ r.model|urlencode }}+and+need+help+with+my+deposit."
+               target="_blank" rel="noopener">
+              💬 Need Help?
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+
+    <div style="text-align:center;margin-top:24px">
+      <a href="/shop" style="color:var(--green);font-weight:600;text-decoration:none">← Browse More Devices</a>
+    </div>
+
+  {% else %}
+    <div class="empty">
+      <div class="icon">📦</div>
+      <h2>No reservations yet</h2>
+      <p>When you reserve a device from our shop, it will appear here.</p>
+      <a href="/shop">Browse Available Phones</a>
+    </div>
+  {% endif %}
+</div>
+
+<footer>
+  <p>&copy; {{ 2025 }} PhoneHub Ghana &mdash; <a href="/shop">Shop</a> &mdash; <a href="/booking">Book a Repair</a></p>
+</footer>
+
+<a class="wa-float" href="https://wa.me/233541057500" target="_blank" rel="noopener" title="Chat on WhatsApp">💬</a>
+
+<script>
+// Countdown timers
+document.querySelectorAll('.countdown[data-expires]').forEach(function(el){
+  var iso = el.dataset.expires;
+  if(!iso) return;
+  var expires = new Date(iso);
+
+  function tick(){
+    var now = new Date();
+    var diff = expires - now;
+    if(diff <= 0){
+      el.textContent = 'Expired';
+      el.classList.add('urgent');
+      return;
+    }
+    var h = Math.floor(diff/3600000);
+    var m = Math.floor((diff%3600000)/60000);
+    var s = Math.floor((diff%60000)/1000);
+    el.textContent = 'Expires in ' + h + 'h ' + m + 'm ' + s + 's';
+    if(diff < 3600000) el.classList.add('urgent');
+    setTimeout(tick, 1000);
+  }
+  tick();
+});
+</script>
+</body>
+</html>

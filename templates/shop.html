@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buy a Phone — PhoneHub Ghana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#006B3F;--gold:#FCD116;--off-white:#F7F5F0;
+  --text:#1A1A1A;--muted:#5A5A5A;--border:#DDD;
+  --card-bg:#FFFFFF;--radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
+
+/* NAV */
+nav{background:var(--green);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.brand{font-family:'Syne',sans-serif;font-weight:800;font-size:1.25rem;color:#fff;text-decoration:none;letter-spacing:-.5px}
+.brand span{color:var(--gold)}
+.nav-links{display:flex;gap:8px;align-items:center}
+.nav-links a{color:rgba(255,255,255,.85);text-decoration:none;font-size:.9rem;font-weight:500;padding:6px 14px;border-radius:6px;transition:background .2s}
+.nav-links a:hover{background:rgba(255,255,255,.12);color:#fff}
+.nav-links a.active{background:rgba(255,255,255,.18);color:#fff}
+.nav-cta{background:var(--gold)!important;color:#1A1A1A!important;font-weight:600!important}
+.nav-cta:hover{background:#e6b800!important}
+
+/* HERO */
+.shop-hero{background:linear-gradient(135deg,var(--green) 0%,#004d2d 100%);color:#fff;text-align:center;padding:60px 24px 48px}
+.shop-hero h1{font-family:'Syne',sans-serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:12px}
+.shop-hero p{font-size:1.05rem;opacity:.85;max-width:520px;margin:0 auto 24px}
+.hero-badge{display:inline-block;background:var(--gold);color:#1A1A1A;font-weight:700;font-size:.85rem;padding:6px 18px;border-radius:20px;letter-spacing:.5px}
+
+/* FILTERS */
+.filters-bar{background:#fff;border-bottom:1px solid var(--border);padding:16px 24px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;position:sticky;top:64px;z-index:90}
+.filters-bar select,.filters-bar input{padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit;background:#fff;color:var(--text);outline:none;transition:border-color .2s}
+.filters-bar select:focus,.filters-bar input:focus{border-color:var(--green)}
+.filters-bar label{font-size:.85rem;color:var(--muted);font-weight:500}
+.count-badge{margin-left:auto;background:var(--green);color:#fff;font-size:.8rem;font-weight:600;padding:4px 12px;border-radius:20px}
+
+/* GRID */
+.shop-container{max-width:1200px;margin:0 auto;padding:32px 24px}
+.devices-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px}
+.device-card{background:var(--card-bg);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;transition:transform .2s,box-shadow .2s;text-decoration:none;color:inherit;display:flex;flex-direction:column}
+.device-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,107,63,.12)}
+.card-img{height:200px;background:linear-gradient(135deg,#f0f0f0,#e0e0e0);display:flex;align-items:center;justify-content:center;font-size:4rem;position:relative}
+.condition-badge{position:absolute;top:12px;right:12px;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:.5px}
+.condition-badge.new{background:#dcfce7;color:#16a34a}
+.condition-badge.used,.condition-badge.refurbished{background:#fef3c7;color:#b45309}
+.card-body{padding:20px;flex:1;display:flex;flex-direction:column;gap:8px}
+.card-brand{font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.card-model{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;line-height:1.2}
+.card-specs{font-size:.84rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
+.card-specs span{background:#f3f4f6;padding:2px 8px;border-radius:6px}
+.card-price{margin-top:auto;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between}
+.price{font-family:'Syne',sans-serif;font-size:1.25rem;font-weight:800;color:var(--green)}
+.deposit-note{font-size:.78rem;color:var(--muted)}
+.view-btn{display:block;background:var(--green);color:#fff;text-align:center;padding:10px;border-radius:0 0 var(--radius) var(--radius);font-weight:600;font-size:.9rem;text-decoration:none;transition:background .2s}
+.view-btn:hover{background:#004d2d}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:80px 24px;color:var(--muted)}
+.empty-state .icon{font-size:4rem;margin-bottom:16px}
+.empty-state h3{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;color:var(--text);margin-bottom:8px}
+.empty-state p{font-size:.95rem}
+
+/* ENQUIRY SECTION */
+.enquiry-section{background:#fff;border-top:4px solid var(--green);padding:56px 24px;margin-top:48px}
+.enquiry-inner{max-width:600px;margin:0 auto}
+.enquiry-inner h2{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:8px}
+.enquiry-inner p{color:var(--muted);margin-bottom:28px}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-weight:500;font-size:.9rem;margin-bottom:6px;color:var(--text)}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:.95rem;font-family:inherit;background:#fff;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--green)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.submit-btn{width:100%;background:var(--green);color:#fff;border:none;padding:14px;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s}
+.submit-btn:hover{background:#004d2d}
+
+/* FLASH */
+.flash-container{max-width:1200px;margin:16px auto 0;padding:0 24px}
+.flash{padding:12px 18px;border-radius:8px;font-size:.9rem;font-weight:500;margin-bottom:8px}
+.flash.success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.flash.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+
+/* FOOTER */
+footer{background:var(--green);color:rgba(255,255,255,.7);text-align:center;padding:24px;font-size:.85rem;margin-top:48px}
+footer a{color:var(--gold);text-decoration:none}
+
+/* WA */
+.wa-float{position:fixed;bottom:28px;right:28px;z-index:999;background:#25D366;color:#fff;border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 4px 16px rgba(0,0,0,.25);text-decoration:none;transition:transform .2s}
+.wa-float:hover{transform:scale(1.1)}
+
+@media(max-width:600px){.form-row{grid-template-columns:1fr}.devices-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/"><span>Phone</span>Hub Ghana</a>
+  <div class="nav-links">
+    <a href="/#services">Services</a>
+    <a href="/#membership">Membership</a>
+    <a href="/shop" class="active">Shop</a>
+    <a href="/booking">Book Repair</a>
+    {% if session.get('customer_id') %}
+      <a href="/dashboard">My Account</a>
+    {% else %}
+      <a href="/login">Login</a>
+      <a href="/register" class="nav-cta">Join Free</a>
+    {% endif %}
+  </div>
+</nav>
+
+<div class="shop-hero">
+  <h1>Buy a Certified Phone</h1>
+  <p>Browse our curated selection of new and refurbished devices. Reserve online with just a {{ RESERVATION_DEPOSIT_PCT }}% deposit.</p>
+  <span class="hero-badge">{{ RESERVATION_DEPOSIT_PCT }}% Deposit Reserves Your Phone</span>
+</div>
+
+<div class="flash-container">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+<!-- FILTERS -->
+<div class="filters-bar">
+  <label>Filter by:</label>
+  <select id="brand-filter" onchange="filterDevices()">
+    <option value="">All Brands</option>
+    {% for b in brands %}
+      <option value="{{ b }}">{{ b }}</option>
+    {% endfor %}
+  </select>
+  <select id="condition-filter" onchange="filterDevices()">
+    <option value="">All Conditions</option>
+    <option value="New">New</option>
+    <option value="Refurbished">Refurbished</option>
+    <option value="Used">Used</option>
+  </select>
+  <input id="search-input" type="text" placeholder="Search model…" oninput="filterDevices()" style="min-width:180px">
+  <span class="count-badge" id="count-badge">{{ items|length }} device{{ 's' if items|length != 1 }}</span>
+</div>
+
+<div class="shop-container">
+  {% if items %}
+    <div class="devices-grid" id="devices-grid">
+      {% for item in items %}
+        <a class="device-card"
+           href="/shop/{{ item.id }}"
+           data-brand="{{ item.brand }}"
+           data-condition="{{ item.condition }}"
+           data-model="{{ item.model|lower }}">
+          <div class="card-img">
+            📱
+            <span class="condition-badge {{ item.condition|lower }}">{{ item.condition }}</span>
+          </div>
+          <div class="card-body">
+            <div class="card-brand">{{ item.brand }}</div>
+            <div class="card-model">{{ item.model }}</div>
+            <div class="card-specs">
+              {% if item.storage %}<span>{{ item.storage }}</span>{% endif %}
+              {% if item.color %}<span>{{ item.color }}</span>{% endif %}
+            </div>
+            <div class="card-price">
+              <div>
+                <div class="price">{{ fmt_ghs(item.selling_price) }}</div>
+                <div class="deposit-note">Reserve for {{ fmt_ghs(item.selling_price * RESERVATION_DEPOSIT_PCT / 100) }}</div>
+              </div>
+            </div>
+          </div>
+          <span class="view-btn">View Details →</span>
+        </a>
+      {% endfor %}
+    </div>
+    <div id="no-results" class="empty-state" style="display:none">
+      <div class="icon">🔍</div>
+      <h3>No devices match your filters</h3>
+      <p>Try adjusting your search or filter criteria.</p>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="icon">📦</div>
+      <h3>No devices in stock right now</h3>
+      <p>Check back soon, or send us an enquiry below and we'll source what you need.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- ENQUIRY FORM -->
+<div class="enquiry-section" id="enquire">
+  <div class="enquiry-inner">
+    <h2>Can't Find What You Need?</h2>
+    <p>Tell us what you're looking for and your budget. We'll source it for you within 24 hours.</p>
+    <form method="POST" action="/shop/enquire">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Your Name *</label>
+          <input type="text" name="name" required placeholder="Full name"
+                 value="{{ session.get('customer_name', '') }}">
+        </div>
+        <div class="form-group">
+          <label>Phone Number *</label>
+          <input type="tel" name="phone" required placeholder="0XX XXX XXXX">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email Address *</label>
+        <input type="email" name="email" required placeholder="your@email.com"
+               value="{{ session.get('customer_email', '') }}">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Device Type *</label>
+          <input type="text" name="device_type" required placeholder="e.g. iPhone 15 Pro, Samsung S24">
+        </div>
+        <div class="form-group">
+          <label>Budget (GH₵)</label>
+          <input type="text" name="budget" placeholder="e.g. 3000 - 5000">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Additional Details *</label>
+        <textarea name="message" rows="4" required
+                  placeholder="Storage size, color preference, new or refurbished…"></textarea>
+      </div>
+      <button type="submit" class="submit-btn">Send Enquiry</button>
+    </form>
+  </div>
+</div>
+
+<footer>
+  <p>&copy; {{ 2025 }} PhoneHub Ghana &mdash; <a href="/booking">Book a Repair</a> &mdash; <a href="/#membership">Membership</a></p>
+</footer>
+
+<a class="wa-float" href="https://wa.me/233541057500" target="_blank" rel="noopener" title="Chat on WhatsApp">💬</a>
+
+<script>
+function filterDevices(){
+  const brand = document.getElementById('brand-filter').value.toLowerCase();
+  const cond  = document.getElementById('condition-filter').value.toLowerCase();
+  const q     = document.getElementById('search-input').value.toLowerCase();
+  const cards = document.querySelectorAll('.device-card');
+  let visible = 0;
+  cards.forEach(c=>{
+    const b = (c.dataset.brand||'').toLowerCase();
+    const co= (c.dataset.condition||'').toLowerCase();
+    const m = (c.dataset.model||'').toLowerCase();
+    const show = (!brand||b===brand) && (!cond||co===cond) && (!q||m.includes(q));
+    c.style.display = show ? '' : 'none';
+    if(show) visible++;
+  });
+  const badge = document.getElementById('count-badge');
+  badge.textContent = visible + ' device' + (visible!==1?'s':'');
+  document.getElementById('no-results').style.display = visible===0 && cards.length>0 ? '' : 'none';
+}
+</script>
+</body>
+</html>

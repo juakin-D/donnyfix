@@ -76,6 +76,8 @@ PLAN_CONFIG = {
     6:  {'deposit_pct': 60, 'fee_pct': 10,  'label': '6 Months', 'min_price': 1500},
 }
 
+RESERVATION_DEPOSIT_PCT = int(os.environ.get('RESERVATION_DEPOSIT_PCT', 20))
+
 ROLE_PERMISSIONS = {
     'owner': {
         'view_bookings':      True,
@@ -289,6 +291,41 @@ def init_db():
         created_by    TEXT DEFAULT 'owner',
         last_login    TIMESTAMP,
         created_at    TIMESTAMP DEFAULT NOW()
+    )""")
+
+    conn.execute("""CREATE TABLE IF NOT EXISTS reservations (
+        id              SERIAL PRIMARY KEY,
+        item_id         INTEGER NOT NULL,
+        customer_id     INTEGER,
+        customer_name   TEXT NOT NULL,
+        customer_phone  TEXT NOT NULL,
+        customer_email  TEXT NOT NULL,
+        deposit_amount  REAL NOT NULL,
+        payment_method  TEXT NOT NULL,
+        momo_number     TEXT,
+        momo_network    TEXT,
+        bank_reference  TEXT,
+        status          TEXT DEFAULT 'Pending',
+        expires_at      TIMESTAMP NOT NULL,
+        confirmed_by    TEXT,
+        notes           TEXT,
+        created_at      TIMESTAMP DEFAULT NOW(),
+        FOREIGN KEY (item_id)      REFERENCES inventory(id),
+        FOREIGN KEY (customer_id)  REFERENCES customers(id)
+    )""")
+
+    conn.execute("""CREATE TABLE IF NOT EXISTS device_enquiries (
+        id              SERIAL PRIMARY KEY,
+        customer_id     INTEGER,
+        customer_name   TEXT NOT NULL,
+        customer_phone  TEXT NOT NULL,
+        customer_email  TEXT NOT NULL,
+        device_type     TEXT NOT NULL,
+        budget          TEXT,
+        message         TEXT NOT NULL,
+        status          TEXT DEFAULT 'New',
+        created_at      TIMESTAMP DEFAULT NOW(),
+        FOREIGN KEY (customer_id) REFERENCES customers(id)
     )""")
 
     conn.commit()
@@ -849,6 +886,19 @@ def dashboard():
     plans = conn.execute(
         'SELECT * FROM installment_plans WHERE customer_id=%s ORDER BY created_at DESC',
         (session['customer_id'],)).fetchall()
+    conn.execute(
+        "UPDATE reservations SET status='Expired' WHERE status='Pending' AND expires_at < NOW()"
+    )
+    conn.commit()
+    reservations = conn.execute(
+        """SELECT r.*, i.brand, i.model, i.color, i.storage, i.selling_price
+           FROM reservations r
+           JOIN inventory i ON i.id = r.item_id
+           WHERE r.customer_id=%s AND r.status IN ('Pending','Confirmed')
+           ORDER BY r.created_at DESC
+           LIMIT 5""",
+        (session['customer_id'],)
+    ).fetchall()
     conn.close()
     status = membership_status(customer['membership_expiry'])
     installment_eligible = status in ('Active', 'Expiring Soon')
@@ -856,6 +906,7 @@ def dashboard():
                            customer=customer, bookings=bookings,
                            plans=plans, status=status,
                            installment_eligible=installment_eligible,
+                           reservations=reservations,
                            now=datetime.today().strftime('%Y-%m-%d'))
 
 
@@ -2425,6 +2476,322 @@ def admin_staff_delete(staff_id):
     logger.info('Master admin permanently deleted staff #%d (%s)', staff_id, staff['name'])
     flash(f"Staff account for {staff['name']} permanently deleted.", 'success')
     return redirect(url_for('admin_staff'))
+
+
+# ─── ONLINE SHOP — PUBLIC ROUTES ─────────────────────────────────────────────
+
+@app.route('/shop')
+def shop():
+    conn = get_db()
+    # Auto-expire stale reservations before listing
+    conn.execute(
+        "UPDATE reservations SET status='Expired' WHERE status='Pending' AND expires_at < NOW()"
+    )
+    conn.commit()
+    items = conn.execute(
+        "SELECT * FROM inventory WHERE status='In Stock' ORDER BY brand, model"
+    ).fetchall()
+    brands = sorted({i['brand'] for i in items})
+    conn.close()
+    return render_template('shop.html', items=items, brands=brands,
+                           RESERVATION_DEPOSIT_PCT=RESERVATION_DEPOSIT_PCT)
+
+
+@app.route('/shop/<int:item_id>')
+def shop_detail(item_id):
+    conn = get_db()
+    conn.execute(
+        "UPDATE reservations SET status='Expired' WHERE status='Pending' AND expires_at < NOW()"
+    )
+    conn.commit()
+    item = conn.execute('SELECT * FROM inventory WHERE id=%s', (item_id,)).fetchone()
+    if not item:
+        conn.close()
+        return render_template('404.html'), 404
+    similar = conn.execute(
+        "SELECT * FROM inventory WHERE brand=%s AND id!=%s AND status='In Stock' LIMIT 4",
+        (item['brand'], item_id)
+    ).fetchall()
+    conn.close()
+    deposit = round(item['selling_price'] * RESERVATION_DEPOSIT_PCT / 100, 2)
+    plans = {}
+    for months in PLAN_CONFIG:
+        if item['selling_price'] >= PLAN_CONFIG[months]['min_price']:
+            plans[months] = calculate_plan(item['selling_price'], months)
+    return render_template('shop_detail.html', item=item, similar=similar,
+                           deposit=deposit, plans=plans,
+                           RESERVATION_DEPOSIT_PCT=RESERVATION_DEPOSIT_PCT,
+                           BANK_DETAILS=BANK_DETAILS)
+
+
+@app.route('/shop/<int:item_id>/reserve', methods=['POST'])
+def shop_reserve(item_id):
+    name       = request.form.get('name', '').strip()
+    phone      = request.form.get('phone', '').strip()
+    email      = request.form.get('email', '').strip()
+    method     = request.form.get('payment_method', '').strip()
+    momo_num   = request.form.get('momo_number', '').strip()
+    momo_net   = request.form.get('momo_network', '').strip()
+    bank_ref   = request.form.get('bank_reference', '').strip()
+
+    if not all([name, phone, email, method]):
+        flash('Please fill in all required fields.', 'error')
+        return redirect(url_for('shop_detail', item_id=item_id))
+
+    conn = get_db()
+    try:
+        # Lock the row to prevent concurrent reservations
+        item = conn.execute(
+            "SELECT * FROM inventory WHERE id=%s AND status='In Stock' FOR UPDATE",
+            (item_id,)
+        ).fetchone()
+        if not item:
+            conn.rollback()
+            conn.close()
+            flash('Sorry, this device is no longer available.', 'error')
+            return redirect(url_for('shop'))
+
+        deposit = round(item['selling_price'] * RESERVATION_DEPOSIT_PCT / 100, 2)
+        expires = datetime.now() + timedelta(hours=48)
+        customer_id = session.get('customer_id')
+
+        conn.execute(
+            """INSERT INTO reservations
+               (item_id, customer_id, customer_name, customer_phone, customer_email,
+                deposit_amount, payment_method, momo_number, momo_network,
+                bank_reference, status, expires_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Pending',%s)""",
+            (item_id, customer_id, name, phone, email,
+             deposit, method, momo_num or None, momo_net or None,
+             bank_ref or None, expires)
+        )
+        conn.execute(
+            "UPDATE inventory SET status='Reserved', updated_at=NOW() WHERE id=%s",
+            (item_id,)
+        )
+        conn.commit()
+        logger.info('Reservation created for item #%d by %s', item_id, email)
+        flash(
+            f'Your reservation is confirmed! Please pay a deposit of {fmt_ghs(deposit)} '
+            f'within 48 hours to hold this device.', 'success'
+        )
+    except Exception as exc:
+        conn.rollback()
+        logger.error('Reservation failed for item #%d: %s', item_id, exc)
+        flash('An error occurred. Please try again.', 'error')
+    finally:
+        conn.close()
+
+    if session.get('customer_id'):
+        return redirect(url_for('shop_reservations'))
+    return redirect(url_for('shop'))
+
+
+@app.route('/shop/reservations')
+@customer_required
+def shop_reservations():
+    conn = get_db()
+    conn.execute(
+        "UPDATE reservations SET status='Expired' WHERE status='Pending' AND expires_at < NOW()"
+    )
+    conn.commit()
+    reservations = conn.execute(
+        """SELECT r.*, i.brand, i.model, i.color, i.storage, i.selling_price
+           FROM reservations r
+           JOIN inventory i ON i.id = r.item_id
+           WHERE r.customer_id=%s
+           ORDER BY r.created_at DESC""",
+        (session['customer_id'],)
+    ).fetchall()
+    conn.close()
+    now = datetime.now()
+    return render_template('shop_reservations.html', reservations=reservations, now=now)
+
+
+@app.route('/shop/reservations/<int:res_id>/cancel', methods=['POST'])
+@customer_required
+def shop_reservation_cancel(res_id):
+    conn = get_db()
+    res = conn.execute(
+        "SELECT * FROM reservations WHERE id=%s AND customer_id=%s",
+        (res_id, session['customer_id'])
+    ).fetchone()
+    if not res or res['status'] not in ('Pending',):
+        conn.close()
+        flash('Reservation not found or cannot be cancelled.', 'error')
+        return redirect(url_for('shop_reservations'))
+    conn.execute("UPDATE reservations SET status='Cancelled' WHERE id=%s", (res_id,))
+    conn.execute(
+        "UPDATE inventory SET status='In Stock', updated_at=NOW() WHERE id=%s",
+        (res['item_id'],)
+    )
+    conn.commit()
+    conn.close()
+    flash('Reservation cancelled. The device is now available again.', 'success')
+    return redirect(url_for('shop_reservations'))
+
+
+@app.route('/shop/enquire', methods=['POST'])
+def shop_enquire():
+    name        = request.form.get('name', '').strip()
+    phone       = request.form.get('phone', '').strip()
+    email       = request.form.get('email', '').strip()
+    device_type = request.form.get('device_type', '').strip()
+    budget      = request.form.get('budget', '').strip()
+    message     = request.form.get('message', '').strip()
+
+    if not all([name, phone, email, device_type, message]):
+        flash('Please fill in all required fields.', 'error')
+        return redirect(url_for('shop') + '#enquire')
+
+    customer_id = session.get('customer_id')
+    conn = get_db()
+    conn.execute(
+        """INSERT INTO device_enquiries
+           (customer_id, customer_name, customer_phone, customer_email,
+            device_type, budget, message)
+           VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+        (customer_id, name, phone, email, device_type, budget or None, message)
+    )
+    conn.commit()
+    conn.close()
+    logger.info('Device enquiry submitted by %s (%s)', name, email)
+    flash("Thanks for your enquiry! We'll reach out within 24 hours.", 'success')
+    return redirect(url_for('shop'))
+
+
+# ─── ONLINE SHOP — ADMIN ROUTES ───────────────────────────────────────────────
+
+@app.route('/admin/shop')
+@admin_required
+def admin_shop():
+    if not has_permission('view_inventory'):
+        flash('You do not have permission to view the shop.', 'error')
+        return redirect(url_for('admin'))
+
+    conn = get_db()
+    # Auto-expire pending reservations
+    conn.execute(
+        "UPDATE reservations SET status='Expired' WHERE status='Pending' AND expires_at < NOW()"
+    )
+    conn.commit()
+
+    reservations = conn.execute(
+        """SELECT r.*, i.brand, i.model, i.color, i.storage, i.selling_price
+           FROM reservations r
+           JOIN inventory i ON i.id = r.item_id
+           ORDER BY r.created_at DESC
+           LIMIT 200"""
+    ).fetchall()
+
+    enquiries = conn.execute(
+        "SELECT * FROM device_enquiries ORDER BY created_at DESC LIMIT 200"
+    ).fetchall()
+
+    stats = conn.execute(
+        """SELECT
+           COUNT(*) FILTER (WHERE status='Pending')   AS pending,
+           COUNT(*) FILTER (WHERE status='Confirmed') AS confirmed,
+           COUNT(*) FILTER (WHERE status='Completed') AS completed,
+           COUNT(*) FILTER (WHERE status='Cancelled') AS cancelled,
+           COUNT(*) FILTER (WHERE status='Expired')   AS expired,
+           COALESCE(SUM(deposit_amount) FILTER (WHERE status='Completed'), 0) AS total_deposits
+           FROM reservations"""
+    ).fetchone()
+
+    enq_new = conn.execute(
+        "SELECT COUNT(*) AS cnt FROM device_enquiries WHERE status='New'"
+    ).fetchone()['cnt']
+
+    conn.close()
+    now = datetime.now()
+    return render_template('admin_shop.html',
+                           reservations=reservations, enquiries=enquiries,
+                           stats=stats, enq_new=enq_new, now=now,
+                           RESERVATION_DEPOSIT_PCT=RESERVATION_DEPOSIT_PCT)
+
+
+@app.route('/admin/shop/reservations/<int:res_id>/confirm', methods=['POST'])
+@admin_required
+def admin_shop_confirm(res_id):
+    if not has_permission('edit_inventory'):
+        flash('You do not have permission to confirm reservations.', 'error')
+        return redirect(url_for('admin_shop'))
+    conn = get_db()
+    res = conn.execute('SELECT * FROM reservations WHERE id=%s', (res_id,)).fetchone()
+    if not res:
+        conn.close()
+        flash('Reservation not found.', 'error')
+        return redirect(url_for('admin_shop'))
+    admin_name = session.get('admin_name', session.get('admin_username', 'admin'))
+    conn.execute(
+        "UPDATE reservations SET status='Confirmed', confirmed_by=%s WHERE id=%s",
+        (admin_name, res_id)
+    )
+    conn.commit()
+    conn.close()
+    flash('Reservation confirmed.', 'success')
+    return redirect(url_for('admin_shop'))
+
+
+@app.route('/admin/shop/reservations/<int:res_id>/cancel', methods=['POST'])
+@admin_required
+def admin_shop_cancel(res_id):
+    if not has_permission('edit_inventory'):
+        flash('You do not have permission to cancel reservations.', 'error')
+        return redirect(url_for('admin_shop'))
+    conn = get_db()
+    res = conn.execute('SELECT * FROM reservations WHERE id=%s', (res_id,)).fetchone()
+    if not res:
+        conn.close()
+        flash('Reservation not found.', 'error')
+        return redirect(url_for('admin_shop'))
+    conn.execute("UPDATE reservations SET status='Cancelled' WHERE id=%s", (res_id,))
+    conn.execute(
+        "UPDATE inventory SET status='In Stock', updated_at=NOW() WHERE id=%s",
+        (res['item_id'],)
+    )
+    conn.commit()
+    conn.close()
+    flash('Reservation cancelled. Device returned to stock.', 'success')
+    return redirect(url_for('admin_shop'))
+
+
+@app.route('/admin/shop/reservations/<int:res_id>/complete', methods=['POST'])
+@admin_required
+def admin_shop_complete(res_id):
+    if not has_permission('edit_inventory'):
+        flash('You do not have permission to complete reservations.', 'error')
+        return redirect(url_for('admin_shop'))
+    conn = get_db()
+    res = conn.execute('SELECT * FROM reservations WHERE id=%s', (res_id,)).fetchone()
+    if not res:
+        conn.close()
+        flash('Reservation not found.', 'error')
+        return redirect(url_for('admin_shop'))
+    conn.execute("UPDATE reservations SET status='Completed' WHERE id=%s", (res_id,))
+    conn.execute(
+        "UPDATE inventory SET status='Sold', updated_at=NOW() WHERE id=%s",
+        (res['item_id'],)
+    )
+    conn.commit()
+    conn.close()
+    flash('Sale completed. Device marked as sold.', 'success')
+    return redirect(url_for('admin_shop'))
+
+
+@app.route('/admin/shop/enquiries/<int:enq_id>/delete', methods=['POST'])
+@admin_required
+def admin_shop_enquiry_delete(enq_id):
+    if not has_permission('delete_inventory'):
+        flash('You do not have permission to delete enquiries.', 'error')
+        return redirect(url_for('admin_shop'))
+    conn = get_db()
+    conn.execute('DELETE FROM device_enquiries WHERE id=%s', (enq_id,))
+    conn.commit()
+    conn.close()
+    flash('Enquiry deleted.', 'success')
+    return redirect(url_for('admin_shop'))
 
 
 # ─── ERROR HANDLERS ───────────────────────────────────────────────────────────

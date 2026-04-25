@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ item.brand }} {{ item.model }} — PhoneHub Ghana Shop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#006B3F;--gold:#FCD116;--off-white:#F7F5F0;
+  --text:#1A1A1A;--muted:#5A5A5A;--border:#DDD;
+  --card-bg:#FFFFFF;--radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
+
+nav{background:var(--green);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.brand{font-family:'Syne',sans-serif;font-weight:800;font-size:1.25rem;color:#fff;text-decoration:none;letter-spacing:-.5px}
+.brand span{color:var(--gold)}
+.nav-links{display:flex;gap:8px;align-items:center}
+.nav-links a{color:rgba(255,255,255,.85);text-decoration:none;font-size:.9rem;font-weight:500;padding:6px 14px;border-radius:6px;transition:background .2s}
+.nav-links a:hover{background:rgba(255,255,255,.12);color:#fff}
+.nav-links a.active{background:rgba(255,255,255,.18);color:#fff}
+.nav-cta{background:var(--gold)!important;color:#1A1A1A!important;font-weight:600!important}
+
+/* BREADCRUMB */
+.breadcrumb{max-width:1200px;margin:0 auto;padding:16px 24px;font-size:.85rem;color:var(--muted)}
+.breadcrumb a{color:var(--green);text-decoration:none}
+.breadcrumb a:hover{text-decoration:underline}
+
+/* DETAIL LAYOUT */
+.detail-container{max-width:1200px;margin:0 auto;padding:0 24px 48px;display:grid;grid-template-columns:3fr 2fr;gap:32px}
+
+/* LEFT: device info */
+.device-image{background:linear-gradient(135deg,#f0f0f0,#e8e8e8);border-radius:var(--radius);height:340px;display:flex;align-items:center;justify-content:center;font-size:7rem;margin-bottom:20px;border:1px solid var(--border)}
+.device-brand{font-size:.85rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.device-model{font-family:'Syne',sans-serif;font-size:1.9rem;font-weight:800;line-height:1.15;margin-bottom:12px}
+.device-price{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--green);margin-bottom:4px}
+.device-deposit{font-size:.95rem;color:var(--muted);margin-bottom:20px}
+.specs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
+.spec-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px}
+.spec-label{font-size:.76rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.spec-value{font-size:.95rem;font-weight:600}
+.desc-section{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px}
+.desc-section h3{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:10px}
+.desc-section p{font-size:.9rem;color:var(--muted);line-height:1.6}
+
+/* INSTALL CALC */
+.install-calc{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px}
+.install-calc h3{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:14px}
+.plan-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.plan-tab{padding:7px 16px;border:2px solid var(--border);border-radius:20px;font-size:.85rem;font-weight:600;cursor:pointer;background:#fff;font-family:inherit;transition:all .2s}
+.plan-tab.active{border-color:var(--green);background:var(--green);color:#fff}
+.plan-details{display:none;gap:10px;grid-template-columns:1fr 1fr}
+.plan-details.active{display:grid}
+.plan-stat{background:var(--off-white);border-radius:8px;padding:12px;text-align:center}
+.plan-stat-label{font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:4px}
+.plan-stat-value{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;color:var(--green)}
+.no-plans{color:var(--muted);font-size:.88rem;font-style:italic}
+
+/* RIGHT: reserve card */
+.reserve-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:24px;position:sticky;top:84px;height:fit-content}
+.reserve-card h2{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:6px}
+.reserve-card .deposit-big{font-size:1.6rem;font-weight:800;color:var(--green);margin:6px 0}
+.reserve-card .expiry-note{font-size:.8rem;color:var(--muted);margin-bottom:20px;padding:8px 12px;background:#fef3c7;border-radius:6px;border-left:3px solid var(--gold)}
+
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-weight:500;font-size:.85rem;margin-bottom:5px}
+.form-group input,.form-group select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--green)}
+.method-fields{display:none}
+.method-fields.active{display:block}
+.reserve-btn{width:100%;background:var(--green);color:#fff;border:none;padding:14px;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px;transition:background .2s}
+.reserve-btn:hover{background:#004d2d}
+.divider{text-align:center;font-size:.8rem;color:var(--muted);margin:12px 0;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border)}
+.divider::before{left:0} .divider::after{right:0}
+.wa-reserve{display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#fff;border-radius:8px;padding:12px;font-weight:600;text-decoration:none;font-size:.9rem;transition:background .2s}
+.wa-reserve:hover{background:#1da851}
+
+/* FLASH */
+.flash-wrap{max-width:1200px;margin:12px auto 0;padding:0 24px}
+.flash{padding:12px 18px;border-radius:8px;font-size:.9rem;font-weight:500;margin-bottom:8px}
+.flash.success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.flash.error{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+
+/* SIMILAR */
+.similar-section{max-width:1200px;margin:0 auto;padding:0 24px 48px}
+.similar-section h2{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:20px}
+.similar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}
+.sim-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;text-decoration:none;color:inherit;transition:transform .2s,box-shadow .2s}
+.sim-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,107,63,.1)}
+.sim-img{height:140px;background:linear-gradient(135deg,#f0f0f0,#e0e0e0);display:flex;align-items:center;justify-content:center;font-size:3rem}
+.sim-body{padding:14px}
+.sim-model{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:4px}
+.sim-price{color:var(--green);font-weight:700;font-size:.9rem}
+
+/* WA FLOAT */
+.wa-float{position:fixed;bottom:28px;right:28px;z-index:999;background:#25D366;color:#fff;border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 4px 16px rgba(0,0,0,.25);text-decoration:none;transition:transform .2s}
+.wa-float:hover{transform:scale(1.1)}
+
+footer{background:var(--green);color:rgba(255,255,255,.7);text-align:center;padding:24px;font-size:.85rem}
+footer a{color:var(--gold);text-decoration:none}
+
+@media(max-width:768px){.detail-container{grid-template-columns:1fr}.reserve-card{position:static}.specs-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/"><span>Phone</span>Hub Ghana</a>
+  <div class="nav-links">
+    <a href="/#services">Services</a>
+    <a href="/#membership">Membership</a>
+    <a href="/shop" class="active">Shop</a>
+    <a href="/booking">Book Repair</a>
+    {% if session.get('customer_id') %}
+      <a href="/dashboard">My Account</a>
+    {% else %}
+      <a href="/login">Login</a>
+      <a href="/register" class="nav-cta">Join Free</a>
+    {% endif %}
+  </div>
+</nav>
+
+<div class="flash-wrap">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+<div class="breadcrumb">
+  <a href="/">Home</a> &rsaquo; <a href="/shop">Shop</a> &rsaquo; {{ item.brand }} {{ item.model }}
+</div>
+
+<div class="detail-container">
+  <!-- LEFT -->
+  <div>
+    <div class="device-image">📱</div>
+    <div class="device-brand">{{ item.brand }}</div>
+    <div class="device-model">{{ item.model }}</div>
+    <div class="device-price">{{ fmt_ghs(item.selling_price) }}</div>
+    <div class="device-deposit">Reserve with {{ fmt_ghs(deposit) }} deposit ({{ RESERVATION_DEPOSIT_PCT }}%)</div>
+
+    <div class="specs-grid">
+      <div class="spec-item">
+        <div class="spec-label">Condition</div>
+        <div class="spec-value">{{ item.condition }}</div>
+      </div>
+      {% if item.storage %}
+      <div class="spec-item">
+        <div class="spec-label">Storage</div>
+        <div class="spec-value">{{ item.storage }}</div>
+      </div>
+      {% endif %}
+      {% if item.color %}
+      <div class="spec-item">
+        <div class="spec-label">Color</div>
+        <div class="spec-value">{{ item.color }}</div>
+      </div>
+      {% endif %}
+      {% if item.imei %}
+      <div class="spec-item">
+        <div class="spec-label">IMEI</div>
+        <div class="spec-value" style="font-size:.8rem;word-break:break-all">{{ item.imei }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if item.notes %}
+    <div class="desc-section">
+      <h3>Device Notes</h3>
+      <p>{{ item.notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- INSTALLMENT CALCULATOR -->
+    <div class="install-calc">
+      <h3>Installment Plans</h3>
+      {% if plans %}
+        <div class="plan-tabs">
+          {% for months, plan in plans.items() %}
+            <button class="plan-tab {% if loop.first %}active{% endif %}"
+                    onclick="showPlan({{ months }}, this)">
+              {{ months }}-Month Plan
+            </button>
+          {% endfor %}
+        </div>
+        {% for months, plan in plans.items() %}
+          <div class="plan-details {% if loop.first %}active{% endif %}" id="plan-{{ months }}">
+            <div class="plan-stat"><div class="plan-stat-label">Deposit ({{ plan.deposit_pct }}%)</div><div class="plan-stat-value">{{ fmt_ghs(plan.deposit) }}</div></div>
+            <div class="plan-stat"><div class="plan-stat-label">Monthly Payment</div><div class="plan-stat-value">{{ fmt_ghs(plan.monthly) }}</div></div>
+            <div class="plan-stat"><div class="plan-stat-label">Service Fee ({{ plan.fee_pct }}%)</div><div class="plan-stat-value">{{ fmt_ghs(plan.service_fee) }}</div></div>
+            <div class="plan-stat"><div class="plan-stat-label">Total Payable</div><div class="plan-stat-value">{{ fmt_ghs(plan.total) }}</div></div>
+          </div>
+        {% endfor %}
+        <p style="font-size:.8rem;color:var(--muted);margin-top:12px">To purchase on installment, reserve the device and visit our shop to set up your plan.</p>
+      {% else %}
+        <p class="no-plans">This device is priced below the minimum for installment plans. Payment must be made in full.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- RIGHT: RESERVE CARD -->
+  <div>
+    <div class="reserve-card">
+      <h2>Reserve This Phone</h2>
+      <div class="deposit-big">{{ fmt_ghs(deposit) }}</div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:12px">{{ RESERVATION_DEPOSIT_PCT }}% deposit &mdash; pay balance on pickup</div>
+      <div class="expiry-note">⏱ Reservation held for 48 hours after deposit confirmation</div>
+
+      <form method="POST" action="/shop/{{ item.id }}/reserve">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" name="name" required placeholder="Your full name"
+                 value="{{ session.get('customer_name', '') }}">
+        </div>
+        <div class="form-group">
+          <label>Phone Number *</label>
+          <input type="tel" name="phone" required placeholder="0XX XXX XXXX">
+        </div>
+        <div class="form-group">
+          <label>Email Address *</label>
+          <input type="email" name="email" required placeholder="your@email.com"
+                 value="{{ session.get('customer_email', '') }}">
+        </div>
+        <div class="form-group">
+          <label>Payment Method *</label>
+          <select name="payment_method" id="payment-method" onchange="toggleMethod(this.value)" required>
+            <option value="">Select method…</option>
+            <option value="MoMo">Mobile Money (MoMo)</option>
+            <option value="Bank">Bank Transfer</option>
+          </select>
+        </div>
+
+        <!-- MoMo fields -->
+        <div class="method-fields" id="momo-fields">
+          <div class="form-group">
+            <label>MoMo Number</label>
+            <input type="tel" name="momo_number" placeholder="0XX XXX XXXX">
+          </div>
+          <div class="form-group">
+            <label>Network</label>
+            <select name="momo_network">
+              <option value="">Select network</option>
+              <option value="MTN">MTN MoMo</option>
+              <option value="Telecel">Telecel Cash</option>
+              <option value="AirtelTigo">AirtelTigo Money</option>
+            </select>
+          </div>
+          <div style="background:#f0fdf4;border-radius:8px;padding:12px;font-size:.82rem;color:#166534;margin-bottom:12px">
+            <strong>Send {{ fmt_ghs(deposit) }} to:</strong><br>
+            MoMo Number: <strong>{{ BANK_DETAILS.account_no or '—' }}</strong><br>
+            Name: <strong>{{ BANK_DETAILS.account_name }}</strong>
+          </div>
+        </div>
+
+        <!-- Bank fields -->
+        <div class="method-fields" id="bank-fields">
+          <div style="background:#eff6ff;border-radius:8px;padding:12px;font-size:.82rem;color:#1e40af;margin-bottom:12px">
+            <strong>Bank Transfer Details:</strong><br>
+            Bank: <strong>{{ BANK_DETAILS.bank_name }}</strong><br>
+            Account: <strong>{{ BANK_DETAILS.account_no or '—' }}</strong><br>
+            Name: <strong>{{ BANK_DETAILS.account_name }}</strong><br>
+            {% if BANK_DETAILS.branch %}Branch: <strong>{{ BANK_DETAILS.branch }}</strong>{% endif %}
+          </div>
+          <div class="form-group">
+            <label>Bank Reference / Transaction ID</label>
+            <input type="text" name="bank_reference" placeholder="Your transaction reference">
+          </div>
+        </div>
+
+        <button type="submit" class="reserve-btn">Reserve Now — {{ fmt_ghs(deposit) }}</button>
+      </form>
+
+      <div class="divider">or</div>
+
+      <a class="wa-reserve" href="https://wa.me/233541057500?text=Hi!+I'd+like+to+reserve+the+{{ item.brand|urlencode }}+{{ item.model|urlencode }}" target="_blank" rel="noopener">
+        💬 Reserve via WhatsApp
+      </a>
+    </div>
+  </div>
+</div>
+
+{% if similar %}
+<div class="similar-section">
+  <h2>More from {{ item.brand }}</h2>
+  <div class="similar-grid">
+    {% for s in similar %}
+      <a class="sim-card" href="/shop/{{ s.id }}">
+        <div class="sim-img">📱</div>
+        <div class="sim-body">
+          <div class="sim-model">{{ s.model }}</div>
+          <div class="sim-price">{{ fmt_ghs(s.selling_price) }}</div>
+          {% if s.storage or s.color %}
+            <div style="font-size:.78rem;color:var(--muted);margin-top:4px">
+              {{ s.storage or '' }}{% if s.storage and s.color %} &bull; {% endif %}{{ s.color or '' }}
+            </div>
+          {% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<footer>
+  <p>&copy; {{ 2025 }} PhoneHub Ghana &mdash; <a href="/booking">Book a Repair</a> &mdash; <a href="/shop">Shop</a></p>
+</footer>
+
+<a class="wa-float" href="https://wa.me/233541057500" target="_blank" rel="noopener" title="Chat on WhatsApp">💬</a>
+
+<script>
+function toggleMethod(val){
+  document.getElementById('momo-fields').classList.toggle('active', val==='MoMo');
+  document.getElementById('bank-fields').classList.toggle('active', val==='Bank');
+}
+function showPlan(months, btn){
+  document.querySelectorAll('.plan-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.plan-details').forEach(d=>d.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('plan-'+months).classList.add('active');
+}
+</script>
+</body>
+</html>
