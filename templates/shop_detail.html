@@ -105,9 +105,12 @@ footer a{color:var(--gold);text-decoration:none}
 
 /* ── MOBILE NAV ─────────────────────────────────────── */
 .mobile-topbar{display:none;position:sticky;top:0;z-index:100;height:60px;background:rgba(247,245,240,0.95);backdrop-filter:blur(12px);border-bottom:1px solid #E8E4DC;padding:0 20px;align-items:center;justify-content:space-between}
-.mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:#006B3F;text-decoration:none}
+.mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#006B3F;text-decoration:none}
 .mtb-brand span{color:#FCD116}
-.mtb-actions{display:flex;gap:4px;align-items:center}
+.mtb-actions{display:flex;gap:2px;align-items:center}
+.mtb-link{color:#4A4740;text-decoration:none;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;transition:background 0.2s;white-space:nowrap}
+.mtb-link:hover{background:#E8E4DC;color:#111008}
+.mtb-join{color:#006B3F;font-weight:700}
 .mobile-icon-btn{width:40px;height:40px;background:none;border:none;font-size:20px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;transition:background 0.2s}
 .mobile-icon-btn:hover{background:#E8E4DC}
 .menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;backdrop-filter:blur(2px)}
@@ -161,9 +164,15 @@ footer a{color:var(--gold);text-decoration:none}
 
 <!-- MOBILE TOPBAR -->
 <div class="mobile-topbar">
-  <a href="/" class="mtb-brand">Phone<span>Hub</span></a>
+  <a href="/" class="mtb-brand">Phone<span>Hub</span> Ghana</a>
   <div class="mtb-actions">
-    {% if session.get('customer_id') %}<a href="/dashboard" class="mobile-icon-btn">👤</a>{% endif %}
+    <a href="/booking" class="mtb-link">Repair</a>
+    <a href="/shop" class="mtb-link mtb-join">Shop</a>
+    {% if session.get('customer_id') %}
+    <a href="/dashboard" class="mtb-link">My Account</a>
+    {% else %}
+    <a href="/register" class="mtb-link">Join Us</a>
+    {% endif %}
     <button class="mobile-icon-btn" onclick="openMenu()">☰</button>
   </div>
 </div>

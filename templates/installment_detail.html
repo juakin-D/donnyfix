@@ -117,9 +117,12 @@
     .flash.error{background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5}
 
     .mobile-topbar{display:none;position:sticky;top:0;z-index:100;height:60px;background:rgba(247,245,240,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--warm-gray);padding:0 20px;align-items:center;justify-content:space-between}
-    .mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--green);text-decoration:none}
+    .mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--green);text-decoration:none}
     .mtb-brand span{color:var(--gold)}
-    .mtb-actions{display:flex;gap:4px;align-items:center}
+    .mtb-actions{display:flex;gap:2px;align-items:center}
+    .mtb-link{color:var(--text-soft);text-decoration:none;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;transition:background 0.2s;white-space:nowrap}
+    .mtb-link:hover{background:var(--warm-gray);color:var(--text)}
+    .mtb-join{color:var(--green);font-weight:700}
     .mobile-icon-btn{width:40px;height:40px;background:none;border:none;font-size:20px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;transition:background 0.2s}
     .mobile-icon-btn:hover{background:var(--warm-gray)}
     .menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;backdrop-filter:blur(2px)}
@@ -172,8 +175,10 @@
   <div class="mobile-topbar" id="mobileTopbar">
     <a href="/" class="mtb-brand">Phone<span>Hub</span> Ghana</a>
     <div class="mtb-actions">
-      <a href="/dashboard" class="mobile-icon-btn" title="Dashboard">📊</a>
-      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Open menu">☰</button>
+      <a href="/booking" class="mtb-link">Repair</a>
+      <a href="/shop" class="mtb-link">Shop</a>
+      <a href="/dashboard" class="mtb-link mtb-join">My Account</a>
+      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Menu">☰</button>
     </div>
   </div>
 

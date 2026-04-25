@@ -172,9 +172,12 @@
 
     /* MOBILE NAV */
     .mobile-topbar{display:none;position:sticky;top:0;z-index:100;height:60px;background:var(--green);padding:0 20px;align-items:center;justify-content:space-between}
-    .mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:#fff;text-decoration:none}
+    .mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#fff;text-decoration:none}
     .mtb-brand span{color:var(--gold)}
-    .mtb-actions{display:flex;gap:4px;align-items:center}
+    .mtb-actions{display:flex;gap:2px;align-items:center}
+    .mtb-link{color:rgba(255,255,255,0.85);text-decoration:none;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;transition:background 0.2s;white-space:nowrap}
+    .mtb-link:hover{background:rgba(255,255,255,0.12)}
+    .mtb-join{color:var(--gold);font-weight:700}
     .mobile-icon-btn{width:40px;height:40px;background:none;border:none;font-size:20px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:rgba(255,255,255,0.85);-webkit-tap-highlight-color:transparent;transition:background 0.2s}
     .mobile-icon-btn:hover{background:rgba(255,255,255,0.15)}
     .menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;backdrop-filter:blur(2px)}
@@ -219,7 +222,10 @@
   <div class="mobile-topbar" id="mobileTopbar">
     <a href="/" class="mtb-brand">Phone<span>Hub</span> Ghana</a>
     <div class="mtb-actions">
-      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Open menu">☰</button>
+      <a href="/booking" class="mtb-link">Repair</a>
+      <a href="/shop" class="mtb-link">Shop</a>
+      <a href="/register" class="mtb-link mtb-join">Join Us</a>
+      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Menu">☰</button>
     </div>
   </div>
 
