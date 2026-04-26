@@ -57,6 +57,10 @@
       transition: background 0.2s;
     }
     .nav-link:hover { background: rgba(255,255,255,0.15); color: white; }
+    .nav-cta{background:var(--gold)!important;color:#1A1A1A!important;font-weight:600!important;padding:7px 16px!important;border-radius:6px!important}
+    .nav-cta:hover{background:#e6b800!important}
+    .nav-hamburger{background:none;border:1px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.8);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:background 0.2s;flex-shrink:0}
+    .nav-hamburger:hover{background:rgba(255,255,255,0.12)}
 
     /* HERO BAND */
     .hero-band {
@@ -238,14 +242,25 @@
     </div>
     <nav class="drawer-nav">
       <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
-      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Buy a Phone</a>
-      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book Repair</a>
+      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book a Repair</a>
+      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Shop Phones</a>
       <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
-      <div class="drawer-divider"></div>
-      <div class="drawer-auth">
-        <a href="/login" class="drawer-btn-primary">Log In</a>
-        <a href="/register" class="drawer-btn-outline">Join Free</a>
-      </div>
+      <a href="/privacy" class="drawer-link active"><span class="dl-icon">📄</span>Privacy Policy</a>
+      {% if session.get('customer_id') %}
+      <div class="drawer-divider" style="margin:8px 0"></div>
+      <a href="/dashboard" class="drawer-link"><span class="dl-icon">📊</span>My Dashboard</a>
+      <a href="/account/edit" class="drawer-link"><span class="dl-icon">✏️</span>Edit Profile</a>
+      <a href="/shop/reservations" class="drawer-link"><span class="dl-icon">📦</span>My Reservations</a>
+      <div class="drawer-divider" style="margin:8px 0"></div>
+      <form method="POST" action="/logout" style="padding:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="drawer-logout">Log Out</button>
+      </form>
+      {% else %}
+      <div class="drawer-divider" style="margin:8px 0"></div>
+      <a href="/register" class="drawer-link"><span class="dl-icon">🎉</span>Join Free</a>
+      <a href="/login" class="drawer-link"><span class="dl-icon">🔑</span>Log In</a>
+      {% endif %}
     </nav>
     <div class="drawer-contact">
       <a href="tel:+233541057500">📞 +233 54 105 7500</a>
@@ -256,9 +271,14 @@
   <nav class="desktop-nav">
     <a href="/" class="brand">Phone<span>Hub</span> Ghana</a>
     <div class="nav-links">
-      <a href="/" class="nav-link">Home</a>
-      <a href="/booking" class="nav-link">Book a Repair</a>
-      <a href="/register" class="nav-link">Join</a>
+      <a href="/booking" class="nav-link">Repair</a>
+      <a href="/shop" class="nav-link">Shop</a>
+      {% if session.get('customer_id') %}
+      <a href="/dashboard" class="nav-cta">My Account</a>
+      {% else %}
+      <a href="/register" class="nav-cta">Join Us</a>
+      {% endif %}
+      <button class="nav-hamburger" onclick="openMenu()" aria-label="Menu">☰</button>
     </div>
   </nav>
 

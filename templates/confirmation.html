@@ -65,6 +65,10 @@
       padding: 8px 14px; border-radius: 8px; transition: all 0.2s;
     }
     .nav-right a:hover { color: white; background: rgba(255,255,255,0.08); }
+    .nav-cta{background:rgba(252,209,22,0.15)!important;color:var(--gold)!important;font-weight:600!important;padding:9px 20px!important}
+    .nav-cta:hover{background:rgba(252,209,22,0.25)!important}
+    .nav-hamburger{background:none;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:background 0.2s;flex-shrink:0}
+    .nav-hamburger:hover{background:rgba(255,255,255,0.08)}
 
     /* ── MAIN CONTENT ────────────────────────────────────── */
     main {
@@ -407,24 +411,24 @@
     {% endif %}
     <nav class="drawer-nav">
       <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
-      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Buy a Phone</a>
-      <a href="/booking" class="drawer-link active"><span class="dl-icon">🔧</span>Book Repair</a>
+      <a href="/booking" class="drawer-link active"><span class="dl-icon">🔧</span>Book a Repair</a>
+      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Shop Phones</a>
       <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
-      <div class="drawer-divider"></div>
+      <a href="/privacy" class="drawer-link"><span class="dl-icon">📄</span>Privacy Policy</a>
       {% if session.get('customer_id') %}
+      <div class="drawer-divider" style="margin:8px 0"></div>
       <a href="/dashboard" class="drawer-link"><span class="dl-icon">📊</span>My Dashboard</a>
-      <div class="drawer-divider"></div>
-      <div class="drawer-auth">
-        <form method="POST" action="/logout">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="drawer-logout">Log Out</button>
-        </form>
-      </div>
+      <a href="/account/edit" class="drawer-link"><span class="dl-icon">✏️</span>Edit Profile</a>
+      <a href="/shop/reservations" class="drawer-link"><span class="dl-icon">📦</span>My Reservations</a>
+      <div class="drawer-divider" style="margin:8px 0"></div>
+      <form method="POST" action="/logout" style="padding:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="drawer-logout">Log Out</button>
+      </form>
       {% else %}
-      <div class="drawer-auth">
-        <a href="/login" class="drawer-btn-primary">Log In</a>
-        <a href="/register" class="drawer-btn-outline">Create Account</a>
-      </div>
+      <div class="drawer-divider" style="margin:8px 0"></div>
+      <a href="/register" class="drawer-link"><span class="dl-icon">🎉</span>Join Free</a>
+      <a href="/login" class="drawer-link"><span class="dl-icon">🔑</span>Log In</a>
       {% endif %}
     </nav>
     <div class="drawer-contact">
@@ -437,12 +441,14 @@
   <nav class="desktop-nav">
     <a href="/" class="nav-logo">Phone<span>Hub</span> Ghana</a>
     <div class="nav-right">
+      <a href="/booking">Repair</a>
+      <a href="/shop">Shop</a>
       {% if session.get('customer_id') %}
-        <a href="/dashboard">My Account</a>
+      <a href="/dashboard" class="nav-cta">My Account</a>
       {% else %}
-        <a href="/register">Create Account</a>
+      <a href="/register" class="nav-cta">Join Us</a>
       {% endif %}
-      <a href="/booking">New Booking</a>
+      <button class="nav-hamburger" onclick="openMenu()" aria-label="Menu">☰</button>
     </div>
   </nav>
 

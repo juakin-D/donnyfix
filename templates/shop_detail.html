@@ -23,6 +23,8 @@ nav{background:var(--green);padding:0 24px;display:flex;align-items:center;justi
 .nav-links a:hover{background:rgba(255,255,255,.12);color:#fff}
 .nav-links a.active{background:rgba(255,255,255,.18);color:#fff}
 .nav-cta{background:var(--gold)!important;color:#1A1A1A!important;font-weight:600!important}
+.nav-hamburger{background:none;border:1px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.8);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:background 0.2s;flex-shrink:0}
+.nav-hamburger:hover{background:rgba(255,255,255,0.12)}
 
 /* BREADCRUMB */
 .breadcrumb{max-width:1200px;margin:0 auto;padding:16px 24px;font-size:.85rem;color:var(--muted)}
@@ -182,26 +184,26 @@ footer a{color:var(--gold);text-decoration:none}
   {% if session.get('customer_id') %}<div class="drawer-user"><div class="drawer-avatar">{{ session.get('customer_name','U')[0]|upper }}</div><div><div class="drawer-username">{{ session.get('customer_name') }}</div><div class="drawer-role">Standard Member</div></div></div>{% endif %}
   <nav class="drawer-nav">
     <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
-    <a href="/shop" class="drawer-link active"><span class="dl-icon">📱</span>Shop Phones</a>
     <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book a Repair</a>
-    <a href="/#membership" class="drawer-link"><span class="dl-icon">🎁</span>Membership</a>
+    <a href="/shop" class="drawer-link active"><span class="dl-icon">📱</span>Shop Phones</a>
     <a href="/privacy" class="drawer-link"><span class="dl-icon">📄</span>Privacy Policy</a>
-  </nav>
-  <div class="drawer-divider"></div>
-  {% if session.get('customer_id') %}
-  <nav class="drawer-nav">
+    {% if session.get('customer_id') %}
+    <div class="drawer-divider" style="margin:8px 0"></div>
     <a href="/dashboard" class="drawer-link"><span class="dl-icon">📊</span>My Dashboard</a>
+    <a href="/account/edit" class="drawer-link"><span class="dl-icon">✏️</span>Edit Profile</a>
     <a href="/shop/reservations" class="drawer-link"><span class="dl-icon">📦</span>My Reservations</a>
     <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
+    <div class="drawer-divider" style="margin:8px 0"></div>
+    <form method="POST" action="/logout" style="padding:0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button type="submit" class="drawer-logout">Log Out</button>
+    </form>
+    {% else %}
+    <div class="drawer-divider" style="margin:8px 0"></div>
+    <a href="/register" class="drawer-link"><span class="dl-icon">🎉</span>Join Free</a>
+    <a href="/login" class="drawer-link"><span class="dl-icon">🔑</span>Log In</a>
+    {% endif %}
   </nav>
-  <div class="drawer-divider"></div>
-  <form method="POST" action="/logout" style="padding:0 16px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button type="submit" class="drawer-logout">Log Out</button></form>
-  {% else %}
-  <div class="drawer-auth">
-    <a href="/register" class="drawer-btn-primary">Join Free — Get 12 Months</a>
-    <a href="/login" class="drawer-btn-outline">Log In</a>
-  </div>
-  {% endif %}
   <div class="drawer-contact">
     <a href="tel:+233541057500">📞 054 105 7500</a>
     <a href="https://wa.me/233541057500" target="_blank" rel="noopener">💬 WhatsApp Us</a>
@@ -211,16 +213,14 @@ footer a{color:var(--gold);text-decoration:none}
 <nav class="desktop-nav">
   <a class="brand" href="/"><span>Phone</span>Hub Ghana</a>
   <div class="nav-links">
-    <a href="/#services">Services</a>
-    <a href="/#membership">Membership</a>
+    <a href="/booking">Repair</a>
     <a href="/shop" class="active">Shop</a>
-    <a href="/booking">Book Repair</a>
     {% if session.get('customer_id') %}
-      <a href="/dashboard">My Account</a>
+    <a href="/dashboard" class="nav-cta">My Account</a>
     {% else %}
-      <a href="/login">Login</a>
-      <a href="/register" class="nav-cta">Join Free</a>
+    <a href="/register" class="nav-cta">Join Us</a>
     {% endif %}
+    <button class="nav-hamburger" onclick="openMenu()" aria-label="Menu">☰</button>
   </div>
 </nav>
 

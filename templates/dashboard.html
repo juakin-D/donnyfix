@@ -16,6 +16,8 @@
     nav .nav-right span { color: rgba(255,255,255,0.8); font-size: 14px; }
     nav a.nav-btn { background: rgba(255,255,255,0.15); color: white; padding: 7px 16px; border-radius: 6px; font-size: 14px; text-decoration: none; transition: background 0.2s; }
     nav a.nav-btn:hover { background: rgba(255,255,255,0.25); }
+    .nav-hamburger{background:none;border:1px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.8);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:background 0.2s;flex-shrink:0}
+    .nav-hamburger:hover{background:rgba(255,255,255,0.12)}
 
     /* LAYOUT */
     .page { max-width: 900px; margin: 0 auto; padding: 32px 20px; }
@@ -204,23 +206,20 @@
     </div>
     <nav class="drawer-nav">
       <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
-      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Shop Phones</a>
       <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book a Repair</a>
-      <a href="/#membership" class="drawer-link"><span class="dl-icon">🎁</span>Membership</a>
+      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Shop Phones</a>
       <a href="/privacy" class="drawer-link"><span class="dl-icon">📄</span>Privacy Policy</a>
-    </nav>
-    <div class="drawer-divider"></div>
-    <nav class="drawer-nav">
+      <div class="drawer-divider" style="margin:8px 0"></div>
       <a href="/dashboard" class="drawer-link active"><span class="dl-icon">📊</span>My Dashboard</a>
       <a href="/account/edit" class="drawer-link"><span class="dl-icon">✏️</span>Edit Profile</a>
       <a href="/shop/reservations" class="drawer-link"><span class="dl-icon">📦</span>My Reservations</a>
       <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
+      <div class="drawer-divider" style="margin:8px 0"></div>
+      <form method="POST" action="/logout" style="padding:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="drawer-logout">Log Out</button>
+      </form>
     </nav>
-    <div class="drawer-divider"></div>
-    <form method="POST" action="/logout" style="padding:0 16px">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-      <button type="submit" class="drawer-logout">Log Out</button>
-    </form>
     <div class="drawer-contact">
       <a href="tel:+233541057500">📞 054 105 7500</a>
       <a href="https://wa.me/233541057500" target="_blank" rel="noopener">💬 WhatsApp Us</a>
@@ -230,9 +229,10 @@
   <nav class="desktop-nav">
     <a href="/" class="brand">PhoneHub Ghana</a>
     <div class="nav-right">
-      <span>👋 {{ session['customer_name'] }}</span>
-      <a href="/booking" class="nav-btn">Book a Repair</a>
-      <form method="POST" action="/logout" style="display:inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="nav-btn" style="background:none;border:none;cursor:pointer;padding:0">Log Out</button></form>
+      <a href="/booking" class="nav-btn">Repair</a>
+      <a href="/shop" class="nav-btn">Shop</a>
+      <a href="/dashboard" class="nav-btn">My Account</a>
+      <button class="nav-hamburger" onclick="openMenu()" aria-label="Menu">☰</button>
     </div>
   </nav>
 

@@ -26,6 +26,10 @@
     .nav-right a{color:var(--text-soft);text-decoration:none;font-size:14px;padding:8px 14px;border-radius:8px;transition:all .2s}
     .nav-right a:hover{background:var(--warm-gray);color:var(--text)}
     .nav-right a.cta{background:var(--green);color:white;font-weight:500}
+    .nav-cta{background:var(--green)!important;color:#fff!important;font-weight:500!important;padding:9px 20px!important}
+    .nav-cta:hover{background:var(--green-dark)!important}
+    .nav-hamburger{background:none;border:1px solid var(--warm-gray);color:var(--text-soft);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:background 0.2s;flex-shrink:0}
+    .nav-hamburger:hover{background:var(--warm-gray)}
 
     /* PAGE */
     .page{max-width:1060px;margin:0 auto;padding:52px 48px 100px;display:grid;grid-template-columns:1fr 360px;gap:48px;align-items:start}
@@ -270,24 +274,24 @@
     {% endif %}
     <nav class="drawer-nav">
       <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
-      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Buy a Phone</a>
-      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book Repair</a>
+      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book a Repair</a>
+      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Shop Phones</a>
       <a href="/installment/apply" class="drawer-link active"><span class="dl-icon">💳</span>Installment Plans</a>
-      <div class="drawer-divider"></div>
+      <a href="/privacy" class="drawer-link"><span class="dl-icon">📄</span>Privacy Policy</a>
       {% if session.get('customer_id') %}
+      <div class="drawer-divider" style="margin:8px 0"></div>
       <a href="/dashboard" class="drawer-link"><span class="dl-icon">📊</span>My Dashboard</a>
-      <div class="drawer-divider"></div>
-      <div class="drawer-auth">
-        <form method="POST" action="/logout">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="drawer-logout">Log Out</button>
-        </form>
-      </div>
+      <a href="/account/edit" class="drawer-link"><span class="dl-icon">✏️</span>Edit Profile</a>
+      <a href="/shop/reservations" class="drawer-link"><span class="dl-icon">📦</span>My Reservations</a>
+      <div class="drawer-divider" style="margin:8px 0"></div>
+      <form method="POST" action="/logout" style="padding:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="drawer-logout">Log Out</button>
+      </form>
       {% else %}
-      <div class="drawer-auth">
-        <a href="/login" class="drawer-btn-primary">Log In</a>
-        <a href="/register" class="drawer-btn-outline">Create Account</a>
-      </div>
+      <div class="drawer-divider" style="margin:8px 0"></div>
+      <a href="/register" class="drawer-link"><span class="dl-icon">🎉</span>Join Free</a>
+      <a href="/login" class="drawer-link"><span class="dl-icon">🔑</span>Log In</a>
       {% endif %}
     </nav>
     <div class="drawer-contact">
@@ -299,9 +303,10 @@
   <nav class="desktop-nav">
     <a href="/" class="nav-logo">Phone<span>Hub</span> Ghana</a>
     <div class="nav-right">
-      <a href="/dashboard">My Account</a>
-      <a href="/booking">Book Repair</a>
-      <form method="POST" action="/logout" style="display:inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" >Log Out</button></form>
+      <a href="/booking">Repair</a>
+      <a href="/shop">Shop</a>
+      <a href="/dashboard" class="nav-cta">My Account</a>
+      <button class="nav-hamburger" onclick="openMenu()" aria-label="Menu">☰</button>
     </div>
   </nav>
 
