@@ -59,8 +59,6 @@
     .nav-link:hover { background: rgba(255,255,255,0.15); color: white; }
     .nav-cta{background:var(--gold)!important;color:#1A1A1A!important;font-weight:600!important;padding:7px 16px!important;border-radius:6px!important}
     .nav-cta:hover{background:#e6b800!important}
-    .nav-hamburger{background:none;border:none;font-size:20px;color:rgba(255,255,255,0.85);width:40px;height:40px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
-    .nav-hamburger:hover{background:rgba(255,255,255,0.12)}
 
     /* HERO BAND */
     .hero-band {
@@ -176,12 +174,9 @@
 
     /* MOBILE NAV */
     .mobile-topbar{display:none;position:sticky;top:0;z-index:100;height:60px;background:var(--green);padding:0 20px;align-items:center;justify-content:space-between}
-    .mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#fff;text-decoration:none}
+    .mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:#fff;text-decoration:none}
     .mtb-brand span{color:var(--gold)}
-    .mtb-actions{display:flex;gap:2px;align-items:center}
-    .mtb-link{color:rgba(255,255,255,0.85);text-decoration:none;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;transition:background 0.2s;white-space:nowrap}
-    .mtb-link:hover{background:rgba(255,255,255,0.12)}
-    .mtb-join{color:var(--gold);font-weight:700}
+    .mtb-actions{display:flex;gap:4px;align-items:center}
     .mobile-icon-btn{width:40px;height:40px;background:none;border:none;font-size:20px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:rgba(255,255,255,0.85);-webkit-tap-highlight-color:transparent;transition:background 0.2s}
     .mobile-icon-btn:hover{background:rgba(255,255,255,0.15)}
     .menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;backdrop-filter:blur(2px)}
@@ -224,12 +219,10 @@
 
   <!-- Mobile Topbar -->
   <div class="mobile-topbar" id="mobileTopbar">
-    <a href="/" class="mtb-brand">Phone<span>Hub</span> Ghana</a>
+    <a href="/" class="mtb-brand">Phone<span>Hub</span></a>
     <div class="mtb-actions">
-      <a href="/booking" class="mtb-link">Repair</a>
-      <a href="/shop" class="mtb-link">Shop</a>
-      <a href="/register" class="mtb-link mtb-join">Join Us</a>
-      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Menu">☰</button>
+      {% if session.get('customer_id') %}<a href="/dashboard" class="mobile-icon-btn">👤</a>{% endif %}
+      <button class="mobile-icon-btn" onclick="openMenu()">☰</button>
     </div>
   </div>
 
@@ -242,26 +235,26 @@
     </div>
     <nav class="drawer-nav">
       <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
-      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book a Repair</a>
       <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Shop Phones</a>
-      <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
+      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book a Repair</a>
+      <a href="/#membership" class="drawer-link"><span class="dl-icon">🎁</span>Membership</a>
       <a href="/privacy" class="drawer-link active"><span class="dl-icon">📄</span>Privacy Policy</a>
-      {% if session.get('customer_id') %}
-      <div class="drawer-divider" style="margin:8px 0"></div>
-      <a href="/dashboard" class="drawer-link"><span class="dl-icon">📊</span>My Dashboard</a>
-      <a href="/account/edit" class="drawer-link"><span class="dl-icon">✏️</span>Edit Profile</a>
-      <a href="/shop/reservations" class="drawer-link"><span class="dl-icon">📦</span>My Reservations</a>
-      <div class="drawer-divider" style="margin:8px 0"></div>
-      <form method="POST" action="/logout" style="padding:0">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="drawer-logout">Log Out</button>
-      </form>
-      {% else %}
-      <div class="drawer-divider" style="margin:8px 0"></div>
-      <a href="/register" class="drawer-link"><span class="dl-icon">🎉</span>Join Free</a>
-      <a href="/login" class="drawer-link"><span class="dl-icon">🔑</span>Log In</a>
-      {% endif %}
     </nav>
+    <div class="drawer-divider"></div>
+    {% if session.get('customer_id') %}
+    <nav class="drawer-nav">
+      <a href="/dashboard" class="drawer-link"><span class="dl-icon">📊</span>My Dashboard</a>
+      <a href="/shop/reservations" class="drawer-link"><span class="dl-icon">📦</span>My Reservations</a>
+      <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
+    </nav>
+    <div class="drawer-divider"></div>
+    <form method="POST" action="/logout" style="padding:0 16px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="drawer-logout">Log Out</button></form>
+    {% else %}
+    <div class="drawer-auth">
+      <a href="/register" class="drawer-btn-primary">Join Free — Get 12 Months</a>
+      <a href="/login" class="drawer-btn-outline">Log In</a>
+    </div>
+    {% endif %}
     <div class="drawer-contact">
       <a href="tel:+233541057500">📞 +233 54 105 7500</a>
       <a href="mailto:info@phonehubghana.com">✉ info@phonehubghana.com</a>
@@ -271,14 +264,16 @@
   <nav class="desktop-nav">
     <a href="/" class="brand">Phone<span>Hub</span> Ghana</a>
     <div class="nav-links">
-      <a href="/booking" class="nav-link">Repair</a>
+      <a href="/#services" class="nav-link">Services</a>
+      <a href="/#membership" class="nav-link">Membership</a>
       <a href="/shop" class="nav-link">Shop</a>
+      <a href="/booking" class="nav-link">Book Repair</a>
       {% if session.get('customer_id') %}
-      <a href="/dashboard" class="nav-cta">My Account</a>
+        <a href="/dashboard" class="nav-link">My Account</a>
       {% else %}
-      <a href="/register" class="nav-cta">Join Us</a>
+        <a href="/login" class="nav-link">Login</a>
+        <a href="/register" class="nav-cta">Join Free</a>
       {% endif %}
-      <button class="nav-hamburger" onclick="openMenu()" aria-label="Menu">☰</button>
     </div>
   </nav>
 

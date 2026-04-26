@@ -16,8 +16,6 @@
     nav .nav-right span { color: rgba(255,255,255,0.8); font-size: 14px; }
     nav a.nav-btn { background: rgba(255,255,255,0.15); color: white; padding: 7px 16px; border-radius: 6px; font-size: 14px; text-decoration: none; transition: background 0.2s; }
     nav a.nav-btn:hover { background: rgba(255,255,255,0.25); }
-    .nav-hamburger{background:none;border:none;font-size:20px;color:rgba(255,255,255,0.85);width:40px;height:40px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
-    .nav-hamburger:hover{background:rgba(255,255,255,0.12)}
 
     /* LAYOUT */
     .page { max-width: 900px; margin: 0 auto; padding: 32px 20px; }
@@ -128,12 +126,9 @@
 
     /* ── MOBILE NAV ─────────────────────────────────────── */
     .mobile-topbar{display:none;position:sticky;top:0;z-index:100;height:60px;background:rgba(247,245,240,0.95);backdrop-filter:blur(12px);border-bottom:1px solid #E8E4DC;padding:0 20px;align-items:center;justify-content:space-between}
-    .mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#006B3F;text-decoration:none}
+    .mtb-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:#006B3F;text-decoration:none}
     .mtb-brand span{color:#FCD116}
-    .mtb-actions{display:flex;gap:2px;align-items:center}
-    .mtb-link{color:#4A4740;text-decoration:none;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;transition:background 0.2s;white-space:nowrap}
-    .mtb-link:hover{background:#E8E4DC;color:#111008}
-    .mtb-join{color:#006B3F;font-weight:700}
+    .mtb-actions{display:flex;gap:4px;align-items:center}
     .mobile-icon-btn{width:40px;height:40px;background:none;border:none;font-size:20px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;transition:background 0.2s}
     .mobile-icon-btn:hover{background:#E8E4DC}
     .menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;backdrop-filter:blur(2px)}
@@ -186,12 +181,10 @@
 
   <!-- MOBILE TOPBAR -->
   <div class="mobile-topbar">
-    <a href="/" class="mtb-brand">Phone<span>Hub</span> Ghana</a>
+    <a href="/" class="mtb-brand">Phone<span>Hub</span></a>
     <div class="mtb-actions">
-      <a href="/booking" class="mtb-link">Repair</a>
-      <a href="/shop" class="mtb-link">Shop</a>
-      <a href="/dashboard" class="mtb-link mtb-join">My Account</a>
-      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Menu">☰</button>
+      <a href="/dashboard" class="mobile-icon-btn">👤</a>
+      <button class="mobile-icon-btn" onclick="openMenu()">☰</button>
     </div>
   </div>
   <div class="menu-overlay" id="menuOverlay"></div>
@@ -206,20 +199,18 @@
     </div>
     <nav class="drawer-nav">
       <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
-      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book a Repair</a>
       <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Shop Phones</a>
+      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book a Repair</a>
       <a href="/privacy" class="drawer-link"><span class="dl-icon">📄</span>Privacy Policy</a>
-      <div class="drawer-divider" style="margin:8px 0"></div>
+    </nav>
+    <div class="drawer-divider"></div>
+    <nav class="drawer-nav">
       <a href="/dashboard" class="drawer-link active"><span class="dl-icon">📊</span>My Dashboard</a>
-      <a href="/account/edit" class="drawer-link"><span class="dl-icon">✏️</span>Edit Profile</a>
       <a href="/shop/reservations" class="drawer-link"><span class="dl-icon">📦</span>My Reservations</a>
       <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
-      <div class="drawer-divider" style="margin:8px 0"></div>
-      <form method="POST" action="/logout" style="padding:0">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <button type="submit" class="drawer-logout">Log Out</button>
-      </form>
     </nav>
+    <div class="drawer-divider"></div>
+    <form method="POST" action="/logout" style="padding:0 16px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button type="submit" class="drawer-logout">Log Out</button></form>
     <div class="drawer-contact">
       <a href="tel:+233541057500">📞 054 105 7500</a>
       <a href="https://wa.me/233541057500" target="_blank" rel="noopener">💬 WhatsApp Us</a>
@@ -229,10 +220,9 @@
   <nav class="desktop-nav">
     <a href="/" class="brand">PhoneHub Ghana</a>
     <div class="nav-right">
-      <a href="/booking" class="nav-btn">Repair</a>
       <a href="/shop" class="nav-btn">Shop</a>
-      <a href="/dashboard" class="nav-btn">My Account</a>
-      <button class="nav-hamburger" onclick="openMenu()" aria-label="Menu">☰</button>
+      <a href="/booking" class="nav-btn">Book Repair</a>
+      <a href="/dashboard" class="nav-btn active">My Account</a>
     </div>
   </nav>
 
