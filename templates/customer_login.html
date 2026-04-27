@@ -27,9 +27,121 @@
     .admin-link { text-align: center; font-size: 13px; color: #9CA3AF; margin-top: 10px; }
     .admin-link a { color: #9CA3AF; text-decoration: none; }
     .admin-link a:hover { color: #006B3F; }
+
+    /* ── MOBILE NAV SYSTEM ──────────────────────────────── */
+    .wa-float{position:fixed;bottom:24px;right:24px;z-index:9999;width:56px;height:56px;background:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.45);text-decoration:none;animation:waBounce 1s ease both}
+    .wa-float svg{width:30px;height:30px;fill:white}
+    .wa-float .wa-tip{position:absolute;bottom:66px;right:0;background:#111;color:#fff;font-size:12px;font-family:Arial,sans-serif;white-space:nowrap;padding:6px 12px;border-radius:7px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;transform:translateY(4px)}
+    .wa-float .wa-tip::after{content:'';position:absolute;top:100%;right:18px;border:5px solid transparent;border-top-color:#111}
+    .wa-float:hover .wa-tip{opacity:1;transform:translateY(0)}
+    @keyframes waBounce{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}80%{transform:scale(.95)}100%{transform:scale(1);opacity:1}}
+    .mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;z-index:100;height:60px;background:rgba(0,107,63,0.97);padding:0 20px;align-items:center;justify-content:space-between}
+    .mtb-brand{font-family:Arial,sans-serif;font-weight:800;font-size:18px;color:#fff;text-decoration:none}
+    .mtb-brand span{color:#FCD116}
+    .mtb-actions{display:flex;gap:4px;align-items:center}
+    .mobile-icon-btn{width:40px;height:40px;background:none;border:none;font-size:20px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:rgba(255,255,255,0.85);-webkit-tap-highlight-color:transparent}
+    .menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;backdrop-filter:blur(2px)}
+    .menu-overlay.open{display:block}
+    .menu-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,85vw);background:#fff;z-index:201;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);overflow-y:auto;display:flex;flex-direction:column}
+    .menu-drawer.open{transform:translateX(0)}
+    .drawer-header{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1px solid #E8E4DC;flex-shrink:0}
+    .drawer-logo{font-family:Arial,sans-serif;font-size:18px;font-weight:800;color:#006B3F}
+    .drawer-logo span{color:#FCD116}
+    .drawer-close{background:none;border:none;font-size:20px;cursor:pointer;color:#8C8880;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+    .drawer-nav{padding:8px 0;display:flex;flex-direction:column}
+    .drawer-link{display:flex;align-items:center;gap:14px;padding:13px 20px;color:#4A4740;text-decoration:none;font-size:15px;transition:all 0.15s;border-left:3px solid transparent}
+    .drawer-link:hover,.drawer-link.active{background:rgba(0,107,63,0.06);color:#006B3F;border-left-color:#006B3F}
+    .dl-icon{width:24px;text-align:center;font-size:16px;flex-shrink:0}
+    .drawer-divider{height:1px;background:#E8E4DC;margin:8px 0}
+    .drawer-auth{padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+    .drawer-btn-primary{display:block;text-align:center;padding:13px 20px;background:#006B3F;color:#fff;font-weight:700;font-size:15px;border-radius:10px;text-decoration:none;transition:background 0.2s}
+    .drawer-btn-outline{display:block;text-align:center;padding:12px 20px;border:1.5px solid #E8E4DC;color:#111008;border-radius:10px;text-decoration:none;font-size:15px;font-weight:500;transition:all 0.2s}
+    .drawer-contact{padding:16px 20px;display:flex;flex-direction:column;gap:8px;margin-top:auto;border-top:1px solid #E8E4DC;flex-shrink:0}
+    .drawer-contact a{color:#8C8880;font-size:14px;text-decoration:none;display:flex;align-items:center;gap:8px}
+    .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:150;height:64px;background:#fff;border-top:1px solid #E8E4DC;box-shadow:0 -4px 20px rgba(0,0,0,0.08);align-items:stretch;justify-content:space-around}
+    .bn-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;text-decoration:none;color:#8C8880;font-size:10px;font-weight:500;font-family:Arial,sans-serif;background:none;border:none;cursor:pointer;padding:8px 4px;transition:color 0.2s;-webkit-tap-highlight-color:transparent}
+    .bn-item.bn-active,.bn-item:hover{color:#006B3F}
+    .bn-icon{font-size:20px;line-height:1;display:block}
+    .bn-label{font-size:10px}
+    @media(max-width:768px){
+      body{padding-top:80px;padding-bottom:80px;align-items:flex-start}
+      .mobile-topbar{display:flex}
+      .bottom-nav{display:flex}
+      .wa-float{bottom:80px !important}
+    }
+    /* ── END MOBILE NAV ─────────────────────────────────── */
   </style>
 </head>
 <body>
+
+  <!-- WA FLOAT -->
+  <a href="https://wa.me/233541057500" class="wa-float" target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.114.549 4.1 1.51 5.832L0 24l6.335-1.48A11.934 11.934 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.373l-.36-.214-3.727.977.995-3.632-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
+    <span class="wa-tip">Chat with us on WhatsApp</span>
+  </a>
+
+  <!-- MOBILE TOPBAR -->
+  <div class="mobile-topbar" id="mobileTopbar">
+    <a href="/" class="mtb-brand">Phone<span>Hub</span> Ghana</a>
+    <div class="mtb-actions">
+      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Open menu">☰</button>
+    </div>
+  </div>
+
+  <!-- OVERLAY + DRAWER -->
+  <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+  <div class="menu-drawer" id="menuDrawer">
+    <div class="drawer-header">
+      <span class="drawer-logo">Phone<span>Hub</span> Ghana</span>
+      <button class="drawer-close" onclick="closeMenu()">✕</button>
+    </div>
+    <nav class="drawer-nav">
+      <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
+      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Buy a Phone</a>
+      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book Repair</a>
+      <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
+      <a href="/privacy" class="drawer-link"><span class="dl-icon">📄</span>Privacy Policy</a>
+      <div class="drawer-divider"></div>
+      {% if session.get('customer_id') %}
+      <a href="/dashboard" class="drawer-link"><span class="dl-icon">📊</span>My Dashboard</a>
+      <a href="/account/edit" class="drawer-link"><span class="dl-icon">✏️</span>Edit Profile</a>
+      <a href="/shop/reservations" class="drawer-link"><span class="dl-icon">📦</span>My Reservations</a>
+      <div class="drawer-divider"></div>
+      <div class="drawer-auth">
+        <form method="POST" action="/logout" style="margin:0"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" style="width:100%;padding:13px 20px;background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Log Out</button></form>
+      </div>
+      {% else %}
+      <div class="drawer-auth">
+        <a href="/login" class="drawer-btn-primary active">Log In</a>
+        <a href="/register" class="drawer-btn-outline">Join Free</a>
+      </div>
+      {% endif %}
+    </nav>
+    <div class="drawer-contact">
+      <a href="tel:+233541057500">📞 +233 54 105 7500</a>
+      <a href="mailto:info@phonehubghana.com">✉ info@phonehubghana.com</a>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="/" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">Home</span></a>
+    <a href="/shop" class="bn-item"><span class="bn-icon">📱</span><span class="bn-label">Shop</span></a>
+    <a href="/booking" class="bn-item"><span class="bn-icon">🔧</span><span class="bn-label">Repair</span></a>
+    {% if session.get('customer_id') %}
+    <a href="/dashboard" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">Account</span></a>
+    {% else %}
+    <a href="/register" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">Join Free</span></a>
+    {% endif %}
+    <a href="/installment/apply" class="bn-item"><span class="bn-icon">💳</span><span class="bn-label">Plans</span></a>
+  </nav>
+
+  <script>
+    function openMenu(){document.getElementById('menuDrawer').classList.add('open');document.getElementById('menuOverlay').classList.add('open');document.body.style.overflow='hidden'}
+    function closeMenu(){document.getElementById('menuDrawer').classList.remove('open');document.getElementById('menuOverlay').classList.remove('open');document.body.style.overflow=''}
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
+  </script>
+
   <div class="card">
     <div class="logo">
       <h1>PhoneHub Ghana</h1>
@@ -68,95 +180,5 @@
     </div>
   </div>
 
-  <!-- WhatsApp Floating Button -->
-  <style>
-    .wa-float{position:fixed;bottom:24px;right:24px;z-index:9999;width:56px;height:56px;background:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.45);text-decoration:none;animation:waBounce 1s ease both}
-    .wa-float svg{width:30px;height:30px;fill:white}
-    .wa-float .wa-tip{position:absolute;bottom:66px;right:0;background:#111;color:#fff;font-size:12px;white-space:nowrap;padding:6px 12px;border-radius:7px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;transform:translateY(4px)}
-    .wa-float .wa-tip::after{content:'';position:absolute;top:100%;right:18px;border:5px solid transparent;border-top-color:#111}
-    .wa-float:hover .wa-tip{opacity:1;transform:translateY(0)}
-    @keyframes waBounce{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}80%{transform:scale(.95)}100%{transform:scale(1);opacity:1}}
-    /* MOBILE NAV */
-    .mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;z-index:100;height:60px;background:rgba(0,107,63,0.97);padding:0 20px;align-items:center;justify-content:space-between}
-    .mtb-brand{font-family:Arial,sans-serif;font-weight:800;font-size:18px;color:#fff;text-decoration:none}
-    .mtb-brand span{color:#FCD116}
-    .mtb-actions{display:flex;gap:4px;align-items:center}
-    .mobile-icon-btn{width:40px;height:40px;background:none;border:none;font-size:20px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;text-decoration:none;color:rgba(255,255,255,0.85);-webkit-tap-highlight-color:transparent}
-    .menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;backdrop-filter:blur(2px)}
-    .menu-overlay.open{display:block}
-    .menu-drawer{position:fixed;top:0;right:0;bottom:0;width:min(320px,85vw);background:#fff;z-index:201;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);overflow-y:auto;display:flex;flex-direction:column}
-    .menu-drawer.open{transform:translateX(0)}
-    .drawer-header{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1px solid #E8E4DC;flex-shrink:0}
-    .drawer-logo{font-family:Arial,sans-serif;font-size:18px;font-weight:800;color:#006B3F}
-    .drawer-logo span{color:#FCD116}
-    .drawer-close{background:none;border:none;font-size:20px;cursor:pointer;color:#8C8880;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center}
-    .drawer-nav{padding:8px 0;display:flex;flex-direction:column}
-    .drawer-link{display:flex;align-items:center;gap:14px;padding:13px 20px;color:#4A4740;text-decoration:none;font-size:15px;transition:all 0.15s;border-left:3px solid transparent}
-    .drawer-link:hover,.drawer-link.active{background:rgba(0,107,63,0.06);color:#006B3F;border-left-color:#006B3F}
-    .dl-icon{width:24px;text-align:center;font-size:16px;flex-shrink:0}
-    .drawer-divider{height:1px;background:#E8E4DC;margin:8px 0}
-    .drawer-auth{padding:16px 20px;display:flex;flex-direction:column;gap:10px}
-    .drawer-btn-primary{display:block;text-align:center;padding:13px 20px;background:#006B3F;color:#fff;font-weight:700;font-size:15px;border-radius:10px;text-decoration:none;transition:background 0.2s}
-    .drawer-btn-outline{display:block;text-align:center;padding:12px 20px;border:1.5px solid #E8E4DC;color:#111008;border-radius:10px;text-decoration:none;font-size:15px;font-weight:500;transition:all 0.2s}
-    .drawer-contact{padding:16px 20px;display:flex;flex-direction:column;gap:8px;margin-top:auto;border-top:1px solid #E8E4DC;flex-shrink:0}
-    .drawer-contact a{color:#8C8880;font-size:14px;text-decoration:none;display:flex;align-items:center;gap:8px}
-    .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:150;height:64px;background:#fff;border-top:1px solid #E8E4DC;box-shadow:0 -4px 20px rgba(0,0,0,0.08);align-items:stretch;justify-content:space-around}
-    .bn-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;text-decoration:none;color:#8C8880;font-size:10px;font-weight:500;font-family:Arial,sans-serif;background:none;border:none;cursor:pointer;padding:8px 4px;transition:color 0.2s;-webkit-tap-highlight-color:transparent}
-    .bn-item.bn-active,.bn-item:hover{color:#006B3F}
-    .bn-icon{font-size:20px;line-height:1;display:block}
-    .bn-label{font-size:10px}
-    @media(max-width:768px){
-      body{padding-top:80px;padding-bottom:80px}
-      .mobile-topbar{display:flex}
-      .bottom-nav{display:flex}
-      .wa-float{bottom:80px !important}
-    }
-  </style>
-  <a href="https://wa.me/233541057500" class="wa-float" target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp">
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.114.549 4.1 1.51 5.832L0 24l6.335-1.48A11.934 11.934 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.373l-.36-.214-3.727.977.995-3.632-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
-    <span class="wa-tip">Chat with us on WhatsApp</span>
-  </a>
-
-  <!-- Mobile Nav -->
-  <div class="mobile-topbar" id="mobileTopbar">
-    <a href="/" class="mtb-brand">Phone<span>Hub</span> Ghana</a>
-    <div class="mtb-actions">
-      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Open menu">☰</button>
-    </div>
-  </div>
-  <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
-  <div class="menu-drawer" id="menuDrawer">
-    <div class="drawer-header">
-      <span class="drawer-logo">Phone<span>Hub</span> Ghana</span>
-      <button class="drawer-close" onclick="closeMenu()">✕</button>
-    </div>
-    <nav class="drawer-nav">
-      <a href="/" class="drawer-link"><span class="dl-icon">🏠</span>Home</a>
-      <a href="/shop" class="drawer-link"><span class="dl-icon">📱</span>Buy a Phone</a>
-      <a href="/booking" class="drawer-link"><span class="dl-icon">🔧</span>Book Repair</a>
-      <a href="/installment/apply" class="drawer-link"><span class="dl-icon">💳</span>Installment Plans</a>
-      <div class="drawer-divider"></div>
-      <div class="drawer-auth">
-        <a href="/login" class="drawer-btn-primary">Log In</a>
-        <a href="/register" class="drawer-btn-outline">Join Free</a>
-      </div>
-    </nav>
-    <div class="drawer-contact">
-      <a href="tel:+233541057500">📞 +233 54 105 7500</a>
-      <a href="mailto:info@phonehubghana.com">✉ info@phonehubghana.com</a>
-    </div>
-  </div>
-  <nav class="bottom-nav">
-    <a href="/" class="bn-item"><span class="bn-icon">🏠</span><span class="bn-label">Home</span></a>
-    <a href="/shop" class="bn-item"><span class="bn-icon">📱</span><span class="bn-label">Shop</span></a>
-    <a href="/booking" class="bn-item"><span class="bn-icon">🔧</span><span class="bn-label">Repair</span></a>
-    <a href="/register" class="bn-item"><span class="bn-icon">👤</span><span class="bn-label">Join Free</span></a>
-    <a href="/installment/apply" class="bn-item"><span class="bn-icon">💳</span><span class="bn-label">Plans</span></a>
-  </nav>
-  <script>
-    function openMenu(){document.getElementById('menuDrawer').classList.add('open');document.getElementById('menuOverlay').classList.add('open');document.body.style.overflow='hidden'}
-    function closeMenu(){document.getElementById('menuDrawer').classList.remove('open');document.getElementById('menuOverlay').classList.remove('open');document.body.style.overflow=''}
-    document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
-  </script>
 </body>
 </html>
