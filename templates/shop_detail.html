@@ -238,7 +238,26 @@ footer a{color:var(--gold);text-decoration:none}
 <div class="detail-container">
   <!-- LEFT -->
   <div>
+    {% if item.image1_url or item.image2_url %}
+    <div style="margin-bottom:20px;">
+      <img id="mainImage"
+           src="{{ item.image1_url or item.image2_url }}"
+           alt="{{ item.brand }} {{ item.model }}"
+           style="width:100%;height:340px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);display:block;"/>
+      {% if item.image1_url and item.image2_url %}
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <img src="{{ item.image1_url }}"
+             onclick="document.getElementById('mainImage').src=this.src"
+             style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--green);cursor:pointer;"/>
+        <img src="{{ item.image2_url }}"
+             onclick="document.getElementById('mainImage').src=this.src"
+             style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;"/>
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
     <div class="device-image">📱</div>
+    {% endif %}
     <div class="device-brand">{{ item.brand }}</div>
     <div class="device-model">{{ item.model }}</div>
     <div class="device-price">{{ fmt_ghs(item.selling_price) }}</div>
@@ -392,7 +411,11 @@ footer a{color:var(--gold);text-decoration:none}
   <div class="similar-grid">
     {% for s in similar %}
       <a class="sim-card" href="/shop/{{ s.id }}">
-        <div class="sim-img">📱</div>
+        <div class="sim-img">
+          {% if s.image1_url %}
+          <img src="{{ s.image1_url }}" alt="{{ s.model }}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"/>
+          {% else %}📱{% endif %}
+        </div>
         <div class="sim-body">
           <div class="sim-model">{{ s.model }}</div>
           <div class="sim-price">{{ fmt_ghs(s.selling_price) }}</div>

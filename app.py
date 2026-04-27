@@ -24,6 +24,9 @@ from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 app = Flask(__name__)
 _secret_key = os.environ.get('SECRET_KEY', '')
@@ -68,6 +71,31 @@ BANK_DETAILS = {
     'sort_code':    os.environ.get('BANK_SORT',    ''),
     'swift':        os.environ.get('BANK_SWIFT',   ''),
 }
+
+# ─── CLOUDINARY IMAGE STORAGE ────────────────────────────────────────────────
+# Sign up free at cloudinary.com
+# Free tier: 25GB storage, 25GB bandwidth/month
+#
+# After signing up go to:
+# Dashboard → Account Details
+# Copy: Cloud Name, API Key, API Secret
+#
+# Set these environment variables on Render:
+# CLOUDINARY_CLOUD_NAME = your-cloud-name
+# CLOUDINARY_API_KEY    = your-api-key
+# CLOUDINARY_API_SECRET = your-api-secret
+# CLOUDINARY_FOLDER     = phonehub-ghana/inventory
+#
+# Images are auto-optimised to max 800x800px
+# and served via Cloudinary's global CDN.
+# ─────────────────────────────────────────────────────────────────────────────
+cloudinary.config(
+    cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+    api_key    = os.environ.get('CLOUDINARY_API_KEY', ''),
+    api_secret = os.environ.get('CLOUDINARY_API_SECRET', ''),
+    secure     = True
+)
+CLOUDINARY_FOLDER = os.environ.get('CLOUDINARY_FOLDER', 'phonehub-ghana/inventory')
 
 # Plan config: months -> deposit %, fee %, label, min device price
 PLAN_CONFIG = {
@@ -280,6 +308,14 @@ def init_db():
         FOREIGN KEY (plan_id) REFERENCES installment_plans(id)
     )""")
 
+    # Safe migration — add image columns to inventory if they don't exist yet
+    for col in ('image1_url', 'image2_url', 'image1_public_id', 'image2_public_id'):
+        try:
+            conn.execute(f'ALTER TABLE inventory ADD COLUMN {col} TEXT')
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
     conn.execute("""CREATE TABLE IF NOT EXISTS staff (
         id            SERIAL PRIMARY KEY,
         name          TEXT NOT NULL,
@@ -399,6 +435,66 @@ def fmt_ghs(amount):
         return f"GH\u20B5{float(amount):,.2f}"
     except (TypeError, ValueError):
         return "GH\u20B50.00"
+
+
+# ─── IMAGE UPLOAD HELPERS ─────────────────────────────────────────────────────
+
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp'}
+MAX_IMAGE_SIZE_MB = 5
+
+
+def allowed_image(filename):
+    if not filename or '.' not in filename:
+        return False
+    ext = filename.rsplit('.', 1)[1].lower()
+    return ext in ALLOWED_IMAGE_EXTENSIONS
+
+
+def upload_image_to_cloudinary(file, item_id, slot_number):
+    if not file or not file.filename:
+        return None
+    if not allowed_image(file.filename):
+        logger.warning('Rejected image upload — invalid extension: %s', file.filename)
+        return None
+    file.seek(0, 2)
+    file_size = file.tell()
+    file.seek(0)
+    if file_size > MAX_IMAGE_SIZE_MB * 1024 * 1024:
+        logger.warning('Rejected image — too large: %d bytes', file_size)
+        return None
+    if not cloudinary.config().cloud_name:
+        logger.warning('Cloudinary not configured — skipping upload')
+        return None
+    try:
+        public_id = f'{CLOUDINARY_FOLDER}/item-{item_id}-img{slot_number}'
+        result = cloudinary.uploader.upload(
+            file,
+            public_id      = public_id,
+            overwrite      = True,
+            resource_type  = 'image',
+            transformation = [
+                {'width': 800, 'height': 800,
+                 'crop': 'limit', 'quality': 'auto',
+                 'fetch_format': 'auto'}
+            ]
+        )
+        logger.info('Image uploaded to Cloudinary: %s', result['secure_url'])
+        return {'url': result['secure_url'], 'public_id': result['public_id']}
+    except Exception as exc:
+        logger.error('Cloudinary upload failed for item %d slot %d: %s', item_id, slot_number, exc)
+        return None
+
+
+def delete_image_from_cloudinary(public_id):
+    if not public_id:
+        return
+    if not cloudinary.config().cloud_name:
+        return
+    try:
+        cloudinary.uploader.destroy(public_id)
+        logger.info('Deleted Cloudinary image: %s', public_id)
+    except Exception as exc:
+        logger.error('Failed to delete Cloudinary image %s: %s', public_id, exc)
 
 
 # ─── EMAIL ────────────────────────────────────────────────────────────────────
@@ -1876,12 +1972,41 @@ def admin_inventory_add():
             conn.close()
             flash(f'IMEI {imei} already exists in inventory.', 'error')
             return redirect(url_for('admin_inventory'))
-    conn.execute(
-        'INSERT INTO inventory (brand,model,imei,condition,cost_price,selling_price,color,storage,notes,added_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+    cur = conn.execute(
+        '''INSERT INTO inventory (brand,model,imei,condition,cost_price,selling_price,color,storage,notes,added_by)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id''',
         (brand, model, imei, cond, cost_price, selling_price, color, storage, notes, session.get('admin_username', 'admin')))
-    conn.commit(); conn.close()
+    item_id = cur.fetchone()['id']
+    conn.commit()
+
+    image1_file = request.files.get('image1')
+    image2_file = request.files.get('image2')
+    img1_result = upload_image_to_cloudinary(image1_file, item_id, 1) if image1_file and image1_file.filename else None
+    img2_result = upload_image_to_cloudinary(image2_file, item_id, 2) if image2_file and image2_file.filename else None
+
+    if img1_result or img2_result:
+        conn.execute(
+            '''UPDATE inventory SET image1_url=%s, image1_public_id=%s,
+               image2_url=%s, image2_public_id=%s WHERE id=%s''',
+            (
+                img1_result['url'] if img1_result else None,
+                img1_result['public_id'] if img1_result else None,
+                img2_result['url'] if img2_result else None,
+                img2_result['public_id'] if img2_result else None,
+                item_id
+            )
+        )
+        conn.commit()
+
+    conn.close()
     logger.info('Admin %s added inventory: %s %s', session.get('admin_username'), brand, model)
-    flash('Device added to inventory.', 'success')
+    count = sum(1 for r in [img1_result, img2_result] if r)
+    if count:
+        flash(f'Device added with {count} photo(s) uploaded.', 'success')
+    elif (image1_file and image1_file.filename) or (image2_file and image2_file.filename):
+        flash('Device added but photo upload failed. You can add photos by editing the device.', 'success')
+    else:
+        flash('Device added to inventory.', 'success')
     return redirect(url_for('admin_inventory'))
 
 
@@ -1920,8 +2045,8 @@ def admin_inventory_edit(item_id):
         return redirect(url_for('admin_inventory'))
 
     conn = get_db()
-    item = conn.execute('SELECT id FROM inventory WHERE id=%s', (item_id,)).fetchone()
-    if not item:
+    current = conn.execute('SELECT * FROM inventory WHERE id=%s', (item_id,)).fetchone()
+    if not current:
         conn.close()
         flash('Device not found.', 'error')
         return redirect(url_for('admin_inventory'))
@@ -1934,7 +2059,45 @@ def admin_inventory_edit(item_id):
     conn.execute(
         'UPDATE inventory SET brand=%s,model=%s,imei=%s,condition=%s,cost_price=%s,selling_price=%s,color=%s,storage=%s,notes=%s,status=%s,updated_at=NOW() WHERE id=%s',
         (brand, model, imei, cond, cost_price, selling_price, color, storage, notes, status, item_id))
-    conn.commit(); conn.close()
+    conn.commit()
+
+    image1_file   = request.files.get('image1')
+    image2_file   = request.files.get('image2')
+    delete_image1 = request.form.get('delete_image1') == '1'
+    delete_image2 = request.form.get('delete_image2') == '1'
+
+    img1_url       = current.get('image1_url')
+    img1_public_id = current.get('image1_public_id')
+    img2_url       = current.get('image2_url')
+    img2_public_id = current.get('image2_public_id')
+
+    if delete_image1 or (image1_file and image1_file.filename):
+        delete_image_from_cloudinary(current.get('image1_public_id'))
+        img1_url = img1_public_id = None
+
+    if delete_image2 or (image2_file and image2_file.filename):
+        delete_image_from_cloudinary(current.get('image2_public_id'))
+        img2_url = img2_public_id = None
+
+    if image1_file and image1_file.filename:
+        result = upload_image_to_cloudinary(image1_file, item_id, 1)
+        if result:
+            img1_url = result['url']
+            img1_public_id = result['public_id']
+
+    if image2_file and image2_file.filename:
+        result = upload_image_to_cloudinary(image2_file, item_id, 2)
+        if result:
+            img2_url = result['url']
+            img2_public_id = result['public_id']
+
+    conn.execute(
+        '''UPDATE inventory SET image1_url=%s, image1_public_id=%s,
+           image2_url=%s, image2_public_id=%s WHERE id=%s''',
+        (img1_url, img1_public_id, img2_url, img2_public_id, item_id)
+    )
+    conn.commit()
+    conn.close()
     flash('Device updated.', 'success')
     return redirect(url_for('admin_inventory'))
 
@@ -2009,7 +2172,7 @@ def admin_inventory_reserve(item_id):
 @admin_required
 def admin_inventory_delete(item_id):
     conn = get_db()
-    item = conn.execute('SELECT id, status FROM inventory WHERE id=%s', (item_id,)).fetchone()
+    item = conn.execute('SELECT * FROM inventory WHERE id=%s', (item_id,)).fetchone()
     if not item:
         conn.close()
         flash('Device not found.', 'error')
@@ -2018,6 +2181,8 @@ def admin_inventory_delete(item_id):
         conn.close()
         flash('Cannot delete a sold or reserved device.', 'error')
         return redirect(url_for('admin_inventory'))
+    delete_image_from_cloudinary(item.get('image1_public_id'))
+    delete_image_from_cloudinary(item.get('image2_public_id'))
     conn.execute('DELETE FROM inventory WHERE id=%s', (item_id,))
     conn.commit(); conn.close()
     flash('Device removed from inventory.', 'success')

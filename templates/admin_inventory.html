@@ -206,6 +206,21 @@
       .stats-row{grid-template-columns:1fr}
       .topbar-subtitle{display:none}
     }
+
+    /* IMAGE UPLOAD SLOTS */
+    .img-upload-slot{position:relative}
+    .img-upload-label{display:block;border:2px dashed var(--border2);border-radius:10px;cursor:pointer;overflow:hidden;min-height:140px;transition:border-color .2s,background .2s;background:var(--surface2)}
+    .img-upload-label:hover{border-color:var(--green);background:rgba(0,196,106,.05)}
+    .img-upload-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;gap:6px;min-height:140px}
+    .iup-icon{font-size:28px;opacity:.5}
+    .iup-text{font-size:13px;font-weight:500;color:var(--text-soft)}
+    .iup-hint{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace}
+    .img-preview{width:100%;height:160px;object-fit:cover;display:block;border-radius:8px}
+    .img-file-input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+    .img-clear-btn{position:absolute;top:8px;right:8px;background:rgba(232,64,64,.9);color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s;z-index:2}
+    .img-clear-btn:hover{background:var(--red)}
+    .img-has-preview{border-color:var(--green);border-style:solid}
+    .modal-section{margin-bottom:16px}
   </style>
 </head>
 <body>
@@ -316,7 +331,7 @@
           <button class="add-toggle-btn" type="button" id="add-toggle-btn">+ Add Device</button>
         </div>
         <div class="add-panel-body" id="add-panel-body">
-          <form method="POST" action="/admin/inventory/add">
+          <form method="POST" action="/admin/inventory/add" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
               <div class="form-group">
@@ -356,6 +371,48 @@
               <div class="form-group span2">
                 <label class="form-label">Notes</label>
                 <input class="form-input" type="text" name="notes" placeholder="Optional notes"/>
+              </div>
+
+              <!-- Image Upload Section -->
+              <div style="grid-column:1 / -1;">
+                <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">
+                  Device Photos (optional — max 5MB each)
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+
+                  <!-- Image 1 -->
+                  <div class="img-upload-slot">
+                    <label for="image1" class="img-upload-label" id="slot1Label">
+                      <div class="img-upload-placeholder">
+                        <span class="iup-icon">📷</span>
+                        <span class="iup-text">Primary Photo</span>
+                        <span class="iup-hint">JPG, PNG, WebP · Max 5MB</span>
+                      </div>
+                      <img id="preview1" class="img-preview" style="display:none"/>
+                    </label>
+                    <input type="file" id="image1" name="image1" accept="image/*" class="img-file-input"
+                           onchange="previewImage(this,'preview1','slot1Label')"/>
+                    <button type="button" class="img-clear-btn" id="clear1" style="display:none"
+                            onclick="clearImage('image1','preview1','clear1','slot1Label')">✕ Remove</button>
+                  </div>
+
+                  <!-- Image 2 -->
+                  <div class="img-upload-slot">
+                    <label for="image2" class="img-upload-label" id="slot2Label">
+                      <div class="img-upload-placeholder">
+                        <span class="iup-icon">📷</span>
+                        <span class="iup-text">Secondary Photo</span>
+                        <span class="iup-hint">JPG, PNG, WebP · Max 5MB</span>
+                      </div>
+                      <img id="preview2" class="img-preview" style="display:none"/>
+                    </label>
+                    <input type="file" id="image2" name="image2" accept="image/*" class="img-file-input"
+                           onchange="previewImage(this,'preview2','slot2Label')"/>
+                    <button type="button" class="img-clear-btn" id="clear2" style="display:none"
+                            onclick="clearImage('image2','preview2','clear2','slot2Label')">✕ Remove</button>
+                  </div>
+
+                </div>
               </div>
             </div>
             <div class="form-row-actions">
@@ -416,10 +473,19 @@
             <tr>
               <td class="td-mono">{{ item.id }}</td>
               <td>
-                <div class="td-device">{{ item.brand }} {{ item.model }}</div>
-                {% if item.color or item.storage %}
-                <div class="td-sub">{{ item.color or '' }}{% if item.color and item.storage %} · {% endif %}{{ item.storage or '' }}</div>
-                {% endif %}
+                <div style="display:flex;align-items:center;">
+                  {% if item.image1_url %}
+                  <img src="{{ item.image1_url }}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--border);margin-right:10px;flex-shrink:0;"/>
+                  {% else %}
+                  <span style="width:40px;height:40px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:16px;margin-right:10px;flex-shrink:0;">📱</span>
+                  {% endif %}
+                  <div>
+                    <div class="td-device">{{ item.brand }} {{ item.model }}</div>
+                    {% if item.color or item.storage %}
+                    <div class="td-sub">{{ item.color or '' }}{% if item.color and item.storage %} · {% endif %}{{ item.storage or '' }}</div>
+                    {% endif %}
+                  </div>
+                </div>
               </td>
               <td class="td-mono">{{ item.imei or '—' }}</td>
               <td>
@@ -469,8 +535,10 @@
                         data-selling="{{ item.selling_price }}"
                         data-color="{{ item.color or '' }}"
                         data-storage="{{ item.storage or '' }}"
-                        data-notes="{{ item.notes or '' }}"
+                        data-notes="{{ (item.notes or '')|replace("'", "&#39;") }}"
                         data-status="{{ item.status }}"
+                        data-image1="{{ item.image1_url or '' }}"
+                        data-image2="{{ item.image2_url or '' }}"
                         onclick="openEditModal(this)"
                         title="Edit device">✏ Edit</button>
                     {% if item.status in ('In Stock', 'Reserved') %}
@@ -536,7 +604,7 @@
         <div class="modal-title">Edit Device</div>
         <button class="modal-close" onclick="closeModal('edit-modal')">×</button>
       </div>
-      <form method="POST" id="edit-form">
+      <form method="POST" id="edit-form" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-grid">
           <div>
@@ -584,6 +652,72 @@
             <input class="modal-input" type="text" name="notes" id="edit-notes"/>
           </div>
         </div>
+        <!-- Existing Photos -->
+        <div class="modal-section" id="existingImages" style="display:none">
+          <span class="modal-label">Current Photos</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+
+            <div id="existImg1Wrap">
+              <div style="position:relative;">
+                <img id="existImg1" style="width:100%;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>
+                <label style="position:absolute;top:4px;right:4px;display:flex;align-items:center;gap:4px;background:rgba(232,64,64,.9);color:white;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;">
+                  <input type="checkbox" name="delete_image1" value="1" style="width:12px;height:12px;accent-color:white"/>
+                  Delete
+                </label>
+              </div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;font-family:'DM Mono',monospace;">Primary photo</div>
+            </div>
+
+            <div id="existImg2Wrap" style="display:none">
+              <div style="position:relative;">
+                <img id="existImg2" style="width:100%;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>
+                <label style="position:absolute;top:4px;right:4px;display:flex;align-items:center;gap:4px;background:rgba(232,64,64,.9);color:white;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;">
+                  <input type="checkbox" name="delete_image2" value="1" style="width:12px;height:12px;accent-color:white"/>
+                  Delete
+                </label>
+              </div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;font-family:'DM Mono',monospace;">Secondary photo</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Upload New Photos -->
+        <div class="modal-section">
+          <span class="modal-label">Upload New Photos (replaces existing)</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+
+            <div class="img-upload-slot">
+              <label for="edit_image1" class="img-upload-label" id="editSlot1Label" style="min-height:100px;">
+                <div class="img-upload-placeholder">
+                  <span class="iup-icon">📷</span>
+                  <span class="iup-text" style="font-size:12px;">Primary Photo</span>
+                </div>
+                <img id="editPreview1" class="img-preview" style="display:none;height:100px"/>
+              </label>
+              <input type="file" id="edit_image1" name="image1" accept="image/*" class="img-file-input"
+                     onchange="previewImage(this,'editPreview1','editSlot1Label')"/>
+              <button type="button" id="editClear1" class="img-clear-btn" style="display:none"
+                      onclick="clearImage('edit_image1','editPreview1','editClear1','editSlot1Label')">✕</button>
+            </div>
+
+            <div class="img-upload-slot">
+              <label for="edit_image2" class="img-upload-label" id="editSlot2Label" style="min-height:100px;">
+                <div class="img-upload-placeholder">
+                  <span class="iup-icon">📷</span>
+                  <span class="iup-text" style="font-size:12px;">Secondary Photo</span>
+                </div>
+                <img id="editPreview2" class="img-preview" style="display:none;height:100px"/>
+              </label>
+              <input type="file" id="edit_image2" name="image2" accept="image/*" class="img-file-input"
+                     onchange="previewImage(this,'editPreview2','editSlot2Label')"/>
+              <button type="button" id="editClear2" class="img-clear-btn" style="display:none"
+                      onclick="clearImage('edit_image2','editPreview2','editClear2','editSlot2Label')">✕</button>
+            </div>
+
+          </div>
+        </div>
+
         <button class="modal-submit" type="submit">Save Changes</button>
       </form>
     </div>
@@ -639,17 +773,92 @@
     function openEditModal(btn) {
       const d = btn.dataset;
       document.getElementById('edit-form').action = `/admin/inventory/${d.id}/edit`;
-      document.getElementById('edit-brand').value    = d.brand;
-      document.getElementById('edit-model').value    = d.model;
-      document.getElementById('edit-imei').value     = d.imei;
-      document.getElementById('edit-cost').value     = d.cost;
-      document.getElementById('edit-selling').value  = d.selling;
-      document.getElementById('edit-color').value    = d.color;
-      document.getElementById('edit-storage').value  = d.storage;
-      document.getElementById('edit-notes').value    = d.notes;
+      document.getElementById('edit-brand').value   = d.brand;
+      document.getElementById('edit-model').value   = d.model;
+      document.getElementById('edit-imei').value    = d.imei;
+      document.getElementById('edit-cost').value    = d.cost;
+      document.getElementById('edit-selling').value = d.selling;
+      document.getElementById('edit-color').value   = d.color;
+      document.getElementById('edit-storage').value = d.storage;
+      document.getElementById('edit-notes').value   = d.notes;
       setSelectValue('edit-condition', d.condition);
       setSelectValue('edit-status', d.status);
+
+      // Populate existing images
+      const existSection = document.getElementById('existingImages');
+      const img1Wrap     = document.getElementById('existImg1Wrap');
+      const img2Wrap     = document.getElementById('existImg2Wrap');
+      const img1El       = document.getElementById('existImg1');
+      const img2El       = document.getElementById('existImg2');
+      const image1Url    = d.image1 || '';
+      const image2Url    = d.image2 || '';
+
+      if (image1Url) {
+        img1El.src = image1Url;
+        img1Wrap.style.display = 'block';
+        existSection.style.display = 'block';
+      } else {
+        img1Wrap.style.display = 'none';
+      }
+      if (image2Url) {
+        img2El.src = image2Url;
+        img2Wrap.style.display = 'block';
+        existSection.style.display = 'block';
+      } else {
+        img2Wrap.style.display = 'none';
+      }
+      if (!image1Url && !image2Url) {
+        existSection.style.display = 'none';
+      }
+
+      // Reset upload slots
+      clearImage('edit_image1', 'editPreview1', 'editClear1', 'editSlot1Label');
+      clearImage('edit_image2', 'editPreview2', 'editClear2', 'editSlot2Label');
+
       document.getElementById('edit-modal').classList.add('open');
+    }
+
+    function previewImage(input, previewId, labelId) {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image is too large. Maximum size is 5MB.');
+        input.value = '';
+        return;
+      }
+      const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowed.includes(file.type)) {
+        alert('Invalid file type. Use JPG, PNG, or WebP.');
+        input.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const preview     = document.getElementById(previewId);
+        const label       = document.getElementById(labelId);
+        const placeholder = label.querySelector('.img-upload-placeholder');
+        const clearBtn    = label.parentElement.querySelector('.img-clear-btn');
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+        if (clearBtn)    clearBtn.style.display = 'block';
+        label.classList.add('img-has-preview');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearImage(inputId, previewId, clearBtnId, labelId) {
+      const input       = document.getElementById(inputId);
+      const preview     = document.getElementById(previewId);
+      const clearBtn    = document.getElementById(clearBtnId);
+      const label       = document.getElementById(labelId);
+      if (!label) return;
+      const placeholder = label.querySelector('.img-upload-placeholder');
+      if (input)        { input.value = ''; }
+      if (preview)      { preview.src = ''; preview.style.display = 'none'; }
+      if (placeholder)  placeholder.style.display = 'flex';
+      if (clearBtn)     clearBtn.style.display = 'none';
+      label.classList.remove('img-has-preview');
     }
 
     function openSellModal(itemId) {
