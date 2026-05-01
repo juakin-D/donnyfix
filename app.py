@@ -65,7 +65,7 @@ del _admin_pw_raw
 
 BANK_DETAILS = {
     'bank_name':    os.environ.get('BANK_NAME',    'GCB Bank Ghana'),
-    'account_name': os.environ.get('BANK_ACCT_NAME','PhoneHub Ghana Ltd.'),
+    'account_name': os.environ.get('BANK_ACCT_NAME','DonnyPhonehub Gh Ltd.'),
     'account_no':   os.environ.get('BANK_ACCT_NO', ''),
     'branch':       os.environ.get('BANK_BRANCH',  ''),
     'sort_code':    os.environ.get('BANK_SORT',    ''),
@@ -513,7 +513,7 @@ def send_email(to, subject, html_body):
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From']    = f'PhoneHub Ghana <{MAIL_FROM}>'
+        msg['From']    = f'DonnyPhonehub Gh <{MAIL_FROM}>'
         msg['To']      = to
         msg.attach(MIMEText(html_body, 'html'))
         with smtplib.SMTP(MAIL_HOST, MAIL_PORT) as s:
@@ -585,7 +585,7 @@ _C_BG    = colors.HexColor('#F7F5F0')
 
 def _pdf_header(styles):
     return [
-        Paragraph('PhoneHub Ghana',
+        Paragraph('DonnyPhonehub Gh',
                   ParagraphStyle('ph', parent=styles['Normal'], fontSize=20,
                                  fontName='Helvetica-Bold', textColor=_C_GREEN)),
         Paragraph('Osu Oxford Street, Accra · 0541057500 · hello@phonehubghana.com',
@@ -651,7 +651,7 @@ def generate_booking_receipt_pdf(booking):
     ]))
     story.append(Spacer(1, 12*mm))
     story.append(HRFlowable(width='100%', thickness=1.5, color=_C_GOLD, spaceAfter=6))
-    story.append(Paragraph('Thank you for choosing PhoneHub Ghana. Please keep this receipt.',
+    story.append(Paragraph('Thank you for choosing DonnyPhonehub Gh. Please keep this receipt.',
                            ParagraphStyle('ft', parent=styles['Normal'],
                                fontSize=8, textColor=_C_GRAY, alignment=TA_CENTER)))
     doc.build(story)
@@ -805,7 +805,7 @@ def customer_required(f):
 
 @app.route('/health')
 def health():
-    return {'status': 'ok', 'service': 'PhoneHub Ghana'}
+    return {'status': 'ok', 'service': 'DonnyPhonehub Gh'}
 
 
 @app.route('/')
@@ -864,7 +864,7 @@ def booking():
         conn.close()
         ids = session.get('guest_booking_ids', []) + [booking_id]
         session['guest_booking_ids'] = ids[-10:]
-        send_email(email, 'Booking Confirmed — PhoneHub Ghana', f"""
+        send_email(email, 'Booking Confirmed — DonnyPhonehub Gh', f"""
         <p>Hi {_he(name)},</p>
         <p>Your repair booking is confirmed.</p>
         <ul>
@@ -873,7 +873,7 @@ def booking():
           <li><b>Date:</b> {_he(date)}</li>
         </ul>
         <p>We'll see you at our Osu Oxford Street location. Call us on 0541057500 with any questions.</p>
-        <p>— PhoneHub Ghana Team</p>
+        <p>— DonnyPhonehub Gh Team</p>
         """)
         return render_template('confirmation.html',
             name=name, phone=phone, email=email,
@@ -926,12 +926,12 @@ def register():
         session['customer_id']   = customer['id']
         session['customer_name'] = customer['name']
         verify_url = url_for('verify_email', token=v_token, _external=True)
-        send_email(email, 'Verify your email — PhoneHub Ghana', f"""
+        send_email(email, 'Verify your email — DonnyPhonehub Gh', f"""
         <p>Hi {_he(name)},</p>
-        <p>Your PhoneHub Ghana account is live! Please verify your email to unlock all features.</p>
+        <p>Your DonnyPhonehub Gh account is live! Please verify your email to unlock all features.</p>
         <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
         <p style="margin-top:12px;font-size:13px;color:#666">Link expires in 24 hours. If you didn't create an account, ignore this email.</p>
-        <p>— PhoneHub Ghana Team</p>
+        <p>— DonnyPhonehub Gh Team</p>
         """)
         flash(f'Welcome, {name}! Check your email to verify your account.', 'success')
         return redirect(url_for('dashboard'))
@@ -1284,11 +1284,11 @@ def update_booking_status(booking_id):
     conn.execute('UPDATE bookings SET status=%s WHERE id=%s', (new_status, booking_id))
     conn.commit(); conn.close()
     if booking and new_status == 'Complete':
-        send_email(booking['email'], 'Your repair is ready — PhoneHub Ghana', f"""
+        send_email(booking['email'], 'Your repair is ready — DonnyPhonehub Gh', f"""
         <p>Hi {_he(booking['name'])},</p>
         <p>Great news — your <b>{_he(booking['device'])}</b> ({_he(booking['service'])}) is complete and ready for collection.</p>
         <p>Visit us at Osu Oxford Street or call 0541057500 to arrange pickup.</p>
-        <p>— PhoneHub Ghana Team</p>
+        <p>— DonnyPhonehub Gh Team</p>
         """)
     flash(f'Booking #{booking_id} marked as {new_status}.', 'success')
     return redirect(url_for('admin'))
@@ -1528,13 +1528,13 @@ def record_payment(plan_id):
     first = customer_name.split()[0] if customer_name else 'Customer'
     if new_status == 'Completed':
         send_sms(customer_phone,
-                 f"Hi {first}, your PhoneHub Ghana installment for {plan['device_name']} "
+                 f"Hi {first}, your DonnyPhonehub Gh installment for {plan['device_name']} "
                  f"is now FULLY PAID! Thank you. Call 0541057500 for your receipt.")
         flash(f'Plan #{plan_id} fully paid — marked Completed. Receipt: /receipt/payment/{payment_id}', 'success')
     else:
         send_sms(customer_phone,
                  f"Hi {first}, payment of {fmt_ghs(amount)} received for your {plan['device_name']} plan. "
-                 f"Balance: {fmt_ghs(new_balance)}. Next due: {new_next_due}. -PhoneHub Ghana")
+                 f"Balance: {fmt_ghs(new_balance)}. Next due: {new_next_due}. -DonnyPhonehub Gh")
         flash(f'Payment of {fmt_ghs(amount)} recorded for plan #{plan_id}.', 'success')
     return redirect(url_for('admin_installments', last_payment=payment_id))
 
@@ -1662,13 +1662,13 @@ def send_payment_reminders():
         overdue = p['next_due_date'] < today_s
         first   = (p['customer_name'].split() or ['Customer'])[0]
         if overdue:
-            msg = (f"Hi {first}, your PhoneHub Ghana installment of "
+            msg = (f"Hi {first}, your DonnyPhonehub Gh installment of "
                    f"{fmt_ghs(p['monthly_amount'])} for {p['device_name']} "
                    f"was DUE {p['next_due_date']}. Please pay now via "
                    f"{p['payment_method']} & call 0541057500. "
                    f"Balance: {fmt_ghs(p['balance_remaining'])}.")
         else:
-            msg = (f"Hi {first}, your PhoneHub Ghana installment of "
+            msg = (f"Hi {first}, your DonnyPhonehub Gh installment of "
                    f"{fmt_ghs(p['monthly_amount'])} for {p['device_name']} "
                    f"is due {p['next_due_date']}. Pay via "
                    f"{p['payment_method']}. Balance: {fmt_ghs(p['balance_remaining'])}. "
@@ -1727,12 +1727,12 @@ def resend_verification():
         (customer['id'], v_token, v_expiry))
     conn.commit(); conn.close()
     verify_url = url_for('verify_email', token=v_token, _external=True)
-    send_email(customer['email'], 'Verify your email — PhoneHub Ghana', f"""
+    send_email(customer['email'], 'Verify your email — DonnyPhonehub Gh', f"""
     <p>Hi {_he(customer['name'])},</p>
     <p>Click below to verify your email address:</p>
     <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
     <p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>
-    <p>— PhoneHub Ghana Team</p>
+    <p>— DonnyPhonehub Gh Team</p>
     """)
     flash('Verification email sent — check your inbox.', 'success')
     return redirect(url_for('dashboard'))
@@ -1756,12 +1756,12 @@ def forgot_password():
                 (email, token, expires))
             conn.commit()
             reset_url = url_for('reset_password', token=token, _external=True)
-            send_email(email, 'Reset your password — PhoneHub Ghana', f"""
+            send_email(email, 'Reset your password — DonnyPhonehub Gh', f"""
             <p>Hi {_he(customer['name'])},</p>
-            <p>We received a request to reset your PhoneHub Ghana password.</p>
+            <p>We received a request to reset your DonnyPhonehub Gh password.</p>
             <p><a href="{reset_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Reset Password</a></p>
             <p style="font-size:13px;color:#666;margin-top:12px">This link expires in 30 minutes. If you didn't request this, ignore the email.</p>
-            <p>— PhoneHub Ghana Team</p>
+            <p>— DonnyPhonehub Gh Team</p>
             """)
         conn.close()
         flash('If an account with that email exists, a reset link has been sent.', 'success')
