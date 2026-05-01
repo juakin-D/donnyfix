@@ -53,6 +53,12 @@ limiter = Limiter(
 ADMIN_SESSION_TIMEOUT = timedelta(minutes=int(os.environ.get('ADMIN_TIMEOUT_MINUTES', 30)))
 ADMIN_PAGE_SIZE       = 50
 
+BOOKING_SERVICES = frozenset({
+    'Screen Replacement', 'Battery Replacement', 'Charging Port Repair',
+    'Water Damage Treatment', 'Software Restore', 'Data Backup & Transfer',
+    'Full Diagnostics', 'Camera / Speaker Repair',
+})
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
 logger = logging.getLogger(__name__)
 if _SECRET_KEY_MISSING:
@@ -197,6 +203,7 @@ def has_permission(permission):
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
 
 _db_pool = None
+_last_reservation_expiry: datetime | None = None
 
 def _get_pool():
     global _db_pool
@@ -843,6 +850,7 @@ def customer_required(f):
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route('/health')
+@limiter.limit('30 per minute')
 def health():
     return {'status': 'ok', 'service': 'DonnyPhonehub Gh'}
 
@@ -1280,6 +1288,8 @@ def admin_logout():
 def admin():
     search  = request.args.get('search', '').strip()
     service = request.args.get('service', '').strip()
+    if service not in BOOKING_SERVICES:
+        service = ''
     try:
         page = max(1, int(request.args.get('page', 1)))
     except ValueError:
@@ -2692,13 +2702,17 @@ def admin_staff_delete(staff_id):
 # ─── ONLINE SHOP — PUBLIC ROUTES ─────────────────────────────────────────────
 
 @app.route('/shop')
+@limiter.limit('120 per minute')
 def shop():
+    global _last_reservation_expiry
     conn = get_db()
-    # Auto-expire stale reservations before listing
-    conn.execute(
-        "UPDATE reservations SET status='Expired' WHERE status='Pending' AND expires_at < NOW()"
-    )
-    conn.commit()
+    now = datetime.now()
+    if _last_reservation_expiry is None or (now - _last_reservation_expiry).seconds >= 60:
+        conn.execute(
+            "UPDATE reservations SET status='Expired' WHERE status='Pending' AND expires_at < NOW()"
+        )
+        conn.commit()
+        _last_reservation_expiry = now
     items = conn.execute(
         "SELECT * FROM inventory WHERE status='In Stock' ORDER BY brand, model"
     ).fetchall()
