@@ -274,6 +274,8 @@ def convert_customer(fname):
 
     # ── 7. Lift page-specific <script> blocks out of page_html ───────────
     # base.html already provides openMenu/closeMenu, so skip those.
+    # Also pick up scripts that appear AFTER the footer (some templates put
+    # their JS block after the <footer> element, before </body>).
     page_scripts_parts = []
 
     def _collect_script(m):
@@ -285,6 +287,17 @@ def convert_customer(fname):
 
     page_html = re.sub(r'<script\b[^>]*>.*?</script>', _collect_script,
                        page_html, flags=re.DOTALL).strip()
+
+    # Capture scripts between footer end and </body> (missed by page_html scan)
+    if footer_html:
+        body_end_idx = content.rfind('</body>')
+        footer_end_pos = content_end + len(footer_html)
+        after_footer = content[footer_end_pos:body_end_idx] if body_end_idx != -1 else ''
+        for sm in re.finditer(r'<script\b[^>]*>.*?</script>', after_footer, re.DOTALL):
+            sb = sm.group(0)
+            if 'openMenu' not in sb and 'closeMenu' not in sb:
+                page_scripts_parts.append(sb)
+
     page_scripts = '\n'.join(page_scripts_parts)
 
     # ── 8. Assemble new template ──────────────────────────────────────────

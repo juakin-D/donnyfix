@@ -157,3 +157,31 @@ h1{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;margin-bottom:
   <p>&copy; {{ 2025 }} DonnyPhonehub Gh &mdash; <a href="/shop">Shop</a> &mdash; <a href="/booking">Book a Repair</a></p>
 </footer>
 {% endblock %}
+
+{% block page_scripts %}
+  <script nonce="{{ csp_nonce }}">
+// Countdown timers
+document.querySelectorAll('.countdown[data-expires]').forEach(function(el){
+  var iso = el.dataset.expires;
+  if(!iso) return;
+  var expires = new Date(iso);
+
+  function tick(){
+    var now = new Date();
+    var diff = expires - now;
+    if(diff <= 0){
+      el.textContent = 'Expired';
+      el.classList.add('urgent');
+      return;
+    }
+    var h = Math.floor(diff/3600000);
+    var m = Math.floor((diff%3600000)/60000);
+    var s = Math.floor((diff%60000)/1000);
+    el.textContent = 'Expires in ' + h + 'h ' + m + 'm ' + s + 's';
+    if(diff < 3600000) el.classList.add('urgent');
+    setTimeout(tick, 1000);
+  }
+  tick();
+});
+</script>
+{% endblock %}

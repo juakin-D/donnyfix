@@ -312,3 +312,18 @@ nav{background:var(--green);padding:0 24px;display:flex;align-items:center;justi
   <p>&copy; {{ 2025 }} DonnyPhonehub Gh &mdash; <a href="/booking">Book a Repair</a> &mdash; <a href="/shop">Shop</a></p>
 </footer>
 {% endblock %}
+
+{% block page_scripts %}
+  <script nonce="{{ csp_nonce }}">
+function toggleMethod(val){
+  document.getElementById('momo-fields').classList.toggle('active', val==='MoMo');
+  document.getElementById('bank-fields').classList.toggle('active', val==='Bank');
+}
+function showPlan(months, btn){
+  document.querySelectorAll('.plan-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.plan-details').forEach(d=>d.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('plan-'+months).classList.add('active');
+}
+</script>
+{% endblock %}

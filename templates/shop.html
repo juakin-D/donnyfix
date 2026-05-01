@@ -222,3 +222,26 @@ footer a{color:var(--gold);text-decoration:none}
   <p>&copy; {{ 2025 }} DonnyPhonehub Gh &mdash; <a href="/booking">Book a Repair</a> &mdash; <a href="/#membership">Membership</a></p>
 </footer>
 {% endblock %}
+
+{% block page_scripts %}
+  <script nonce="{{ csp_nonce }}">
+function filterDevices(){
+  const brand = document.getElementById('brand-filter').value.toLowerCase();
+  const cond  = document.getElementById('condition-filter').value.toLowerCase();
+  const q     = document.getElementById('search-input').value.toLowerCase();
+  const cards = document.querySelectorAll('.device-card');
+  let visible = 0;
+  cards.forEach(c=>{
+    const b = (c.dataset.brand||'').toLowerCase();
+    const co= (c.dataset.condition||'').toLowerCase();
+    const m = (c.dataset.model||'').toLowerCase();
+    const show = (!brand||b===brand) && (!cond||co===cond) && (!q||m.includes(q));
+    c.style.display = show ? '' : 'none';
+    if(show) visible++;
+  });
+  const badge = document.getElementById('count-badge');
+  badge.textContent = visible + ' device' + (visible!==1?'s':'');
+  document.getElementById('no-results').style.display = visible===0 && cards.length>0 ? '' : 'none';
+}
+</script>
+{% endblock %}

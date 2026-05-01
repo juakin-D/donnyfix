@@ -138,16 +138,16 @@
   <div class="mobile-topbar" id="mobileTopbar">
     <a href="{{ url_for('home') }}" class="mtb-brand"><img src="/static/logo.png" alt="" style="height:30px;width:30px;object-fit:contain;vertical-align:middle;margin-right:6px;">Donny<span>Phonehub</span> Gh</a>
     <div class="mtb-actions">
-      <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Open menu">☰</button>
+      <button class="mobile-icon-btn" id="menuOpenBtn" aria-label="Open menu">☰</button>
     </div>
   </div>
-  <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+  <div class="menu-overlay" id="menuOverlay"></div>
 
   <!-- Drawer -->
   <div class="menu-drawer" id="menuDrawer">
     <div class="drawer-header">
       <span class="drawer-logo"><img src="/static/logo.png" alt="" style="height:30px;width:30px;object-fit:contain;vertical-align:middle;margin-right:6px;">Donny<span>Phonehub</span> Gh</span>
-      <button class="drawer-close" onclick="closeMenu()">✕</button>
+      <button class="drawer-close" id="menuCloseBtn">✕</button>
     </div>
     <nav class="drawer-nav">
       <a href="{{ url_for('home') }}" class="drawer-link{% if request.endpoint == 'home' %} active{% endif %}"><span class="dl-icon">🏠</span>Home</a>
@@ -229,6 +229,9 @@
   <script nonce="{{ csp_nonce }}">
     function openMenu(){document.getElementById('menuDrawer').classList.add('open');document.getElementById('menuOverlay').classList.add('open');document.body.style.overflow='hidden'}
     function closeMenu(){document.getElementById('menuDrawer').classList.remove('open');document.getElementById('menuOverlay').classList.remove('open');document.body.style.overflow=''}
+    document.getElementById('menuOpenBtn').addEventListener('click',openMenu);
+    document.getElementById('menuCloseBtn').addEventListener('click',closeMenu);
+    document.getElementById('menuOverlay').addEventListener('click',closeMenu);
     document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
   </script>
   {% block page_scripts %}{% endblock %}
