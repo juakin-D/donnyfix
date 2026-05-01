@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Apply for Installment Plan — DonnyPhonehub Gh</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
     body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
 
     /* NAV */
-    nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:68px;background:rgba(247,245,240,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--warm-gray)}
+    .desktop-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:68px;background:rgba(247,245,240,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--warm-gray)}
     .nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--green);text-decoration:none}
     .nav-logo span{color:var(--gold)}
     .nav-right{display:flex;align-items:center;gap:8px}
@@ -245,7 +245,7 @@
 
   <!-- MOBILE TOPBAR -->
   <div class="mobile-topbar" id="mobileTopbar">
-    <a href="/" class="mtb-brand">Donny<span>Phonehub</span> Gh</a>
+    <a href="/" class="mtb-brand"><img src="/static/logo.png" alt="" style="height:30px;width:30px;object-fit:contain;vertical-align:middle;margin-right:6px;">Donny<span>Phonehub</span> Gh</a>
     <div class="mtb-actions">
       <button class="mobile-icon-btn" onclick="openMenu()" aria-label="Open menu">☰</button>
     </div>
@@ -255,7 +255,7 @@
   <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
   <div class="menu-drawer" id="menuDrawer">
     <div class="drawer-header">
-      <span class="drawer-logo">Donny<span>Phonehub</span> Gh</span>
+      <span class="drawer-logo"><img src="/static/logo.png" alt="" style="height:30px;width:30px;object-fit:contain;vertical-align:middle;margin-right:6px;">Donny<span>Phonehub</span> Gh</span>
       <button class="drawer-close" onclick="closeMenu()">✕</button>
     </div>
     <nav class="drawer-nav">
@@ -306,7 +306,7 @@
   </script>
 
   <nav class="desktop-nav">
-    <a href="/" class="nav-logo">Donny<span>Phonehub</span> Gh</a>
+    <a href="/" class="nav-logo"><img src="/static/logo.png" alt="" style="height:30px;width:30px;object-fit:contain;vertical-align:middle;margin-right:6px;">Donny<span>Phonehub</span> Gh</a>
     <div class="nav-right">
       <a href="/shop">Shop</a>
       <a href="/booking">Book Repair</a>
