@@ -961,7 +961,7 @@ def customer_login():
 def customer_logout():
     session.clear()
     flash('You have been logged out.', 'success')
-    return redirect(url_for('home'))
+    return redirect(url_for('index'))
 
 
 # ─── CUSTOMER DASHBOARD ───────────────────────────────────────────────────────
@@ -2974,7 +2974,7 @@ def server_error(_e):
 @app.errorhandler(CSRFError)
 def csrf_error(_e):
     flash('Your form session expired. Please try again.', 'error')
-    return _safe_redirect(url_for('home'))
+    return _safe_redirect(url_for('index'))
 
 
 @app.errorhandler(429)
@@ -2984,7 +2984,7 @@ def too_many_requests(_e):
         flash('Too many attempts. Please wait a minute and try again.', 'error')
         return render_template('admin_login.html'), 429
     flash('Too many attempts. Please wait a while and try again.', 'error')
-    return _safe_redirect(url_for('home'))
+    return _safe_redirect(url_for('index'))
 
 
 # ─── RUN ──────────────────────────────────────────────────────────────────────
