@@ -299,7 +299,7 @@
     <a href="/installment/apply" class="bn-item bn-active"><span class="bn-icon">💳</span><span class="bn-label">Plans</span></a>
   </nav>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
     function openMenu(){document.getElementById('menuDrawer').classList.add('open');document.getElementById('menuOverlay').classList.add('open');document.body.style.overflow='hidden'}
     function closeMenu(){document.getElementById('menuDrawer').classList.remove('open');document.getElementById('menuOverlay').classList.remove('open');document.body.style.overflow=''}
     document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
@@ -624,7 +624,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
     const FEES  = { 2: 0.025, 3: 0.05, 6: 0.10 };
     const PLANS = { 2: 40,    3: 40,   6: 60   };
 

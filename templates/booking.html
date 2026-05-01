@@ -448,7 +448,7 @@
     {% endif %}
     <a href="/installment/apply" class="bn-item "><span class="bn-icon">💳</span><span class="bn-label">Plans</span></a>
   </nav>
-  <script>
+  <script nonce="{{ csp_nonce }}">
     function openMenu(){document.getElementById('menuDrawer').classList.add('open');document.getElementById('menuOverlay').classList.add('open');document.body.style.overflow='hidden'}
     function closeMenu(){document.getElementById('menuDrawer').classList.remove('open');document.getElementById('menuOverlay').classList.remove('open');document.body.style.overflow=''}
     document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
@@ -800,7 +800,7 @@
 
   </div><!-- end .page -->
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
     // Set minimum booking date to today
     const dateInput = document.querySelector('input[type="date"]');
     if (dateInput) {

@@ -402,7 +402,7 @@ tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function showTab(id, btn){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));

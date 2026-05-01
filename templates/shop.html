@@ -202,7 +202,7 @@ footer a{color:var(--gold);text-decoration:none}
   <a href="/installment/apply" class="bn-item"><span class="bn-icon">💳</span><span class="bn-label">Plans</span></a>
 </nav>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function openMenu(){document.getElementById('menuDrawer').classList.add('open');document.getElementById('menuOverlay').classList.add('open');document.body.style.overflow='hidden'}
 function closeMenu(){document.getElementById('menuDrawer').classList.remove('open');document.getElementById('menuOverlay').classList.remove('open');document.body.style.overflow=''}
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
@@ -354,7 +354,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()}
   <p>&copy; {{ 2025 }} DonnyPhonehub Gh &mdash; <a href="/booking">Book a Repair</a> &mdash; <a href="/#membership">Membership</a></p>
 </footer>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function filterDevices(){
   const brand = document.getElementById('brand-filter').value.toLowerCase();
   const cond  = document.getElementById('condition-filter').value.toLowerCase();

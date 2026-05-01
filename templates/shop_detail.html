@@ -202,7 +202,7 @@ footer a{color:var(--gold);text-decoration:none}
     <a href="mailto:info@phonehubghana.com">✉ info@phonehubghana.com</a>
   </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
   function openMenu(){document.getElementById('menuDrawer').classList.add('open');document.getElementById('menuOverlay').classList.add('open');document.body.style.overflow='hidden'}
   function closeMenu(){document.getElementById('menuDrawer').classList.remove('open');document.getElementById('menuOverlay').classList.remove('open');document.body.style.overflow=''}
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
@@ -448,7 +448,7 @@ footer a{color:var(--gold);text-decoration:none}
   <a href="/installment/apply" class="bn-item"><span class="bn-icon">💳</span><span class="bn-label">Plans</span></a>
 </nav>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function toggleMethod(val){
   document.getElementById('momo-fields').classList.toggle('active', val==='MoMo');
   document.getElementById('bank-fields').classList.toggle('active', val==='Bank');

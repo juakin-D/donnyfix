@@ -409,8 +409,8 @@
     </div><!-- end content -->
   </div><!-- end main -->
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-  <script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" nonce="{{ csp_nonce }}"></script>
+  <script nonce="{{ csp_nonce }}">
     const collectionsData = {{ monthly_collections|tojson }};
     const membersData     = {{ monthly_members|tojson }};
 

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
+from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response, g
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from markupsafe import escape as _he
 from flask_limiter import Limiter
@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
+from psycopg2 import pool as pg_pool
 from psycopg2.extras import RealDictCursor
 import smtplib
 import os
@@ -31,7 +32,7 @@ import cloudinary.api
 app = Flask(__name__)
 _secret_key = os.environ.get('SECRET_KEY', '')
 if not _secret_key:
-    _secret_key = 'change-this-secret-key'
+    _secret_key = secrets.token_hex(32)
     _SECRET_KEY_MISSING = True
 else:
     _SECRET_KEY_MISSING = False
@@ -55,12 +56,15 @@ ADMIN_PAGE_SIZE       = 50
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
 logger = logging.getLogger(__name__)
 if _SECRET_KEY_MISSING:
-    logger.warning('SECRET_KEY env var not set — sessions can be forged. Set SECRET_KEY in production!')
+    logger.warning('SECRET_KEY env var not set — a random key was generated. Sessions will be lost on restart. Set SECRET_KEY in production!')
 
 DATABASE_URL          = os.environ.get('DATABASE_URL')
-ADMIN_USERNAME        = os.environ.get('ADMIN_USERNAME', 'admin')
-_admin_pw_raw         = os.environ.get('ADMIN_PASSWORD', 'change-this-password')
-ADMIN_PASSWORD_HASH   = generate_password_hash(_admin_pw_raw)
+ADMIN_USERNAME  = os.environ.get('ADMIN_USERNAME', 'admin')
+_admin_pw_raw   = os.environ.get('ADMIN_PASSWORD', '')
+if not _admin_pw_raw:
+    _admin_pw_raw = secrets.token_urlsafe(24)
+    logger.critical('ADMIN_PASSWORD env var not set — a random admin password was generated for this session. Set ADMIN_PASSWORD in production!')
+ADMIN_PASSWORD_HASH = generate_password_hash(_admin_pw_raw)
 del _admin_pw_raw
 
 BANK_DETAILS = {
@@ -192,10 +196,22 @@ def has_permission(permission):
 
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
 
+_db_pool = None
+
+def _get_pool():
+    global _db_pool
+    if _db_pool is None and DATABASE_URL:
+        _db_pool = pg_pool.ThreadedConnectionPool(
+            minconn=1, maxconn=10, dsn=DATABASE_URL
+        )
+    return _db_pool
+
+
 class _PgConn:
     """Thin wrapper so callers use conn.execute() / conn.commit() / conn.close()."""
-    def __init__(self, conn):
+    def __init__(self, conn, pool=None):
         self._conn = conn
+        self._pool = pool
 
     def execute(self, sql, params=None):
         cur = self._conn.cursor(cursor_factory=RealDictCursor)
@@ -209,13 +225,17 @@ class _PgConn:
         self._conn.rollback()
 
     def close(self):
-        self._conn.close()
+        if self._pool:
+            self._pool.putconn(self._conn)
+        else:
+            self._conn.close()
 
 
 def get_db():
     if not DATABASE_URL:
         raise RuntimeError('DATABASE_URL environment variable is not set.')
-    return _PgConn(psycopg2.connect(DATABASE_URL))
+    p = _get_pool()
+    return _PgConn(p.getconn(), pool=p)
 
 
 def init_db():
@@ -376,6 +396,17 @@ def hash_password(p):
 
 def verify_password(stored, supplied):
     return check_password_hash(stored, supplied)
+
+
+def validate_password(pw):
+    """Return an error string or None if the password meets policy."""
+    if len(pw) < 8:
+        return 'Password must be at least 8 characters.'
+    if not re.search(r'[A-Za-z]', pw):
+        return 'Password must contain at least one letter.'
+    if not re.search(r'[0-9!@#$%^&*()\-_=+\[\]{}|;:\'",.<>?/`~]', pw):
+        return 'Password must contain at least one number or special character.'
+    return None
 
 
 _GH_PHONE_RE = re.compile(r'^(?:\+233|0)[2-9]\d{8}$')
@@ -734,22 +765,29 @@ def _safe_redirect(fallback):
     return redirect(fallback)
 
 
+@app.before_request
+def _generate_csp_nonce():
+    g.csp_nonce = secrets.token_urlsafe(16)
+
+
 @app.after_request
 def set_security_headers(response):
+    nonce = getattr(g, 'csp_nonce', '')
     response.headers['Content-Security-Policy'] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https://res.cloudinary.com; "
-        "connect-src 'self'; "
-        "form-action 'self'; "
-        "base-uri 'self'; "
-        "upgrade-insecure-requests;"
+        f"default-src 'self'; "
+        f"script-src 'self' 'nonce-{nonce}' https://cdnjs.cloudflare.com; "
+        f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        f"font-src 'self' https://fonts.gstatic.com; "
+        f"img-src 'self' data: https://res.cloudinary.com; "
+        f"connect-src 'self'; "
+        f"form-action 'self'; "
+        f"base-uri 'self'; "
+        f"upgrade-insecure-requests;"
     )
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options']        = 'SAMEORIGIN'
-    response.headers['Referrer-Policy']        = 'strict-origin-when-cross-origin'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['X-Content-Type-Options']    = 'nosniff'
+    response.headers['X-Frame-Options']           = 'SAMEORIGIN'
+    response.headers['Referrer-Policy']           = 'strict-origin-when-cross-origin'
     return response
 
 
@@ -757,7 +795,8 @@ def set_security_headers(response):
 def inject_helpers():
     return dict(membership_status=membership_status,
                 fmt_ghs=fmt_ghs, PLAN_CONFIG=PLAN_CONFIG,
-                has_permission=has_permission)
+                has_permission=has_permission,
+                csp_nonce=getattr(g, 'csp_nonce', ''))
 
 
 # ─── AUTH DECORATORS ──────────────────────────────────────────────────────────
@@ -901,8 +940,9 @@ def register():
         if not valid_gh_phone(phone):
             flash('Enter a valid Ghanaian phone number (e.g. 024 000 0000).', 'error')
             return render_template('register.html')
-        if len(pw) < 6:
-            flash('Password must be at least 6 characters.', 'error')
+        pw_err = validate_password(pw)
+        if pw_err:
+            flash(pw_err, 'error')
             return render_template('register.html')
         start  = datetime.today().strftime('%Y-%m-%d')
         expiry = (datetime.today() + timedelta(days=365)).strftime('%Y-%m-%d')
@@ -923,6 +963,7 @@ def register():
             (customer['id'], v_token, v_expiry))
         conn.commit()
         conn.close()
+        session.clear()
         session['customer_id']   = customer['id']
         session['customer_name'] = customer['name']
         verify_url = url_for('verify_email', token=v_token, _external=True)
@@ -939,6 +980,7 @@ def register():
 
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit('10 per minute', methods=['POST'])
 def customer_login():
     if session.get('customer_id'):
         return redirect(url_for('dashboard'))
@@ -949,6 +991,7 @@ def customer_login():
         c = conn.execute('SELECT * FROM customers WHERE email=%s', (email,)).fetchone()
         conn.close()
         if c and verify_password(c['password_hash'], pw):
+            session.clear()
             session['customer_id']   = c['id']
             session['customer_name'] = c['name']
             flash(f'Welcome back, {c["name"]}!', 'success')
@@ -1051,6 +1094,9 @@ def installment_apply():
     conn     = get_db()
     customer = conn.execute('SELECT * FROM customers WHERE id=%s', (session['customer_id'],)).fetchone()
     conn.close()
+    if not customer['email_verified']:
+        flash('You must verify your email address before applying for an installment plan. Check your inbox for the verification link.', 'error')
+        return redirect(url_for('dashboard'))
     mem_status = membership_status(customer['membership_expiry'])
     if mem_status not in ('Active', 'Expiring Soon'):
         flash('Your membership has expired or is inactive. Please renew to apply for an installment plan.', 'error')
@@ -1519,8 +1565,7 @@ def record_payment(plan_id):
         flash('Payment could not be recorded — please try again.', 'error')
         return redirect(url_for('admin_installments'))
 
-    logger.info('Admin %s recorded payment of %s for plan #%d (new balance: %s)',
-                session.get('admin_username'), fmt_ghs(amount), plan_id, fmt_ghs(new_balance))
+    logger.info('Admin %s recorded payment for plan #%d', session.get('admin_username'), plan_id)
     conn.close()
 
     customer_name  = plan.get('customer_name') or ''
@@ -1786,9 +1831,10 @@ def reset_password(token):
     if request.method == 'POST':
         pw  = request.form.get('password', '')
         pw2 = request.form.get('password2', '')
-        if len(pw) < 6:
+        pw_err = validate_password(pw)
+        if pw_err:
             conn.close()
-            flash('Password must be at least 6 characters.', 'error')
+            flash(pw_err, 'error')
             return render_template('reset_password.html', token=token)
         if pw != pw2:
             conn.close()
