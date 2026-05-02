@@ -429,7 +429,7 @@
         <span class="res-deposit">{{ fmt_ghs(r.selling_price) }}</span>
         {% if r.status == 'Pending' %}
         <form method="POST" action="/shop/reservations/{{ r.id }}/cancel"
-              onsubmit="return confirm('Cancel this reservation?')">
+              data-confirm="Cancel this reservation?">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="res-cancel-btn">Cancel</button>
         </form>

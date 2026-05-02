@@ -271,6 +271,11 @@
       const el = document.getElementById('live-time');
       if(el) el.textContent = new Date().toLocaleTimeString('en-GH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     }, 1000);
+    // Global handler: any form with data-confirm="..." will prompt before submitting
+    document.addEventListener('submit', function(e) {
+      var msg = e.target.dataset.confirm;
+      if (msg && !confirm(msg)) e.preventDefault();
+    }, true);
   </script>
   {% block scripts %}{% endblock %}
 </body>

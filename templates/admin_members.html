@@ -1,5 +1,23 @@
 {% extends "admin_base.html" %}
 
+{% block head_extra %}
+<style>
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;width:100%;max-width:400px}
+@keyframes mpop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)}
+.modal-close{background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;border-radius:6px;transition:background .15s}
+.modal-close:hover{background:var(--surface2);color:var(--text)}
+.modal-label{display:block;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:7px}
+.modal-select,.modal-input{width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;margin-bottom:16px}
+.modal-select:focus,.modal-input:focus{border-color:rgba(0,196,106,.4)}
+.modal-submit{width:100%;padding:12px;background:var(--green);border:none;border-radius:9px;color:#0E1210;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.modal-submit:hover{opacity:.9}
+</style>
+{% endblock %}
+
 {% block title %}Members — Admin{% endblock %}
 
 {% block topbar_title %}Members{% endblock %}
@@ -111,22 +129,20 @@
                 <td>
                   <div class="action-cell">
                     {% if m.plan_id %}
-                    <button class="act-btn plan-{{ m.plan_status | lower }}"
+                    <button class="act-btn plan-{{ m.plan_status | lower }} open-plan-modal"
                         data-plan-id="{{ m.plan_id }}"
                         data-plan-name="{{ m.name }}"
                         data-plan-device="{{ m.plan_device or '' }}"
                         data-plan-status="{{ m.plan_status }}"
-                        onclick="openPlanModal(this)"
                         title="Update installment plan status">
                       {% if m.plan_status == 'Active' %}● Plan{% elif m.plan_status == 'Paused' %}⏸ Plan{% else %}✕ Plan{% endif %}
                     </button>
                     {% endif %}
-                    <button class="act-btn edit"
+                    <button class="act-btn edit open-member-modal"
                         data-id="{{ m.id }}"
                         data-name="{{ m.name }}"
                         data-tier="{{ m.tier }}"
                         data-expiry="{{ m.expiry or '' }}"
-                        onclick="openMemberModal(this)"
                         title="Update membership">✏ Edit</button>
                     {% if has_permission('extend_membership') %}
                     <form class="extend-form" method="POST" action="/admin/members/{{ m.id }}/extend">
@@ -142,7 +158,7 @@
                     {% endif %}
                     {% if has_permission('delete_members') %}
                     <form method="POST" action="/admin/members/delete/{{ m.id }}"
-                          onsubmit="return confirm('Delete member {{ m.name|e }}?')">
+                          data-confirm="Delete member {{ m.name|e }}?">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button class="act-btn delete" type="submit" title="Delete member">🗑</button>
                     </form>
@@ -178,6 +194,57 @@
             </div>
           </div>
         {% endif %}
+      </div>
+
+      <!-- MEMBERSHIP UPDATE MODAL -->
+      <div class="modal-overlay" id="member-modal">
+        <div class="modal">
+          <div class="modal-head">
+            <div class="modal-title">Update Membership</div>
+            <button class="modal-close" type="button" id="member-modal-close">×</button>
+          </div>
+          <div id="modal-member-name" style="font-size:13px;color:var(--text-soft);margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)"></div>
+          <form method="POST" id="member-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="modal-label">Membership Tier</label>
+            <select class="modal-select" name="tier" id="modal-tier">
+              <option value="Standard">Standard</option>
+              <option value="Silver">Silver</option>
+              <option value="Gold">Gold</option>
+              <option value="Premium">Premium</option>
+            </select>
+            <label class="modal-label">Expiry Date</label>
+            <input class="modal-input" type="date" name="expiry" id="modal-expiry" required/>
+            <button class="modal-submit" type="submit">Save Changes</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- PLAN STATUS MODAL -->
+      <div class="modal-overlay" id="plan-modal">
+        <div class="modal">
+          <div class="modal-head">
+            <div class="modal-title">Update Installment Plan</div>
+            <button class="modal-close" type="button" id="plan-modal-close">×</button>
+          </div>
+          <div id="plan-modal-info" style="font-size:13px;color:var(--text-soft);margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)"></div>
+          <form method="POST" id="plan-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="admin_members">
+            <label class="modal-label">Plan Status</label>
+            <select class="modal-select" name="status" id="plan-status-select">
+              <option value="Active">Active</option>
+              <option value="Paused">Paused</option>
+              <option value="Completed">Completed</option>
+              <option value="Defaulted">Defaulted</option>
+            </select>
+            <p style="font-size:12px;color:var(--text-muted);margin:10px 0 18px">
+              <strong style="color:var(--gold)">Defaulted</strong> blocks the member from applying for new plans.<br>
+              <strong style="color:#94A3B8">Paused</strong> suspends the plan temporarily.
+            </p>
+            <button class="modal-submit" type="submit">Save Status</button>
+          </form>
+        </div>
       </div>
 {% endblock %}
 
@@ -219,7 +286,24 @@
     function closeMemberModal() {
       document.getElementById('member-modal').classList.remove('open');
     }
-    document.addEventListener('keydown', e => {
+
+    // Event delegation replacing onclick handlers
+    document.querySelectorAll('.open-plan-modal').forEach(function(btn) {
+      btn.addEventListener('click', function() { openPlanModal(this); });
+    });
+    document.querySelectorAll('.open-member-modal').forEach(function(btn) {
+      btn.addEventListener('click', function() { openMemberModal(this); });
+    });
+
+    // Close buttons
+    document.getElementById('member-modal-close').addEventListener('click', closeMemberModal);
+    document.getElementById('plan-modal-close').addEventListener('click', closePlanModal);
+
+    // Overlay click-to-close
+    document.getElementById('member-modal').addEventListener('click', function(e) { if (e.target === this) closeMemberModal(); });
+    document.getElementById('plan-modal').addEventListener('click', function(e) { if (e.target === this) closePlanModal(); });
+
+    document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') { closeMemberModal(); closePlanModal(); }
     });
   </script>

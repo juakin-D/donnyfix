@@ -1,5 +1,26 @@
 {% extends "admin_base.html" %}
 
+{% block head_extra %}
+<style>
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;padding:28px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto}
+@keyframes mPop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--text)}
+.modal-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:22px;line-height:1;transition:color .15s;padding:4px 8px}
+.modal-close:hover{color:var(--text)}
+.modal-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:7px;display:block}
+.modal-input,.modal-select{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;margin-bottom:14px}
+.modal-input:focus,.modal-select:focus{border-color:var(--green)}
+.modal-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234A5E58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-section{margin-bottom:14px}
+.modal-submit{width:100%;padding:12px;background:var(--green-glow);border:1px solid rgba(0,196,106,.3);border-radius:9px;color:var(--green);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .2s}
+.modal-submit:hover{background:rgba(0,196,106,.2)}
+</style>
+{% endblock %}
+
 {% block title %}Inventory — Admin{% endblock %}
 
 {% block topbar_title %}Inventory{% endblock %}
@@ -33,7 +54,7 @@
 
       <!-- ADD DEVICE PANEL -->
       <div class="add-panel">
-        <div class="add-panel-header" onclick="toggleAddPanel()">
+        <div class="add-panel-header" id="add-panel-header">
           <span class="add-panel-title">Add New Device</span>
           <button class="add-toggle-btn" type="button" id="add-toggle-btn">+ Add Device</button>
         </div>
@@ -97,10 +118,8 @@
                       </div>
                       <img id="preview1" class="img-preview" style="display:none"/>
                     </label>
-                    <input type="file" id="image1" name="image1" accept="image/*" class="img-file-input"
-                           onchange="previewImage(this,'preview1','slot1Label')"/>
-                    <button type="button" class="img-clear-btn" id="clear1" style="display:none"
-                            onclick="clearImage('image1','preview1','clear1','slot1Label')">✕ Remove</button>
+                    <input type="file" id="image1" name="image1" accept="image/*" class="img-file-input"/>
+                    <button type="button" class="img-clear-btn" id="clear1" style="display:none">✕ Remove</button>
                   </div>
 
                   <!-- Image 2 -->
@@ -113,17 +132,15 @@
                       </div>
                       <img id="preview2" class="img-preview" style="display:none"/>
                     </label>
-                    <input type="file" id="image2" name="image2" accept="image/*" class="img-file-input"
-                           onchange="previewImage(this,'preview2','slot2Label')"/>
-                    <button type="button" class="img-clear-btn" id="clear2" style="display:none"
-                            onclick="clearImage('image2','preview2','clear2','slot2Label')">✕ Remove</button>
+                    <input type="file" id="image2" name="image2" accept="image/*" class="img-file-input"/>
+                    <button type="button" class="img-clear-btn" id="clear2" style="display:none">✕ Remove</button>
                   </div>
 
                 </div>
               </div>
             </div>
             <div class="form-row-actions">
-              <button class="btn-cancel" type="button" onclick="toggleAddPanel()">Cancel</button>
+              <button class="btn-cancel" type="button" id="add-panel-cancel">Cancel</button>
               <button class="btn-submit" type="submit">Add to Inventory</button>
             </div>
           </form>
@@ -246,23 +263,20 @@
                         data-status="{{ item.status }}"
                         data-image1="{{ item.image1_url or '' }}"
                         data-image2="{{ item.image2_url or '' }}"
-                        onclick="openEditModal(this)"
                         title="Edit device">✏ Edit</button>
                     {% if item.status in ('In Stock', 'Reserved') %}
                     <button class="act-btn green-btn"
                         data-id="{{ item.id }}"
-                        onclick="openSellModal(this.dataset.id)"
                         title="Mark as sold">💰 Sell</button>
                     {% endif %}
                     {% if item.status == 'In Stock' %}
                     <button class="act-btn amber-btn"
                         data-id="{{ item.id }}"
-                        onclick="openReserveModal(this.dataset.id)"
                         title="Reserve for plan">📌 Reserve</button>
                     {% endif %}
                     {% if item.status in ('In Stock', 'Returned') %}
                     <form method="POST" action="/admin/inventory/{{ item.id }}/delete"
-                          onsubmit="return confirm('Remove {{ item.brand|e }} {{ item.model|e }} from inventory?')">
+                          data-confirm="Remove {{ item.brand|e }} {{ item.model|e }} from inventory?">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button class="act-btn red-btn" type="submit" title="Delete">🗑</button>
                     </form>
@@ -300,6 +314,109 @@
         📈 Total profit on sold devices this month:
         <strong>{{ fmt_ghs(monthly_profit) }}</strong>
       </div>
+
+      <!-- EDIT MODAL -->
+      <div class="modal-overlay" id="edit-modal">
+        <div class="modal">
+          <div class="modal-header">
+            <div class="modal-title">Edit Device</div>
+            <button id="edit-modal-close" class="modal-close">×</button>
+          </div>
+          <form method="POST" id="edit-form" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-grid">
+              <div><label class="modal-label">Brand *</label><input class="modal-input" type="text" name="brand" id="edit-brand" maxlength="100" required/></div>
+              <div><label class="modal-label">Model *</label><input class="modal-input" type="text" name="model" id="edit-model" maxlength="100" required/></div>
+              <div><label class="modal-label">IMEI</label><input class="modal-input" type="text" name="imei" id="edit-imei" maxlength="20"/></div>
+              <div><label class="modal-label">Condition *</label>
+                <select class="modal-select" name="condition" id="edit-condition">
+                  {% for c in conditions %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                </select></div>
+              <div><label class="modal-label">Cost Price (GH₵) *</label><input class="modal-input" type="number" name="cost_price" id="edit-cost" step="0.01" min="0.01" required/></div>
+              <div><label class="modal-label">Selling Price (GH₵) *</label><input class="modal-input" type="number" name="selling_price" id="edit-selling" step="0.01" min="0.01" required/></div>
+              <div><label class="modal-label">Color</label><input class="modal-input" type="text" name="color" id="edit-color"/></div>
+              <div><label class="modal-label">Storage</label><input class="modal-input" type="text" name="storage" id="edit-storage"/></div>
+              <div style="grid-column:span 2"><label class="modal-label">Status *</label>
+                <select class="modal-select" name="status" id="edit-status">
+                  {% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+                </select></div>
+              <div style="grid-column:span 2"><label class="modal-label">Notes</label><input class="modal-input" type="text" name="notes" id="edit-notes"/></div>
+            </div>
+            <div class="modal-section" id="existingImages" style="display:none">
+              <span class="modal-label">Current Photos</span>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div id="existImg1Wrap"><div style="position:relative;"><img id="existImg1" style="width:100%;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>
+                  <label style="position:absolute;top:4px;right:4px;display:flex;align-items:center;gap:4px;background:rgba(232,64,64,.9);color:white;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;"><input type="checkbox" name="delete_image1" value="1" style="width:12px;height:12px;accent-color:white"/> Delete</label></div>
+                  <div style="font-size:10px;color:var(--text-muted);margin-top:4px;font-family:'DM Mono',monospace;">Primary photo</div></div>
+                <div id="existImg2Wrap" style="display:none"><div style="position:relative;"><img id="existImg2" style="width:100%;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>
+                  <label style="position:absolute;top:4px;right:4px;display:flex;align-items:center;gap:4px;background:rgba(232,64,64,.9);color:white;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;"><input type="checkbox" name="delete_image2" value="1" style="width:12px;height:12px;accent-color:white"/> Delete</label></div>
+                  <div style="font-size:10px;color:var(--text-muted);margin-top:4px;font-family:'DM Mono',monospace;">Secondary photo</div></div>
+              </div>
+            </div>
+            <div class="modal-section">
+              <span class="modal-label">Upload New Photos (replaces existing)</span>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="img-upload-slot">
+                  <label for="edit_image1" class="img-upload-label" id="editSlot1Label" style="min-height:100px;">
+                    <div class="img-upload-placeholder"><span class="iup-icon">📷</span><span class="iup-text" style="font-size:12px;">Primary Photo</span></div>
+                    <img id="editPreview1" class="img-preview" style="display:none;height:100px"/>
+                  </label>
+                  <input type="file" id="edit_image1" name="image1" accept="image/*" class="img-file-input"/>
+                  <button type="button" id="editClear1" class="img-clear-btn" style="display:none">✕</button>
+                </div>
+                <div class="img-upload-slot">
+                  <label for="edit_image2" class="img-upload-label" id="editSlot2Label" style="min-height:100px;">
+                    <div class="img-upload-placeholder"><span class="iup-icon">📷</span><span class="iup-text" style="font-size:12px;">Secondary Photo</span></div>
+                    <img id="editPreview2" class="img-preview" style="display:none;height:100px"/>
+                  </label>
+                  <input type="file" id="edit_image2" name="image2" accept="image/*" class="img-file-input"/>
+                  <button type="button" id="editClear2" class="img-clear-btn" style="display:none">✕</button>
+                </div>
+              </div>
+            </div>
+            <button class="modal-submit" type="submit">Save Changes</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- SELL MODAL -->
+      <div class="modal-overlay" id="sell-modal">
+        <div class="modal" style="max-width:380px">
+          <div class="modal-header">
+            <div class="modal-title">Mark as Sold</div>
+            <button id="sell-modal-close" class="modal-close">×</button>
+          </div>
+          <p style="font-size:13px;color:var(--text-soft);margin-bottom:18px">Enter the customer ID to link this sale.</p>
+          <form method="POST" id="sell-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="modal-label">Customer ID</label>
+            <input class="modal-input" type="number" name="customer_id" id="sell-customer-id" required placeholder="Enter customer ID"/>
+            <button class="modal-submit" type="submit">Confirm Sale</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- RESERVE MODAL -->
+      <div class="modal-overlay" id="reserve-modal">
+        <div class="modal" style="max-width:380px">
+          <div class="modal-header">
+            <div class="modal-title">Reserve for Plan</div>
+            <button id="reserve-modal-close" class="modal-close">×</button>
+          </div>
+          <p style="font-size:13px;color:var(--text-soft);margin-bottom:18px">Link this device to an active installment plan.</p>
+          <form method="POST" id="reserve-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="modal-label">Installment Plan</label>
+            <select class="modal-select" name="plan_id" required>
+              <option value="">— Select Plan —</option>
+              {% for p in active_plans %}
+                <option value="{{ p.id }}">#{{ p.id }} — {{ p.device_name }}</option>
+              {% endfor %}
+            </select>
+            <button class="modal-submit" type="submit" style="margin-top:14px">Confirm Reserve</button>
+          </form>
+        </div>
+      </div>
 {% endblock %}
 
 {% block scripts %}
@@ -310,6 +427,8 @@
       body.classList.toggle('open');
       btn.textContent = body.classList.contains('open') ? '✕ Close' : '+ Add Device';
     }
+    document.getElementById('add-panel-header').addEventListener('click', toggleAddPanel);
+    document.getElementById('add-panel-cancel').addEventListener('click', toggleAddPanel);
 
     function openEditModal(btn) {
       const d = btn.dataset;
@@ -424,10 +543,38 @@
       }
     }
 
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
-        ['edit-modal','sell-modal','reserve-modal'].forEach(closeModal);
-      }
+    // Wire file inputs and clear buttons
+    document.getElementById('image1').addEventListener('change', function() { previewImage(this, 'preview1', 'slot1Label'); });
+    document.getElementById('image2').addEventListener('change', function() { previewImage(this, 'preview2', 'slot2Label'); });
+    document.getElementById('clear1').addEventListener('click', function() { clearImage('image1', 'preview1', 'clear1', 'slot1Label'); });
+    document.getElementById('clear2').addEventListener('click', function() { clearImage('image2', 'preview2', 'clear2', 'slot2Label'); });
+    document.getElementById('edit_image1').addEventListener('change', function() { previewImage(this, 'editPreview1', 'editSlot1Label'); });
+    document.getElementById('edit_image2').addEventListener('change', function() { previewImage(this, 'editPreview2', 'editSlot2Label'); });
+    document.getElementById('editClear1').addEventListener('click', function() { clearImage('edit_image1', 'editPreview1', 'editClear1', 'editSlot1Label'); });
+    document.getElementById('editClear2').addEventListener('click', function() { clearImage('edit_image2', 'editPreview2', 'editClear2', 'editSlot2Label'); });
+
+    // Event delegation for table action buttons
+    document.querySelectorAll('.act-btn[data-brand]').forEach(function(btn) {
+      btn.addEventListener('click', function() { openEditModal(this); });
+    });
+    document.querySelectorAll('.act-btn.green-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { openSellModal(this.dataset.id); });
+    });
+    document.querySelectorAll('.act-btn.amber-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { openReserveModal(this.dataset.id); });
+    });
+
+    // Close buttons
+    document.getElementById('edit-modal-close').addEventListener('click', function() { closeModal('edit-modal'); });
+    document.getElementById('sell-modal-close').addEventListener('click', function() { closeModal('sell-modal'); });
+    document.getElementById('reserve-modal-close').addEventListener('click', function() { closeModal('reserve-modal'); });
+
+    // Backdrop and Escape
+    ['edit-modal','sell-modal','reserve-modal'].forEach(function(id) {
+      document.getElementById(id).addEventListener('click', function(e) { if (e.target === this) closeModal(id); });
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { ['edit-modal','sell-modal','reserve-modal'].forEach(closeModal); }
     });
   </script>
 {% endblock %}

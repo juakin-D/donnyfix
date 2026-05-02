@@ -107,19 +107,19 @@ footer a{color:var(--gold);text-decoration:none}
 <!-- FILTERS -->
 <div class="filters-bar">
   <label>Filter by:</label>
-  <select id="brand-filter" onchange="filterDevices()">
+  <select id="brand-filter">
     <option value="">All Brands</option>
     {% for b in brands %}
       <option value="{{ b }}">{{ b }}</option>
     {% endfor %}
   </select>
-  <select id="condition-filter" onchange="filterDevices()">
+  <select id="condition-filter">
     <option value="">All Conditions</option>
     <option value="New">New</option>
     <option value="Refurbished">Refurbished</option>
     <option value="Used">Used</option>
   </select>
-  <input id="search-input" type="text" placeholder="Search model…" oninput="filterDevices()" style="min-width:180px">
+  <input id="search-input" type="text" placeholder="Search model…" style="min-width:180px">
   <span class="count-badge" id="count-badge">{{ items|length }} device{{ 's' if items|length != 1 }}</span>
 </div>
 
@@ -243,5 +243,8 @@ function filterDevices(){
   badge.textContent = visible + ' device' + (visible!==1?'s':'');
   document.getElementById('no-results').style.display = visible===0 && cards.length>0 ? '' : 'none';
 }
+document.getElementById('brand-filter').addEventListener('change', filterDevices);
+document.getElementById('condition-filter').addEventListener('change', filterDevices);
+document.getElementById('search-input').addEventListener('input', filterDevices);
 </script>
 {% endblock %}

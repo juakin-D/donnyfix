@@ -356,7 +356,7 @@
             <div class="tc-text">
               <strong>I agree to the DonnyPhonehub Gh Installment Plan Terms &amp; Conditions.</strong><br>
               I understand the deposit is non-refundable, monthly payments are due on time, and full ownership of the device transfers only after the plan is fully paid.
-              <br><button type="button" class="tc-link" onclick="openTC()">Read full Terms &amp; Conditions →</button>
+              <br><button type="button" class="tc-link" id="tc-open-btn">Read full Terms &amp; Conditions →</button>
             </div>
           </div>
 
@@ -442,11 +442,11 @@
   </div>
 
   <!-- TERMS & CONDITIONS MODAL -->
-  <div class="tc-overlay" id="tc-overlay" onclick="if(event.target===this)closeTC()">
+  <div class="tc-overlay" id="tc-overlay">
     <div class="tc-modal">
       <div class="tc-modal-head">
         <div class="tc-modal-title">Installment Plan — Terms &amp; Conditions</div>
-        <button class="tc-modal-close" type="button" onclick="closeTC()">×</button>
+        <button class="tc-modal-close" type="button" id="tc-close-x">×</button>
       </div>
       <div class="tc-modal-body">
         <h3>1. Eligibility</h3>
@@ -491,7 +491,7 @@
         <p>By submitting this application and ticking the agreement checkbox, you confirm that you have read, understood, and accepted these Terms &amp; Conditions in full.</p>
       </div>
       <div class="tc-modal-foot">
-        <button type="button" onclick="acceptTC()">I Understand — Close</button>
+        <button type="button" id="tc-accept-btn">I Understand — Close</button>
       </div>
     </div>
   </div>
@@ -567,6 +567,10 @@
       submitBtn.disabled = false;
       closeTC();
     }
-    document.addEventListener('keydown', e => { if(e.key === 'Escape') closeTC(); });
+    document.getElementById('tc-open-btn').addEventListener('click', openTC);
+    document.getElementById('tc-close-x').addEventListener('click', closeTC);
+    document.getElementById('tc-accept-btn').addEventListener('click', acceptTC);
+    document.getElementById('tc-overlay').addEventListener('click', function(e) { if (e.target === this) closeTC(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeTC(); });
   </script>
 {% endblock %}

@@ -139,7 +139,7 @@
                 {% if has_permission('edit_bookings') %}
                 <form method="POST" action="/admin/bookings/{{ b['id'] }}/status">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <select name="status" class="status-select" onchange="this.form.submit()" title="Change status">
+                  <select name="status" class="status-select" title="Change status">
                     {% set s = b['status'] or 'Pending' %}
                     <option value="Pending"     {% if s == 'Pending'     %}selected{% endif %}>Pending</option>
                     <option value="In Progress" {% if s == 'In Progress' %}selected{% endif %}>In Progress</option>
@@ -153,14 +153,16 @@
               </td>
               <td>
                 <div class="action-cell">
-                  <button class="act-btn" title="View notes"
-                    onclick="showNotes({{ b['id'] }}, {{ b['name']|tojson }}, {{ (b['notes'] if b['notes'] else 'No notes.')|tojson }})">
+                  <button class="act-btn view-notes-btn" title="View notes"
+                    data-id="{{ b['id'] }}"
+                    data-name="{{ b['name']|tojson }}"
+                    data-notes="{{ (b['notes'] if b['notes'] else 'No notes.')|tojson }}">
                     👁
                   </button>
                   <a class="act-btn" href="/receipt/booking/{{ b['id'] }}" target="_blank" title="Download receipt">🧾</a>
                   {% if has_permission('delete_bookings') %}
                   <form method="POST" action="/admin/delete/{{ b['id'] }}"
-                        onsubmit="return confirmDelete(this)"
+                        data-confirm="Delete booking #{{ b['id'] }} for {{ b['name']|e }}?"
                         style="display:inline;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="act-btn delete" title="Delete booking"
@@ -201,4 +203,69 @@
         </div>
         {% endif %}
       </div>
+
+      <!-- NOTES MODAL -->
+      <div id="notes-modal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+        <div style="background:var(--surface); border:1px solid var(--border2); border-radius:16px; padding:28px; max-width:440px; width:90%;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <div id="modal-title" style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--text);">Booking Notes</div>
+            <button id="notes-modal-close-x" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1;">×</button>
+          </div>
+          <div id="modal-body" style="font-size:14px; color:var(--text-soft); line-height:1.7; font-weight:300;"></div>
+          <button id="notes-modal-close-btn" style="margin-top:20px; width:100%; padding:10px; background:var(--green-glow); border:1px solid rgba(0,196,106,0.2); border-radius:8px; color:var(--green); font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer;">Close</button>
+        </div>
+      </div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  const todayStr = new Date().toISOString().split('T')[0];
+  const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
+  let todayCount = 0, weekCount = 0;
+  document.querySelectorAll('[data-date]').forEach(function(row) {
+    const d = row.dataset.date;
+    if (d === todayStr) {
+      todayCount++;
+      row.classList.add('today-row');
+      const dateTd = row.querySelector('td:nth-child(6) div');
+      if (dateTd) dateTd.insertAdjacentHTML('afterend', '<span class="today-badge">Today</span>');
+    }
+    if (d >= sevenDaysAgo) weekCount++;
+  });
+  document.getElementById('today-count').textContent = todayCount;
+  document.getElementById('week-count').textContent  = weekCount;
+
+  document.getElementById('search-input').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#bookings-tbody tr').forEach(function(row) {
+      const match = !q || (row.dataset.name||'').includes(q) || (row.dataset.email||'').includes(q) || (row.dataset.phone||'').includes(q);
+      row.style.display = match ? '' : 'none';
+    });
+  });
+
+  document.querySelectorAll('.status-select').forEach(function(sel) {
+    sel.addEventListener('change', function() { this.form.submit(); });
+  });
+
+  function showNotes(id, name, notes) {
+    document.getElementById('modal-title').textContent = name + ' — Booking #' + id;
+    document.getElementById('modal-body').textContent  = notes;
+    document.getElementById('notes-modal').style.display = 'flex';
+  }
+  function closeNotesModal() {
+    document.getElementById('notes-modal').style.display = 'none';
+  }
+
+  document.querySelectorAll('.view-notes-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      showNotes(this.dataset.id, JSON.parse(this.dataset.name), JSON.parse(this.dataset.notes));
+    });
+  });
+  document.getElementById('notes-modal-close-x').addEventListener('click', closeNotesModal);
+  document.getElementById('notes-modal-close-btn').addEventListener('click', closeNotesModal);
+  document.getElementById('notes-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeNotesModal();
+  });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeNotesModal(); });
+</script>
 {% endblock %}

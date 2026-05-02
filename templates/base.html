@@ -233,6 +233,11 @@
     document.getElementById('menuCloseBtn').addEventListener('click',closeMenu);
     document.getElementById('menuOverlay').addEventListener('click',closeMenu);
     document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
+    // Global handler: forms with data-confirm="..." will prompt before submitting
+    document.addEventListener('submit', function(e) {
+      var msg = e.target.dataset.confirm;
+      if (msg && !confirm(msg)) e.preventDefault();
+    }, true);
   </script>
   {% block page_scripts %}{% endblock %}
 </body>

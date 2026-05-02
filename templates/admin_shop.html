@@ -50,8 +50,8 @@
 
     <!-- TABS -->
     <div class="tab-bar">
-      <button class="tab-btn active" onclick="showTab('reservations',this)">Reservations</button>
-      <button class="tab-btn" onclick="showTab('enquiries',this)">Enquiries{% if enq_new %} <span class="new-badge">{{ enq_new }}</span>{% endif %}</button>
+      <button class="tab-btn active" id="tab-btn-reservations">Reservations</button>
+      <button class="tab-btn" id="tab-btn-enquiries">Enquiries{% if enq_new %} <span class="new-badge">{{ enq_new }}</span>{% endif %}</button>
     </div>
 
     <!-- RESERVATIONS TAB -->
@@ -115,26 +115,26 @@
                   <td>
                     <div class="action-btns">
                       {% if r.status == 'Pending' %}
-                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/confirm">
+                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/confirm"
+                              data-confirm="Confirm this reservation?">
                           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <button class="btn btn-confirm" type="submit"
-                                  onclick="return confirm('Confirm this reservation?')">Confirm</button>
+                          <button class="btn btn-confirm" type="submit">Confirm</button>
                         </form>
-                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/cancel">
+                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/cancel"
+                              data-confirm="Cancel and return device to stock?">
                           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <button class="btn btn-cancel" type="submit"
-                                  onclick="return confirm('Cancel and return device to stock?')">Cancel</button>
+                          <button class="btn btn-cancel" type="submit">Cancel</button>
                         </form>
                       {% elif r.status == 'Confirmed' %}
-                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/complete">
+                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/complete"
+                              data-confirm="Mark as sold and complete this sale?">
                           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <button class="btn btn-complete" type="submit"
-                                  onclick="return confirm('Mark as sold and complete this sale?')">Complete Sale</button>
+                          <button class="btn btn-complete" type="submit">Complete Sale</button>
                         </form>
-                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/cancel">
+                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/cancel"
+                              data-confirm="Cancel this confirmed reservation?">
                           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <button class="btn btn-cancel" type="submit"
-                                  onclick="return confirm('Cancel this confirmed reservation?')">Cancel</button>
+                          <button class="btn btn-cancel" type="submit">Cancel</button>
                         </form>
                       {% else %}
                         <span style="font-size:.78rem;color:var(--muted)">No actions</span>
@@ -196,10 +196,10 @@
                   </td>
                   {% if has_permission('delete_inventory') %}
                   <td>
-                    <form method="POST" action="/admin/shop/enquiries/{{ e.id }}/delete">
+                    <form method="POST" action="/admin/shop/enquiries/{{ e.id }}/delete"
+                          data-confirm="Delete this enquiry?">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button class="btn btn-delete" type="submit"
-                              onclick="return confirm('Delete this enquiry?')">Delete</button>
+                      <button class="btn btn-delete" type="submit">Delete</button>
                     </form>
                   </td>
                   {% endif %}
@@ -224,6 +224,8 @@ function showTab(id, btn){
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
 }
+document.getElementById('tab-btn-reservations').addEventListener('click', function(){ showTab('reservations', this); });
+document.getElementById('tab-btn-enquiries').addEventListener('click', function(){ showTab('enquiries', this); });
 
 // Admin countdown timers
 document.querySelectorAll('.countdown[data-expires]').forEach(function(el){

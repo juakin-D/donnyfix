@@ -1,5 +1,28 @@
 {% extends "admin_base.html" %}
 
+{% block head_extra %}
+<style>
+.modal-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;max-width:440px;width:90%}
+@keyframes modalPop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px}
+.modal-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1;float:right;margin-top:-4px}
+.modal-field{margin-bottom:14px}
+.modal-label{display:block;font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.modal-input,.modal-select{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s}
+.modal-input:focus,.modal-select:focus{border-color:rgba(0,196,106,.4)}
+.modal-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234A5E58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.modal-checkbox-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.modal-checkbox-row label{font-size:14px;color:var(--text-soft);cursor:pointer}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.modal-submit{flex:1;padding:10px;background:var(--green);border:none;border-radius:8px;color:#0E1210;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.modal-submit:hover{opacity:.88}
+.modal-cancel{padding:10px 16px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s}
+.modal-cancel:hover{color:var(--text)}
+</style>
+{% endblock %}
+
 {% block title %}Staff — Admin{% endblock %}
 
 {% block topbar_title %}Staff{% endblock %}
@@ -36,7 +59,7 @@
 
       <!-- ADD STAFF FORM -->
       <div class="panel" id="add-panel">
-        <div class="panel-header" onclick="togglePanel()">
+        <div class="panel-header" id="panel-header">
           <div class="panel-title">+ Add Staff Member</div>
           <button type="button" class="panel-toggle" id="panel-toggle-btn">Show Form</button>
         </div>
@@ -79,7 +102,7 @@
             </div>
             <div class="form-actions">
               <button type="submit" class="btn-primary">Create Staff Account</button>
-              <button type="button" class="btn-ghost" onclick="togglePanel()">Cancel</button>
+              <button type="button" class="btn-ghost" id="panel-cancel-btn">Cancel</button>
             </div>
           </form>
         </div>
@@ -145,27 +168,32 @@
               <td>
                 <div class="action-cell">
                   {% if s.id != current_staff_id %}
-                  <button class="act-btn edit"
-                    onclick="openEditModal({{ s.id }}, {{ s.name|tojson }}, {{ (s.phone or '')|tojson }}, {{ s.role|tojson }}, {{ s.is_active }})">
+                  <button class="act-btn edit open-edit-modal"
+                    data-id="{{ s.id }}"
+                    data-name="{{ s.name|tojson }}"
+                    data-phone="{{ (s.phone or '')|tojson }}"
+                    data-role="{{ s.role|tojson }}"
+                    data-active="{{ s.is_active }}">
                     ✏ Edit
                   </button>
                   {% endif %}
                   {% if session.get('admin_is_master') or session.get('admin_role') == 'owner' %}
-                  <button class="act-btn edit"
-                    onclick="openResetModal({{ s.id }}, {{ s.name|tojson }})">
+                  <button class="act-btn edit open-reset-modal"
+                    data-id="{{ s.id }}"
+                    data-name="{{ s.name|tojson }}">
                     🔑 Reset
                   </button>
                   {% endif %}
                   {% if s.is_active and s.id != current_staff_id %}
                   <form method="POST" action="/admin/staff/{{ s.id }}/deactivate"
-                        onsubmit="return confirm('Deactivate {{ s.name|e }}?')" style="display:inline">
+                        data-confirm="Deactivate {{ s.name|e }}?" style="display:inline">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="act-btn warn">⏸ Deactivate</button>
                   </form>
                   {% endif %}
                   {% if session.get('admin_is_master') and s.id != current_staff_id %}
                   <form method="POST" action="/admin/staff/{{ s.id }}/delete"
-                        onsubmit="return confirm('Permanently delete {{ s.name|e }}? This cannot be undone.')" style="display:inline">
+                        data-confirm="Permanently delete {{ s.name|e }}? This cannot be undone." style="display:inline">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="act-btn danger">🗑 Delete</button>
                   </form>
@@ -217,6 +245,68 @@
           </tbody>
         </table>
       </div>
+
+      <!-- EDIT STAFF MODAL -->
+      <div class="modal-overlay" id="edit-modal">
+        <div class="modal-box">
+          <button class="modal-close" id="edit-modal-close">×</button>
+          <div class="modal-title">Edit Staff Member</div>
+          <form method="POST" id="edit-form" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-field">
+              <label class="modal-label">Full Name</label>
+              <input class="modal-input" type="text" name="name" id="edit-name" maxlength="100" required>
+            </div>
+            <div class="modal-field">
+              <label class="modal-label">Phone</label>
+              <input class="modal-input" type="text" name="phone" id="edit-phone" placeholder="024 000 0000">
+            </div>
+            <div class="modal-field">
+              <label class="modal-label">Role</label>
+              <select class="modal-select" name="role" id="edit-role">
+                {% if session.get('admin_is_master') %}
+                <option value="owner">Owner</option>
+                {% endif %}
+                <option value="manager">Manager</option>
+                <option value="technician">Technician</option>
+                <option value="sales">Sales</option>
+              </select>
+            </div>
+            <div class="modal-checkbox-row">
+              <input type="checkbox" name="is_active" id="edit-active" value="1">
+              <label for="edit-active">Account is active</label>
+            </div>
+            <div class="modal-actions">
+              <button type="submit" class="modal-submit">Save Changes</button>
+              <button type="button" class="modal-cancel" id="edit-modal-cancel">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- RESET PASSWORD MODAL -->
+      <div class="modal-overlay" id="reset-modal">
+        <div class="modal-box">
+          <button class="modal-close" id="reset-modal-close">×</button>
+          <div class="modal-title" id="reset-modal-title">Reset Password</div>
+          <form method="POST" id="reset-form" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-field">
+              <label class="modal-label">New Password (min 8 chars)</label>
+              <input class="modal-input" type="password" name="new_password" placeholder="••••••••" minlength="8" required>
+            </div>
+            <div class="modal-field">
+              <label class="modal-label">Confirm Password</label>
+              <input class="modal-input" type="password" name="confirm_password" placeholder="••••••••" minlength="8" required>
+            </div>
+            <div class="modal-actions">
+              <button type="submit" class="modal-submit">Reset Password</button>
+              <button type="button" class="modal-cancel" id="reset-modal-cancel">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -240,7 +330,7 @@
       for (let i = 0; i < roleSelect.options.length; i++) {
         if (roleSelect.options[i].value === role) { roleSelect.selectedIndex = i; break; }
       }
-      document.getElementById('edit-active').checked = isActive === 1;
+      document.getElementById('edit-active').checked = isActive == 1;
       document.getElementById('edit-modal').classList.add('open');
     }
 
@@ -250,11 +340,42 @@
       document.getElementById('reset-modal').classList.add('open');
     }
 
-    // Close modals on overlay click
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    // Wire toggle panel
+    document.getElementById('panel-header').addEventListener('click', togglePanel);
+    document.getElementById('panel-cancel-btn').addEventListener('click', togglePanel);
+
+    // Event delegation for edit/reset buttons
+    document.querySelectorAll('.open-edit-modal').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        openEditModal(
+          this.dataset.id,
+          JSON.parse(this.dataset.name),
+          JSON.parse(this.dataset.phone),
+          JSON.parse(this.dataset.role),
+          parseInt(this.dataset.active, 10)
+        );
+      });
+    });
+    document.querySelectorAll('.open-reset-modal').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        openResetModal(this.dataset.id, JSON.parse(this.dataset.name));
+      });
+    });
+
+    // Close buttons
+    document.getElementById('edit-modal-close').addEventListener('click', function() { closeModal('edit-modal'); });
+    document.getElementById('edit-modal-cancel').addEventListener('click', function() { closeModal('edit-modal'); });
+    document.getElementById('reset-modal-close').addEventListener('click', function() { closeModal('reset-modal'); });
+    document.getElementById('reset-modal-cancel').addEventListener('click', function() { closeModal('reset-modal'); });
+
+    // Overlay click-to-close and Escape key
+    document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
       overlay.addEventListener('click', function(e) {
         if (e.target === this) this.classList.remove('open');
       });
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { closeModal('edit-modal'); closeModal('reset-modal'); }
     });
   </script>
 {% endblock %}

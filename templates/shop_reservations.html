@@ -121,7 +121,7 @@ h1{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;margin-bottom:
           {% if r.status == 'Pending' %}
             <form class="cancel-form" method="POST"
                   action="/shop/reservations/{{ r.id }}/cancel"
-                  onsubmit="return confirm('Cancel this reservation? The device will return to stock.')">
+                  data-confirm="Cancel this reservation? The device will return to stock.">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit">Cancel Reservation</button>
             </form>

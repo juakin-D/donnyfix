@@ -120,12 +120,12 @@ nav{background:var(--green);padding:0 24px;display:flex;align-items:center;justi
            alt="{{ item.brand }} {{ item.model }}"
            style="width:100%;height:640px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);display:block;"/>
       {% if item.image1_url and item.image2_url %}
-      <div style="display:flex;gap:10px;margin-top:10px;">
+      <div id="thumb-row" style="display:flex;gap:10px;margin-top:10px;">
         <img src="{{ item.image1_url }}"
-             onclick="document.getElementById('mainImage').src=this.src"
+             class="thumb-img"
              style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid var(--green);cursor:pointer;"/>
         <img src="{{ item.image2_url }}"
-             onclick="document.getElementById('mainImage').src=this.src"
+             class="thumb-img"
              style="width:80px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;"/>
       </div>
       {% endif %}
@@ -177,7 +177,7 @@ nav{background:var(--green);padding:0 24px;display:flex;align-items:center;justi
         <div class="plan-tabs">
           {% for months, plan in plans.items() %}
             <button class="plan-tab {% if loop.first %}active{% endif %}"
-                    onclick="showPlan({{ months }}, this)">
+                    data-months="{{ months }}">
               {{ months }}-Month Plan
             </button>
           {% endfor %}
@@ -224,7 +224,7 @@ nav{background:var(--green);padding:0 24px;display:flex;align-items:center;justi
         </div>
         <div class="form-group">
           <label>Payment Method *</label>
-          <select name="payment_method" id="payment-method" onchange="toggleMethod(this.value)" required>
+          <select name="payment_method" id="payment-method" required>
             <option value="">Select method…</option>
             <option value="MoMo">Mobile Money (MoMo)</option>
             <option value="Bank">Bank Transfer</option>
@@ -324,6 +324,27 @@ function showPlan(months, btn){
   document.querySelectorAll('.plan-details').forEach(d=>d.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('plan-'+months).classList.add('active');
+}
+
+// Thumbnail image swap
+var thumbRow = document.getElementById('thumb-row');
+if (thumbRow) {
+  thumbRow.addEventListener('click', function(e) {
+    if (e.target.classList.contains('thumb-img')) {
+      document.getElementById('mainImage').src = e.target.src;
+    }
+  });
+}
+
+// Plan tab buttons
+document.querySelectorAll('.plan-tab[data-months]').forEach(function(btn) {
+  btn.addEventListener('click', function() { showPlan(this.dataset.months, this); });
+});
+
+// Payment method select
+var pmSelect = document.getElementById('payment-method');
+if (pmSelect) {
+  pmSelect.addEventListener('change', function() { toggleMethod(this.value); });
 }
 </script>
 {% endblock %}

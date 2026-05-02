@@ -1,5 +1,31 @@
 {% extends "admin_base.html" %}
 
+{% block head_extra %}
+<style>
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;padding:32px;max-width:460px;width:90%}
+@keyframes modalPop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text)}
+.modal-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:22px;line-height:1;transition:color .15s}
+.modal-close:hover{color:var(--text)}
+.modal-section{margin-bottom:16px}
+.modal-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:7px;display:block}
+.modal-input,.modal-select{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+.modal-input:focus,.modal-select:focus{border-color:var(--green)}
+.modal-input::placeholder{color:var(--text-muted)}
+.modal-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234A5E58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-plan-summary{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mps-item{font-size:12px}
+.mps-label{color:var(--text-muted);font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px}
+.mps-val{color:var(--text);font-weight:500}
+.modal-submit{width:100%;padding:13px;background:var(--green-glow);border:1px solid rgba(0,196,106,.3);border-radius:9px;color:var(--green);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .2s}
+.modal-submit:hover{background:rgba(0,196,106,.2)}
+</style>
+{% endblock %}
+
 {% block title %}Installments — Admin{% endblock %}
 
 {% block topbar_title %}Installments{% endblock %}
@@ -161,8 +187,7 @@
                       data-device="{{ p.device_name }}"
                       data-monthly="{{ p.monthly_amount }}"
                       data-balance="{{ p.balance_remaining }}"
-                      data-method="{{ p.payment_method }}"
-                      onclick="openPayModal(this)">
+                      data-method="{{ p.payment_method }}">
                     + Record Payment
                   </button>
                   {% endif %}
@@ -173,8 +198,7 @@
                   <button class="act-btn icon-only"
                       title="Change status"
                       data-id="{{ p.id }}"
-                      data-status="{{ p.status }}"
-                      onclick="openStatusModal(this.dataset.id, this.dataset.status)">⋯</button>
+                      data-status="{{ p.status }}">⋯</button>
                   {% endif %}
                 </div>
               </td>
@@ -203,6 +227,73 @@
           </div>
         </div>
         {% endif %}
+      </div>
+
+      <!-- RECORD PAYMENT MODAL -->
+      <div class="modal-overlay" id="pay-modal">
+        <div class="modal">
+          <div class="modal-header">
+            <div class="modal-title">Record Payment</div>
+            <button id="pay-modal-close" class="modal-close">×</button>
+          </div>
+          <div class="modal-plan-summary" id="modal-summary"></div>
+          <form method="POST" id="pay-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-row" style="margin-bottom:14px">
+              <div>
+                <span class="modal-label">Amount (GH₵)</span>
+                <input type="number" name="amount" id="pay-amount" class="modal-input" placeholder="0.00" step="0.01" min="1" required/>
+              </div>
+              <div>
+                <span class="modal-label">Payment Date</span>
+                <input type="date" name="paid_on" id="pay-date" class="modal-input" required/>
+              </div>
+            </div>
+            <div class="modal-section">
+              <span class="modal-label">Payment Method</span>
+              <select name="payment_method" id="pay-method" class="modal-select">
+                <option value="MTN MoMo">MTN MoMo</option>
+                <option value="Vodafone Cash">Vodafone Cash</option>
+                <option value="AirtelTigo Money">AirtelTigo Money</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Bank Deposit">Bank Deposit (cash)</option>
+                <option value="Cash">Cash in store</option>
+              </select>
+            </div>
+            <div class="modal-section">
+              <span class="modal-label">Reference / Transaction ID</span>
+              <input type="text" name="reference" class="modal-input" placeholder="e.g. MoMo ref or bank receipt no."/>
+            </div>
+            <div class="modal-section">
+              <span class="modal-label">Notes (optional)</span>
+              <input type="text" name="notes" class="modal-input" placeholder="Any notes about this payment..."/>
+            </div>
+            <button type="submit" class="modal-submit">✓ Confirm Payment</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- STATUS MODAL -->
+      <div class="modal-overlay" id="status-modal">
+        <div class="modal" style="max-width:360px">
+          <div class="modal-header">
+            <div class="modal-title">Update Plan Status</div>
+            <button id="status-modal-close" class="modal-close">×</button>
+          </div>
+          <form method="POST" id="status-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-section">
+              <span class="modal-label">New Status</span>
+              <select name="status" id="new-status" class="modal-select">
+                <option value="Active">Active</option>
+                <option value="Paused">Paused</option>
+                <option value="Completed">Completed</option>
+                <option value="Defaulted">Defaulted</option>
+              </select>
+            </div>
+            <button type="submit" class="modal-submit" style="margin-top:12px">Update Status</button>
+          </form>
+        </div>
       </div>
 {% endblock %}
 
@@ -259,6 +350,18 @@
     function closeStatusModal() {
       document.getElementById('status-modal').classList.remove('open');
     }
+
+    // Event delegation replacing onclick handlers
+    document.querySelectorAll('.act-btn.pay').forEach(function(btn) {
+      btn.addEventListener('click', function() { openPayModal(this); });
+    });
+    document.querySelectorAll('.act-btn.icon-only').forEach(function(btn) {
+      btn.addEventListener('click', function() { openStatusModal(this.dataset.id, this.dataset.status); });
+    });
+
+    // Close buttons
+    document.getElementById('pay-modal-close').addEventListener('click', closePayModal);
+    document.getElementById('status-modal-close').addEventListener('click', closeStatusModal);
 
     // Close on backdrop click
     document.getElementById('pay-modal').addEventListener('click', function(e){ if(e.target===this) closePayModal(); });
