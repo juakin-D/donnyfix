@@ -15,6 +15,17 @@
 .modal-select:focus,.modal-input:focus{border-color:rgba(0,196,106,.4)}
 .modal-submit{width:100%;padding:12px;background:var(--green);border:none;border-radius:9px;color:#0E1210;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s}
 .modal-submit:hover{opacity:.9}
+
+/* ── TABLE FIXES ── */
+.table-wrap{overflow-x:auto}
+/* text-label buttons need auto width, not the 30px icon default */
+.act-btn.edit,
+.act-btn[class*="plan-"]{width:auto;padding:0 10px;font-size:12px;white-space:nowrap}
+/* keep the extend select compact */
+.extend-form{display:flex;align-items:center;gap:4px}
+.extend-select{padding:4px 6px;border:1px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;outline:none}
+/* action column never wraps or clips */
+th:last-child,td:last-child{white-space:nowrap}
 </style>
 {% endblock %}
 
