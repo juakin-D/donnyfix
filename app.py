@@ -11,6 +11,7 @@ import psycopg2
 from psycopg2 import pool as pg_pool
 from psycopg2.extras import RealDictCursor
 import smtplib
+import threading
 import os
 import re
 import secrets
@@ -1787,17 +1788,21 @@ def resend_verification():
         conn.commit()
         conn.close(); conn = None
         verify_url = url_for('verify_email', token=v_token, _external=True)
-        sent = send_email(customer['email'], 'Verify your email — DonnyPhonehub Gh', f"""
-    <p>Hi {_he(customer['name'])},</p>
-    <p>Click below to verify your email address:</p>
-    <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
-    <p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>
-    <p>— DonnyPhonehub Gh Team</p>
-    """)
-        if sent:
-            flash('Verification email sent — check your inbox.', 'success')
-        else:
-            flash('Could not send the email right now. Please try again later.', 'error')
+        body = (
+            f'<p>Hi {_he(customer["name"])},</p>'
+            f'<p>Click below to verify your email address:</p>'
+            f'<p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;'
+            f'border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">'
+            f'Verify My Email</a></p>'
+            f'<p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>'
+            f'<p>— DonnyPhonehub Gh Team</p>'
+        )
+        threading.Thread(
+            target=send_email,
+            args=(customer['email'], 'Verify your email — DonnyPhonehub Gh', body),
+            daemon=True,
+        ).start()
+        flash('Verification email sent — check your inbox.', 'success')
     except Exception:
         if conn:
             try:
