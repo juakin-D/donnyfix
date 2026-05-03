@@ -1787,14 +1787,17 @@ def resend_verification():
         conn.commit()
         conn.close(); conn = None
         verify_url = url_for('verify_email', token=v_token, _external=True)
-        send_email(customer['email'], 'Verify your email — DonnyPhonehub Gh', f"""
+        sent = send_email(customer['email'], 'Verify your email — DonnyPhonehub Gh', f"""
     <p>Hi {_he(customer['name'])},</p>
     <p>Click below to verify your email address:</p>
     <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
     <p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>
     <p>— DonnyPhonehub Gh Team</p>
     """)
-        flash('Verification email sent — check your inbox.', 'success')
+        if sent:
+            flash('Verification email sent — check your inbox.', 'success')
+        else:
+            flash('Could not send the email right now. Please try again later.', 'error')
     except Exception:
         if conn:
             try:
