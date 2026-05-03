@@ -17,8 +17,14 @@
 th:last-child,td:last-child{white-space:nowrap}
 
 /* ── ACTION BUTTONS ── */
-/* icon-only buttons stay square; text buttons expand */
 .act-btn.view-notes-btn,.act-btn.delete{width:30px;height:30px;padding:0;font-size:14px}
+
+/* ── STATUS SELECT COLOURS ── */
+.status-select{transition:background .15s,color .15s,border-color .15s}
+.status-pending    {background:var(--amber-dim)!important;border-color:rgba(245,158,11,.4)!important;color:var(--amber)!important}
+.status-in-progress{background:rgba(59,158,232,.12)!important;border-color:rgba(59,158,232,.4)!important;color:#3B9EE8!important}
+.status-complete   {background:var(--green-glow)!important;border-color:rgba(0,196,106,.4)!important;color:var(--green)!important}
+.status-cancelled  {background:var(--red-dim)!important;border-color:rgba(232,64,64,.4)!important;color:var(--red)!important}
 
 /* ── NOTES MODAL ── */
 .notes-modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);align-items:center;justify-content:center;backdrop-filter:blur(4px)}
@@ -257,8 +263,20 @@ th:last-child,td:last-child{white-space:nowrap}
     });
   });
 
+  var statusClasses = {
+    'Pending':     'status-pending',
+    'In Progress': 'status-in-progress',
+    'Complete':    'status-complete',
+    'Cancelled':   'status-cancelled'
+  };
+  function applyStatusColour(sel) {
+    Object.values(statusClasses).forEach(function(c){ sel.classList.remove(c); });
+    var cls = statusClasses[sel.value];
+    if (cls) sel.classList.add(cls);
+  }
   document.querySelectorAll('.status-select').forEach(function(sel) {
-    sel.addEventListener('change', function() { this.form.submit(); });
+    applyStatusColour(sel);
+    sel.addEventListener('change', function() { applyStatusColour(this); this.form.submit(); });
   });
 
   function showNotes(id, name, notes) {
