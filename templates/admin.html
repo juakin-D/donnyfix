@@ -8,16 +8,30 @@
 
 {% block head_extra %}
 <style>
-@keyframes modalPop {
-      from { transform: scale(0.95); opacity: 0; }
-      to   { transform: scale(1);    opacity: 1; }
-    }
-</style>
-<style>
-@keyframes modalPop {
-      from { transform: scale(0.95); opacity: 0; }
-      to   { transform: scale(1);    opacity: 1; }
-    }
+/* ── STAT CARD BLUE ── */
+.stat-card.blue::before{background:#3B9EE8}
+.stat-card.blue .stat-value{color:#3B9EE8}
+
+/* ── TABLE OVERFLOW ── */
+.table-wrap{overflow-x:auto}
+th:last-child,td:last-child{white-space:nowrap}
+
+/* ── ACTION BUTTONS ── */
+/* icon-only buttons stay square; text buttons expand */
+.act-btn.view-notes-btn,.act-btn.delete{width:30px;height:30px;padding:0;font-size:14px}
+
+/* ── NOTES MODAL ── */
+.notes-modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.notes-modal.open{display:flex}
+.notes-modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;max-width:440px;width:90%;animation:modalPop .18s ease}
+@keyframes modalPop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.notes-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.notes-modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)}
+.notes-modal-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1;padding:4px 8px;border-radius:6px;transition:background .15s}
+.notes-modal-close:hover{background:var(--surface2);color:var(--text)}
+.notes-modal-body{font-size:14px;color:var(--text-soft);line-height:1.7;white-space:pre-wrap}
+.notes-modal-btn{margin-top:20px;width:100%;padding:10px;background:var(--green-glow);border:1px solid rgba(0,196,106,.2);border-radius:8px;color:var(--green);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:background .15s}
+.notes-modal-btn:hover{background:rgba(0,196,106,.2)}
 </style>
 {% endblock %}
 
@@ -205,14 +219,14 @@
       </div>
 
       <!-- NOTES MODAL -->
-      <div id="notes-modal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; backdrop-filter:blur(4px);">
-        <div style="background:var(--surface); border:1px solid var(--border2); border-radius:16px; padding:28px; max-width:440px; width:90%;">
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-            <div id="modal-title" style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--text);">Booking Notes</div>
-            <button id="notes-modal-close-x" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1;">×</button>
+      <div id="notes-modal" class="notes-modal">
+        <div class="notes-modal-box">
+          <div class="notes-modal-head">
+            <div id="modal-title" class="notes-modal-title">Booking Notes</div>
+            <button id="notes-modal-close-x" class="notes-modal-close">×</button>
           </div>
-          <div id="modal-body" style="font-size:14px; color:var(--text-soft); line-height:1.7; font-weight:300;"></div>
-          <button id="notes-modal-close-btn" style="margin-top:20px; width:100%; padding:10px; background:var(--green-glow); border:1px solid rgba(0,196,106,0.2); border-radius:8px; color:var(--green); font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer;">Close</button>
+          <div id="modal-body" class="notes-modal-body"></div>
+          <button id="notes-modal-close-btn" class="notes-modal-btn">Close</button>
         </div>
       </div>
 {% endblock %}
@@ -250,10 +264,10 @@
   function showNotes(id, name, notes) {
     document.getElementById('modal-title').textContent = name + ' — Booking #' + id;
     document.getElementById('modal-body').textContent  = notes;
-    document.getElementById('notes-modal').style.display = 'flex';
+    document.getElementById('notes-modal').classList.add('open');
   }
   function closeNotesModal() {
-    document.getElementById('notes-modal').style.display = 'none';
+    document.getElementById('notes-modal').classList.remove('open');
   }
 
   document.querySelectorAll('.view-notes-btn').forEach(function(btn) {
@@ -266,6 +280,7 @@
   document.getElementById('notes-modal').addEventListener('click', function(e) {
     if (e.target === this) closeNotesModal();
   });
+
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeNotesModal(); });
 </script>
 {% endblock %}

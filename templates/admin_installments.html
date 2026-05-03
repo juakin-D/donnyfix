@@ -23,6 +23,40 @@
 .mps-val{color:var(--text);font-weight:500}
 .modal-submit{width:100%;padding:13px;background:var(--green-glow);border:1px solid rgba(0,196,106,.3);border-radius:9px;color:var(--green);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:all .2s}
 .modal-submit:hover{background:rgba(0,196,106,.2)}
+
+/* ── STAT CARD BLUE ── */
+.stat-card.blue::before{background:#3B9EE8}
+.stat-card.blue .stat-value{color:#3B9EE8}
+
+/* ── PROGRESS BAR ── */
+.progress-wrap{display:flex;flex-direction:column;gap:4px;min-width:120px}
+.progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--green);border-radius:3px}
+.progress-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)}
+
+/* ── DEVICE / METHOD TAGS ── */
+.device-tag{display:inline-block;padding:3px 9px;border-radius:6px;font-size:12px;background:var(--surface2);color:var(--text-soft);border:1px solid var(--border);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.method-badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-soft);background:var(--surface2);border:1px solid var(--border);padding:3px 9px;border-radius:6px;white-space:nowrap}
+
+/* ── OVERDUE ROW ── */
+.overdue-row td{background:rgba(232,64,64,.03)}
+
+/* ── PLAN STATUS BADGES ── */
+.badge-active   {background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.25)}
+.badge-overdue  {background:var(--red-dim);color:var(--red);border:1px solid rgba(232,64,64,.25)}
+.badge-completed{background:rgba(59,158,232,.12);color:#3B9EE8;border:1px solid rgba(59,158,232,.25)}
+.badge-paused   {background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.badge-defaulted{background:var(--red-dim);color:var(--red);border:1px solid rgba(232,64,64,.25)}
+
+/* ── ACTION BUTTONS ── */
+.act-btn{width:auto;height:auto;padding:5px 10px;font-size:12px;white-space:nowrap}
+.act-btn.pay{background:var(--green-glow);border-color:rgba(0,196,106,.3);color:var(--green)}
+.act-btn.pay:hover{background:rgba(0,196,106,.2)}
+.act-btn.icon-only{width:30px;height:30px;padding:0;font-size:16px}
+
+/* ── TABLE OVERFLOW ── */
+.table-wrap{overflow-x:auto}
+th:last-child,td:last-child{white-space:nowrap}
 </style>
 {% endblock %}
 

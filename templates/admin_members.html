@@ -26,6 +26,25 @@
 .extend-select{padding:4px 6px;border:1px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;outline:none}
 /* action column never wraps or clips */
 th:last-child,td:last-child{white-space:nowrap}
+
+/* ── TIER BADGES ── */
+.tier-badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.tier-Standard{background:var(--surface2);color:var(--text-soft);border:1px solid var(--border)}
+.tier-Silver  {background:rgba(148,163,184,.12);color:#94A3B8;border:1px solid rgba(148,163,184,.25)}
+.tier-Gold    {background:var(--gold-dim);color:var(--gold);border:1px solid rgba(245,200,66,.25)}
+.tier-Premium {background:rgba(59,158,232,.12);color:#3B9EE8;border:1px solid rgba(59,158,232,.25)}
+.tier-VIP     {background:rgba(168,85,247,.12);color:#A855F7;border:1px solid rgba(168,85,247,.25)}
+
+/* ── STATUS BADGES ── */
+.badge-active  {background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.25)}
+.badge-expiring{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.badge-expired {background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+.badge-inactive{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+
+/* ── PLAN BUTTON COLOURS ── */
+.act-btn.plan-active  {background:var(--green-glow);border-color:rgba(0,196,106,.3);color:var(--green)}
+.act-btn.plan-paused  {background:var(--amber-dim);border-color:rgba(245,158,11,.3);color:var(--amber)}
+.act-btn.plan-defaulted{background:var(--red-dim);border-color:rgba(232,64,64,.3);color:var(--red)}
 </style>
 {% endblock %}
 
