@@ -11,7 +11,6 @@ import psycopg2
 from psycopg2 import pool as pg_pool
 from psycopg2.extras import RealDictCursor
 import smtplib
-import threading
 import os
 import re
 import secrets
@@ -545,28 +544,29 @@ MAIL_PASS = os.environ.get('MAIL_PASS', '')
 MAIL_FROM = os.environ.get('MAIL_FROM', 'noreply@phonehubghana.com')
 
 
-def _send_email_sync(to, subject, html_body):
+def send_email(to, subject, html_body):
+    if not MAIL_USER or not MAIL_PASS:
+        logger.warning(
+            'send_email skipped — MAIL_USER/MAIL_PASS '
+            'not configured')
+        return False
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From']    = f'DonnyPhonehub Gh <{MAIL_FROM}>'
         msg['To']      = to
         msg.attach(MIMEText(html_body, 'html'))
-        with smtplib.SMTP(MAIL_HOST, MAIL_PORT, timeout=20) as s:
+        with smtplib.SMTP(MAIL_HOST, MAIL_PORT,
+                          timeout=10) as s:
             s.starttls()
             s.login(MAIL_USER, MAIL_PASS)
             s.sendmail(MAIL_FROM, to, msg.as_string())
         logger.info('Email sent to %s — %s', to, subject)
+        return True
     except Exception as exc:
-        logger.error('Email to %s failed: %s', to, exc)
-
-
-def send_email(to, subject, html_body):
-    """Fire-and-forget: SMTP runs in a daemon thread so it never blocks a gunicorn worker."""
-    if not MAIL_USER or not MAIL_PASS:
-        logger.warning('send_email skipped — MAIL_USER/MAIL_PASS not configured')
-        return
-    threading.Thread(target=_send_email_sync, args=(to, subject, html_body), daemon=True).start()
+        logger.error(
+            'Email to %s failed: %s', to, exc)
+        return False
 
 
 # ─── SMS (Arkesel) ────────────────────────────────────────────────────────────
@@ -915,7 +915,8 @@ def booking():
         conn.close()
         ids = session.get('guest_booking_ids', []) + [booking_id]
         session['guest_booking_ids'] = ids[-10:]
-        send_email(email, 'Booking Confirmed — DonnyPhonehub Gh', f"""
+        try:
+            send_email(email, 'Booking Confirmed — DonnyPhonehub Gh', f"""
         <p>Hi {_he(name)},</p>
         <p>Your repair booking is confirmed.</p>
         <ul>
@@ -926,6 +927,8 @@ def booking():
         <p>We'll see you at our Osu Oxford Street location. Call us on 0541057500 with any questions.</p>
         <p>— DonnyPhonehub Gh Team</p>
         """)
+        except Exception as _email_exc:
+            logger.error('Email notification failed: %s', _email_exc)
         return render_template('confirmation.html',
             name=name, phone=phone, email=email,
             device=device, service=service, date=date, notes=notes,
@@ -979,14 +982,26 @@ def register():
         session['customer_id']   = customer['id']
         session['customer_name'] = customer['name']
         verify_url = url_for('verify_email', token=v_token, _external=True)
-        send_email(email, 'Verify your email — DonnyPhonehub Gh', f"""
+        try:
+            send_email(email, 'Verify your email — DonnyPhonehub Gh', f"""
         <p>Hi {_he(name)},</p>
         <p>Your DonnyPhonehub Gh account is live! Please verify your email to unlock all features.</p>
         <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
         <p style="margin-top:12px;font-size:13px;color:#666">Link expires in 24 hours. If you didn't create an account, ignore this email.</p>
         <p>— DonnyPhonehub Gh Team</p>
         """)
-        flash(f'Welcome, {name}! Check your email to verify your account.', 'success')
+            flash(
+                f'Welcome, {name}! Check your email '
+                f'to verify your account.',
+                'success')
+        except Exception as _email_exc:
+            logger.error(
+                'Verification email failed for %s: %s',
+                email, _email_exc)
+            flash(
+                f'Welcome, {name}! Your account is active. '
+                f'You can verify your email from your dashboard.',
+                'success')
         return redirect(url_for('dashboard'))
     return render_template('register.html')
 
@@ -1348,12 +1363,15 @@ def update_booking_status(booking_id):
     conn.execute('UPDATE bookings SET status=%s WHERE id=%s', (new_status, booking_id))
     conn.commit(); conn.close()
     if booking and new_status == 'Complete':
-        send_email(booking['email'], 'Your repair is ready — DonnyPhonehub Gh', f"""
+        try:
+            send_email(booking['email'], 'Your repair is ready — DonnyPhonehub Gh', f"""
         <p>Hi {_he(booking['name'])},</p>
         <p>Great news — your <b>{_he(booking['device'])}</b> ({_he(booking['service'])}) is complete and ready for collection.</p>
         <p>Visit us at Osu Oxford Street or call 0541057500 to arrange pickup.</p>
         <p>— DonnyPhonehub Gh Team</p>
         """)
+        except Exception as _email_exc:
+            logger.error('Email notification failed: %s', _email_exc)
     flash(f'Booking #{booking_id} marked as {new_status}.', 'success')
     return redirect(url_for('admin'))
 
@@ -1793,16 +1811,6 @@ def resend_verification():
             'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (%s,%s,%s)',
             (customer['id'], v_token, v_expiry))
         conn.commit()
-        conn.close(); conn = None
-        verify_url = url_for('verify_email', token=v_token, _external=True)
-        send_email(customer['email'], 'Verify your email — DonnyPhonehub Gh', f"""
-    <p>Hi {_he(customer['name'])},</p>
-    <p>Click below to verify your email address:</p>
-    <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
-    <p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>
-    <p>— DonnyPhonehub Gh Team</p>
-    """)
-        flash('Verification email sent — check your inbox.', 'success')
     except Exception:
         if conn:
             try:
@@ -1810,9 +1818,31 @@ def resend_verification():
             except Exception:
                 pass
         flash('Something went wrong. Please try again later.', 'error')
+        return redirect(url_for('dashboard'))
     finally:
         if conn:
             conn.close()
+    verify_url = url_for('verify_email', token=v_token, _external=True)
+    try:
+        send_email(customer['email'], 'Verify your email — DonnyPhonehub Gh', f"""
+    <p>Hi {_he(customer['name'])},</p>
+    <p>Click below to verify your email address:</p>
+    <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
+    <p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>
+    <p>— DonnyPhonehub Gh Team</p>
+    """)
+        flash(
+            'Verification email sent — check your inbox.',
+            'success')
+    except Exception as _email_exc:
+        logger.error(
+            'Resend verification failed for customer '
+            '#%d: %s',
+            session['customer_id'], _email_exc)
+        flash(
+            'Could not send email right now. '
+            'Please try again in a few minutes.',
+            'error')
     return redirect(url_for('dashboard'))
 
 
@@ -1834,13 +1864,18 @@ def forgot_password():
                 (email, token, expires))
             conn.commit()
             reset_url = url_for('reset_password', token=token, _external=True)
-            send_email(email, 'Reset your password — DonnyPhonehub Gh', f"""
+            try:
+                send_email(email, 'Reset your password — DonnyPhonehub Gh', f"""
             <p>Hi {_he(customer['name'])},</p>
             <p>We received a request to reset your DonnyPhonehub Gh password.</p>
             <p><a href="{reset_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Reset Password</a></p>
             <p style="font-size:13px;color:#666;margin-top:12px">This link expires in 30 minutes. If you didn't request this, ignore the email.</p>
             <p>— DonnyPhonehub Gh Team</p>
             """)
+            except Exception as _email_exc:
+                logger.error(
+                    'Password reset email failed for '
+                    '%s: %s', email, _email_exc)
         conn.close()
         flash('If an account with that email exists, a reset link has been sent.', 'success')
         return redirect(url_for('forgot_password'))
