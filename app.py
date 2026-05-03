@@ -575,10 +575,11 @@ def send_email(to, subject, html_body):
         msg['From']    = f'DonnyPhonehub Gh <{MAIL_FROM}>'
         msg['To']      = to
         msg.attach(MIMEText(html_body, 'html'))
-        import ssl
-        ctx = ssl.create_default_context()
+        import ssl as _ssl
+        _ctx = _ssl.create_default_context()
         with smtplib.SMTP_SSL(MAIL_HOST, MAIL_PORT,
-                              context=ctx, timeout=10) as s:
+                              timeout=10,
+                              context=_ctx) as s:
             s.login(MAIL_USER, MAIL_PASS)
             s.sendmail(MAIL_FROM, to, msg.as_string())
         logger.info('Email sent to %s — %s', to, subject)
