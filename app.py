@@ -1768,28 +1768,36 @@ def verify_email(token):
 @customer_required
 @limiter.limit('3 per hour')
 def resend_verification():
-    conn     = get_db()
-    customer = conn.execute('SELECT * FROM customers WHERE id=%s', (session['customer_id'],)).fetchone()
-    if customer['email_verified']:
-        conn.close()
-        flash('Your email is already verified.', 'success')
-        return redirect(url_for('dashboard'))
-    conn.execute('UPDATE email_verification_tokens SET used=1 WHERE customer_id=%s', (customer['id'],))
-    v_token  = secrets.token_urlsafe(32)
-    v_expiry = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
-    conn.execute(
-        'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (%s,%s,%s)',
-        (customer['id'], v_token, v_expiry))
-    conn.commit(); conn.close()
-    verify_url = url_for('verify_email', token=v_token, _external=True)
-    send_email(customer['email'], 'Verify your email — DonnyPhonehub Gh', f"""
+    conn = get_db()
+    try:
+        customer = conn.execute('SELECT * FROM customers WHERE id=%s', (session['customer_id'],)).fetchone()
+        if not customer:
+            flash('Account not found. Please log in again.', 'error')
+            return redirect(url_for('customer_logout'))
+        if customer['email_verified']:
+            flash('Your email is already verified.', 'success')
+            return redirect(url_for('dashboard'))
+        conn.execute('UPDATE email_verification_tokens SET used=1 WHERE customer_id=%s', (customer['id'],))
+        v_token  = secrets.token_urlsafe(32)
+        v_expiry = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+        conn.execute(
+            'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (%s,%s,%s)',
+            (customer['id'], v_token, v_expiry))
+        conn.commit()
+        verify_url = url_for('verify_email', token=v_token, _external=True)
+        send_email(customer['email'], 'Verify your email — DonnyPhonehub Gh', f"""
     <p>Hi {_he(customer['name'])},</p>
     <p>Click below to verify your email address:</p>
     <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
     <p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>
     <p>— DonnyPhonehub Gh Team</p>
     """)
-    flash('Verification email sent — check your inbox.', 'success')
+        flash('Verification email sent — check your inbox.', 'success')
+    except Exception:
+        conn.rollback()
+        flash('Something went wrong. Please try again later.', 'error')
+    finally:
+        conn.close()
     return redirect(url_for('dashboard'))
 
 
