@@ -16,16 +16,37 @@
 .modal-submit{width:100%;padding:12px;background:var(--green);border:none;border-radius:9px;color:#0E1210;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s}
 .modal-submit:hover{opacity:.9}
 
-/* ── TABLE FIXES ── */
+/* ── TABLE OVERFLOW ── */
 .table-wrap{overflow-x:auto}
-/* text-label buttons need auto width, not the 30px icon default */
-.act-btn.edit,
-.act-btn[class*="plan-"]{width:auto;padding:0 10px;font-size:12px;white-space:nowrap}
-/* keep the extend select compact */
-.extend-form{display:flex;align-items:center;gap:4px}
-.extend-select{padding:4px 6px;border:1px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;outline:none}
-/* action column never wraps or clips */
 th:last-child,td:last-child{white-space:nowrap}
+
+/* ── ACTION CELL ── */
+.action-cell{display:flex;align-items:center;gap:5px;flex-wrap:nowrap}
+
+/* Base override — text buttons are auto-width */
+.act-btn{height:28px;width:auto;padding:0 10px;font-size:12px;font-weight:500;white-space:nowrap;border-radius:7px;display:inline-flex;align-items:center;gap:4px}
+
+/* Plan buttons — coloured by plan status */
+.act-btn.plan-active   {background:var(--green-glow);border-color:rgba(0,196,106,.35);color:var(--green)}
+.act-btn.plan-active:hover{background:rgba(0,196,106,.2)}
+.act-btn.plan-paused   {background:var(--amber-dim);border-color:rgba(245,158,11,.35);color:var(--amber)}
+.act-btn.plan-paused:hover{background:rgba(245,158,11,.2)}
+.act-btn.plan-defaulted{background:var(--red-dim);border-color:rgba(232,64,64,.35);color:var(--red)}
+.act-btn.plan-defaulted:hover{background:rgba(232,64,64,.2)}
+
+/* Edit — muted neutral */
+.act-btn.edit{background:var(--surface2);border-color:var(--border2);color:var(--text-soft)}
+.act-btn.edit:hover{color:var(--text);background:var(--surface)}
+
+/* Extend select + button inline */
+.extend-form{display:inline-flex;align-items:center;gap:4px}
+.extend-select{height:28px;padding:0 24px 0 8px;border:1px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text-soft);font-size:12px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%234A5E58' stroke-width='1.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center}
+.act-btn.extend{background:rgba(59,158,232,.12);border-color:rgba(59,158,232,.3);color:#3B9EE8}
+.act-btn.extend:hover{background:rgba(59,158,232,.2)}
+
+/* Delete — icon only, stays square */
+.act-btn.delete{width:28px;padding:0;font-size:14px;background:transparent;border-color:var(--border);color:var(--text-muted)}
+.act-btn.delete:hover{background:var(--red-dim);border-color:rgba(232,64,64,.3);color:var(--red)}
 
 /* ── TIER BADGES ── */
 .tier-badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
