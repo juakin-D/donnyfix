@@ -856,7 +856,7 @@ def customer_required(f):
 @app.route('/health')
 @limiter.limit('30 per minute')
 def health():
-    return {'status': 'ok', 'service': 'DonnyPhonehub Gh'}
+    return {'status': 'ok', 'service': 'DonnyPhonehub Gh', 'build': '267a97d'}
 
 
 @app.route('/')
