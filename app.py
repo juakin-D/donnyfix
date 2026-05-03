@@ -545,10 +545,7 @@ MAIL_PASS = os.environ.get('MAIL_PASS', '')
 MAIL_FROM = os.environ.get('MAIL_FROM', 'noreply@phonehubghana.com')
 
 
-def send_email(to, subject, html_body):
-    if not MAIL_USER or not MAIL_PASS:
-        logger.warning('send_email skipped — MAIL_USER/MAIL_PASS not configured')
-        return False
+def _send_email_sync(to, subject, html_body):
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
@@ -560,10 +557,16 @@ def send_email(to, subject, html_body):
             s.login(MAIL_USER, MAIL_PASS)
             s.sendmail(MAIL_FROM, to, msg.as_string())
         logger.info('Email sent to %s — %s', to, subject)
-        return True
     except Exception as exc:
         logger.error('Email to %s failed: %s', to, exc)
-        return False
+
+
+def send_email(to, subject, html_body):
+    """Fire-and-forget: SMTP runs in a daemon thread so it never blocks a gunicorn worker."""
+    if not MAIL_USER or not MAIL_PASS:
+        logger.warning('send_email skipped — MAIL_USER/MAIL_PASS not configured')
+        return
+    threading.Thread(target=_send_email_sync, args=(to, subject, html_body), daemon=True).start()
 
 
 # ─── SMS (Arkesel) ────────────────────────────────────────────────────────────
@@ -1788,20 +1791,13 @@ def resend_verification():
         conn.commit()
         conn.close(); conn = None
         verify_url = url_for('verify_email', token=v_token, _external=True)
-        body = (
-            f'<p>Hi {_he(customer["name"])},</p>'
-            f'<p>Click below to verify your email address:</p>'
-            f'<p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;'
-            f'border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">'
-            f'Verify My Email</a></p>'
-            f'<p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>'
-            f'<p>— DonnyPhonehub Gh Team</p>'
-        )
-        threading.Thread(
-            target=send_email,
-            args=(customer['email'], 'Verify your email — DonnyPhonehub Gh', body),
-            daemon=True,
-        ).start()
+        send_email(customer['email'], 'Verify your email — DonnyPhonehub Gh', f"""
+    <p>Hi {_he(customer['name'])},</p>
+    <p>Click below to verify your email address:</p>
+    <p><a href="{verify_url}" style="background:#006B3F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">Verify My Email</a></p>
+    <p style="font-size:13px;color:#666;margin-top:12px">Link expires in 24 hours.</p>
+    <p>— DonnyPhonehub Gh Team</p>
+    """)
         flash('Verification email sent — check your inbox.', 'success')
     except Exception:
         if conn:
