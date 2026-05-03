@@ -240,9 +240,28 @@ class _PgConn:
 
 def get_db():
     if not DATABASE_URL:
-        raise RuntimeError('DATABASE_URL environment variable is not set.')
-    p = _get_pool()
-    return _PgConn(p.getconn(), pool=p)
+        raise RuntimeError(
+            'DATABASE_URL environment variable is not set.')
+    import time
+    last_exc = None
+    for attempt in range(3):
+        try:
+            conn = psycopg2.connect(
+                DATABASE_URL,
+                connect_timeout=10,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=5,
+            )
+            return _PgConn(conn)
+        except psycopg2.OperationalError as exc:
+            last_exc = exc
+            logger.warning(
+                'DB connect attempt %d failed: %s',
+                attempt + 1, exc)
+            time.sleep(0.5 * (attempt + 1))
+    raise last_exc
 
 
 def init_db():
