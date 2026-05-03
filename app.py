@@ -1012,10 +1012,14 @@ def customer_login():
     return render_template('customer_login.html')
 
 
-@app.route('/logout', methods=['POST'])
+@app.route('/logout', methods=['GET', 'POST'])
+@csrf.exempt
 def customer_logout():
-    session.clear()
-    flash('You have been logged out.', 'success')
+    try:
+        session.clear()
+        flash('You have been logged out.', 'success')
+    except Exception:
+        pass
     return redirect(url_for('home'))
 
 
