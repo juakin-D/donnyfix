@@ -554,7 +554,7 @@ def send_email(to, subject, html_body):
         msg['From']    = f'DonnyPhonehub Gh <{MAIL_FROM}>'
         msg['To']      = to
         msg.attach(MIMEText(html_body, 'html'))
-        with smtplib.SMTP(MAIL_HOST, MAIL_PORT) as s:
+        with smtplib.SMTP(MAIL_HOST, MAIL_PORT, timeout=20) as s:
             s.starttls()
             s.login(MAIL_USER, MAIL_PASS)
             s.sendmail(MAIL_FROM, to, msg.as_string())
@@ -1768,8 +1768,9 @@ def verify_email(token):
 @customer_required
 @limiter.limit('3 per hour')
 def resend_verification():
-    conn = get_db()
+    conn = None
     try:
+        conn = get_db()
         customer = conn.execute('SELECT * FROM customers WHERE id=%s', (session['customer_id'],)).fetchone()
         if not customer:
             flash('Account not found. Please log in again.', 'error')
@@ -1784,6 +1785,7 @@ def resend_verification():
             'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (%s,%s,%s)',
             (customer['id'], v_token, v_expiry))
         conn.commit()
+        conn.close(); conn = None
         verify_url = url_for('verify_email', token=v_token, _external=True)
         send_email(customer['email'], 'Verify your email — DonnyPhonehub Gh', f"""
     <p>Hi {_he(customer['name'])},</p>
@@ -1794,10 +1796,15 @@ def resend_verification():
     """)
         flash('Verification email sent — check your inbox.', 'success')
     except Exception:
-        conn.rollback()
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         flash('Something went wrong. Please try again later.', 'error')
     finally:
-        conn.close()
+        if conn:
+            conn.close()
     return redirect(url_for('dashboard'))
 
 
