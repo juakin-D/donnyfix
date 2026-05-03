@@ -557,7 +557,7 @@ def delete_image_from_cloudinary(public_id):
 # ─── EMAIL ────────────────────────────────────────────────────────────────────
 
 MAIL_HOST = os.environ.get('MAIL_HOST', 'smtp.gmail.com')
-MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+MAIL_PORT = int(os.environ.get('MAIL_PORT', 465))
 MAIL_USER = os.environ.get('MAIL_USER', '')
 MAIL_PASS = os.environ.get('MAIL_PASS', '')
 MAIL_FROM = os.environ.get('MAIL_FROM', 'noreply@phonehubghana.com')
@@ -575,9 +575,10 @@ def send_email(to, subject, html_body):
         msg['From']    = f'DonnyPhonehub Gh <{MAIL_FROM}>'
         msg['To']      = to
         msg.attach(MIMEText(html_body, 'html'))
-        with smtplib.SMTP(MAIL_HOST, MAIL_PORT,
-                          timeout=10) as s:
-            s.starttls()
+        import ssl
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL(MAIL_HOST, MAIL_PORT,
+                              context=ctx, timeout=10) as s:
             s.login(MAIL_USER, MAIL_PASS)
             s.sendmail(MAIL_FROM, to, msg.as_string())
         logger.info('Email sent to %s — %s', to, subject)
