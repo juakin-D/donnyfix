@@ -199,6 +199,7 @@
   </nav>
 
   <!-- Flash Messages -->
+  {% block flashes %}
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       <div class="flash-container">
@@ -208,6 +209,7 @@
       </div>
     {% endif %}
   {% endwith %}
+  {% endblock %}
 
   {% block page_content %}{% endblock %}
 

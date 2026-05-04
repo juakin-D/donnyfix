@@ -4,8 +4,29 @@
 
 {% block head_extra %}
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #f4f9f6; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+/* ── NAV OVERRIDE: green on register page ── */
+.desktop-nav {
+  background: rgba(0,107,63,0.97) !important;
+  border-bottom-color: rgba(0,77,45,0.6) !important;
+  backdrop-filter: blur(12px);
+}
+.nav-logo { color: #fff !important; }
+.nav-logo span { color: var(--gold) !important; }
+.nav-links a { color: rgba(255,255,255,0.82) !important; }
+.nav-links a:hover { color: #fff !important; background: rgba(255,255,255,0.12) !important; }
+.nav-links a.active { color: #fff !important; }
+.nav-cta { background: rgba(255,255,255,0.18) !important; color: #fff !important; }
+.nav-cta:hover { background: rgba(255,255,255,0.28) !important; }
+
+/* ── PAGE LAYOUT ── */
+.register-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 88px 24px 40px;
+  background: #f4f9f6;
+}
     .card { background: white; border-radius: 12px; padding: 40px; width: 100%; max-width: 480px; box-shadow: 0 4px 20px rgba(0,107,63,0.1); }
     .logo { text-align: center; margin-bottom: 28px; }
     .logo h1 { color: #006B3F; font-size: 28px; font-weight: 800; }
@@ -31,7 +52,10 @@
 </style>
 {% endblock %}
 
+{% block flashes %}{% endblock %}
+
 {% block page_content %}
+<div class="register-wrap">
 <div class="card">
     <div class="logo">
       <h1>DonnyPhonehub Gh</h1>
@@ -47,7 +71,11 @@
       Priority repairs · 10% off accessories · Dedicated support line · Device service history
     </div>
 
-    
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}
+        <div class="flash {{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
 
     <form method="POST">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -123,6 +151,5 @@
       By registering you agree to our <a href="/privacy" style="color:#006B3F;font-weight:600;">Privacy Policy</a>
     </div>
   </div>
-
-  <!-- WhatsApp Floating Button -->
+</div>
 {% endblock %}
