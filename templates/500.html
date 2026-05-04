@@ -4,27 +4,39 @@
 
 {% block head_extra %}
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'DM Sans',sans-serif;background:#F7F5F0;color:#111008;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-    .card{text-align:center;max-width:480px;width:100%}
-    .code{font-family:'Syne',sans-serif;font-size:96px;font-weight:800;color:#CE1126;line-height:1;letter-spacing:-4px;margin-bottom:8px}
-    .title{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;margin-bottom:12px;color:#111008}
-    .sub{font-size:16px;color:#4A4740;font-weight:300;line-height:1.65;margin-bottom:32px}
-    .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-    .btn-primary{display:inline-block;padding:13px 28px;background:#006B3F;color:white;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;border-radius:10px;text-decoration:none;transition:background .2s}
-    .btn-primary:hover{background:#004D2D}
-    .btn-ghost{display:inline-block;padding:13px 28px;border:1.5px solid #E8E4DC;color:#4A4740;font-size:15px;border-radius:10px;text-decoration:none;transition:all .2s}
-    .btn-ghost:hover{border-color:#006B3F;color:#006B3F}
-    .divider{width:48px;height:3px;background:#FCD116;border-radius:2px;margin:20px auto 28px}
-    .note{margin-top:28px;font-size:13px;color:#8C8880;font-weight:300}
-    .note a{color:#006B3F;text-decoration:none}
+/* ── NAV OVERRIDE: green on error pages ── */
+.desktop-nav {
+  background: rgba(0,107,63,0.97) !important;
+  border-bottom-color: rgba(0,77,45,0.6) !important;
+}
+.nav-logo { color: #fff !important; }
+.nav-logo span { color: var(--gold) !important; }
+.nav-links a { color: rgba(255,255,255,0.82) !important; }
+.nav-links a:hover { color: #fff !important; background: rgba(255,255,255,0.12) !important; }
+.nav-links a.active { color: #fff !important; }
+.nav-cta { background: rgba(255,255,255,0.18) !important; color: #fff !important; }
+.nav-cta:hover { background: rgba(255,255,255,0.28) !important; }
 
-    /* ── MOBILE NAV SYSTEM ──────────────────────────────── */
+/* ── PAGE LAYOUT ── */
+.error-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:88px 24px 40px;background:#F7F5F0}
+.card{text-align:center;max-width:480px;width:100%}
+.code{font-family:'Syne',sans-serif;font-size:96px;font-weight:800;color:#CE1126;line-height:1;letter-spacing:-4px;margin-bottom:8px}
+.title{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;margin-bottom:12px;color:#111008}
+.sub{font-size:16px;color:#4A4740;font-weight:300;line-height:1.65;margin-bottom:32px}
+.actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-primary{display:inline-block;padding:13px 28px;background:#006B3F;color:white;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;border-radius:10px;text-decoration:none;transition:background .2s}
+.btn-primary:hover{background:#004D2D}
+.btn-ghost{display:inline-block;padding:13px 28px;border:1.5px solid #E8E4DC;color:#4A4740;font-size:15px;border-radius:10px;text-decoration:none;transition:all .2s}
+.btn-ghost:hover{border-color:#006B3F;color:#006B3F}
+.divider{width:48px;height:3px;background:#FCD116;border-radius:2px;margin:20px auto 28px}
+.note{margin-top:28px;font-size:13px;color:#8C8880;font-weight:300}
+.note a{color:#006B3F;text-decoration:none}
 </style>
 {% endblock %}
 
 {% block page_content %}
-<div class="card">
+<div class="error-wrap">
+  <div class="card">
     <div class="code">500</div>
     <div class="divider"></div>
     <div class="title">Something went wrong</div>
@@ -35,4 +47,5 @@
     </div>
     <p class="note">Need help right now? Call us on <a href="tel:+233541057500">0541057500</a></p>
   </div>
+</div>
 {% endblock %}
