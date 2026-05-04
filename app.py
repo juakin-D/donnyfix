@@ -577,7 +577,7 @@ def send_email(to, subject, html_body):
         msg.attach(MIMEText(html_body, 'html'))
         import ssl as _ssl
         _ctx = _ssl.create_default_context()
-        with smtplib.SMTP_SSL(MAIL_HOST, MAIL_PORT,
+        with smtplib.SMTP_SSL(MAIL_HOST, 465,
                               timeout=10,
                               context=_ctx) as s:
             s.login(MAIL_USER, MAIL_PASS)
