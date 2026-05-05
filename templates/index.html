@@ -574,6 +574,43 @@
       border-radius: 6px; padding: 4px 10px;
       font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.4);
     }
+
+    /* ── MOBILE RESPONSIVE ──────────────────────────────── */
+    html { overflow-x: hidden; }
+
+    @media (max-width: 768px) {
+      /* Hero */
+      .hero { padding: 100px 20px 60px; }
+      .hero-inner { grid-template-columns: 1fr; gap: 40px; }
+      .hero-visual { display: none; }
+
+      /* Sections */
+      .section { padding: 60px 20px; }
+      .brands-section { padding: 48px 20px; }
+      .testimonials-section { padding: 60px 20px; }
+      .cta-section { padding: 60px 20px; }
+
+      /* Stats bar */
+      .stats-bar { padding: 28px 20px; }
+      .stats-row { justify-content: center; gap: 20px; }
+
+      /* Steps — 2×2 on tablet */
+      .steps { grid-template-columns: 1fr 1fr; gap: 32px; }
+      .steps::before { display: none; }
+
+      /* Footer */
+      footer { padding: 48px 20px 24px; }
+      .footer-top { grid-template-columns: 1fr 1fr; gap: 28px; }
+    }
+
+    @media (max-width: 480px) {
+      /* Steps — single column on phone */
+      .steps { grid-template-columns: 1fr; }
+
+      /* Footer */
+      .footer-top { grid-template-columns: 1fr; }
+      .footer-bottom { flex-direction: column; align-items: flex-start; }
+    }
 </style>
 {% endblock %}
 
