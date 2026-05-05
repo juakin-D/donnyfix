@@ -80,6 +80,8 @@ BANK_DETAILS = {
     'branch':       os.environ.get('BANK_BRANCH',  ''),
     'sort_code':    os.environ.get('BANK_SORT',    ''),
     'swift':        os.environ.get('BANK_SWIFT',   ''),
+    'momo_number':  os.environ.get('MOMO_NUMBER',  '0554509428'),
+    'momo_name':    os.environ.get('MOMO_NAME',    'DonnyPhonehub Gh Ltd.'),
 }
 
 # ─── CLOUDINARY IMAGE STORAGE ────────────────────────────────────────────────

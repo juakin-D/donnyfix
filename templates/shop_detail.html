@@ -248,8 +248,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--te
           </div>
           <div style="background:#f0fdf4;border-radius:8px;padding:12px;font-size:.82rem;color:#166534;margin-bottom:12px">
             <strong>Send {{ fmt_ghs(deposit) }} to:</strong><br>
-            MoMo Number: <strong>{{ BANK_DETAILS.account_no or '—' }}</strong><br>
-            Name: <strong>{{ BANK_DETAILS.account_name }}</strong>
+            MTN MoMo: <strong>{{ BANK_DETAILS.momo_number }}</strong><br>
+            Name: <strong>{{ BANK_DETAILS.momo_name }}</strong>
           </div>
         </div>
 
