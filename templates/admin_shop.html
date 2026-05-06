@@ -56,6 +56,86 @@ th:last-child,td:last-child{white-space:nowrap}
 .countdown{font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)}
 .countdown.urgent{color:var(--red)}
 
+/* ── ENQUIRY MESSAGE CELL ── */
+.enq-message{font-size:13px;color:var(--text-soft);line-height:1.55;white-space:pre-wrap;max-width:220px}
+.enq-reply-preview{
+  margin-top:8px;padding:8px 10px;
+  background:var(--green-glow);
+  border-left:3px solid var(--green);
+  border-radius:0 6px 6px 0;
+  font-size:12px;color:var(--green);
+  line-height:1.5;white-space:pre-wrap;
+}
+.enq-reply-preview strong{display:block;font-size:11px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:3px;opacity:.7}
+
+/* ── ENQUIRY STATUS BADGES ── */
+.badge.replied{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.3)}
+.badge.new-enq{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.badge.read{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+.enq-replied-meta{font-size:11px;color:var(--text-muted);margin-top:4px;font-family:'DM Mono',monospace}
+
+/* ── REPLY BUTTON ── */
+.btn-reply{background:rgba(59,158,232,.12);border-color:rgba(59,158,232,.3);color:#3B9EE8}
+.btn-reply:hover{background:rgba(59,158,232,.2)}
+.btn-reply.has-reply{background:var(--green-glow);border-color:rgba(0,196,106,.3);color:var(--green)}
+.btn-reply.has-reply:hover{background:rgba(0,196,106,.18)}
+
+/* ── REPLY MODAL ── */
+.reply-modal-enquiry{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px 16px;
+  margin-bottom:16px;
+}
+.reply-modal-enquiry .rme-label{
+  font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--text-muted);margin-bottom:6px;
+}
+.reply-modal-enquiry .rme-device{
+  font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;
+}
+.reply-modal-enquiry .rme-message{
+  font-size:13px;color:var(--text-soft);line-height:1.6;
+  white-space:pre-wrap;max-height:80px;overflow-y:auto;
+}
+.reply-textarea{
+  width:100%;min-height:120px;
+  padding:12px 14px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;color:var(--text);
+  resize:vertical;outline:none;
+  transition:border-color .15s;
+  line-height:1.6;
+}
+.reply-textarea:focus{border-color:var(--green)}
+.reply-textarea::placeholder{color:var(--text-muted)}
+.reply-hint{font-size:12px;color:var(--text-muted);margin:6px 0 16px;display:flex;align-items:center;gap:5px}
+.reply-actions{display:flex;gap:10px}
+.reply-send-btn{
+  flex:1;padding:10px;
+  background:var(--green-glow);
+  border:1px solid rgba(0,196,106,.25);
+  border-radius:8px;
+  color:var(--green);
+  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
+  cursor:pointer;transition:background .15s;
+}
+.reply-send-btn:hover{background:rgba(0,196,106,.2)}
+.reply-cancel-btn{
+  padding:10px 18px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  color:var(--text-muted);
+  font-family:'DM Sans',sans-serif;font-size:14px;
+  cursor:pointer;transition:background .15s;
+}
+.reply-cancel-btn:hover{background:var(--border);color:var(--text)}
+
 @media(max-width:1100px){.stats-row{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){.stats-row{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -244,24 +324,27 @@ th:last-child,td:last-child{white-space:nowrap}
                   </td>
                   <td style="font-weight:600">{{ e.device_type }}</td>
                   <td>{{ e.budget or '—' }}</td>
-                  <td style="max-width:200px;font-size:.83rem;color:var(--muted)">
-                    <div style="white-space:pre-wrap;">{{ e.message }}</div>
+                  <td>
+                    <div class="enq-message">{{ e.message }}</div>
                     {% if e.response_message %}
-                      <div style="margin-top:6px;padding:6px 10px;background:var(--green-glow);border-radius:6px;font-size:.78rem;color:var(--green);white-space:pre-wrap;">
-                        <strong>Reply:</strong> {{ e.response_message }}
+                      <div class="enq-reply-preview">
+                        <strong>Reply</strong>{{ e.response_message }}
                       </div>
                     {% endif %}
                   </td>
                   <td>
                     {% if e.status == 'Replied' %}
-                      <span class="badge" style="background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.3)">✓ Replied</span>
+                      <span class="badge replied">✓ Replied</span>
                       {% if e.replied_at %}
-                        <div style="font-size:.72rem;color:var(--muted);margin-top:3px;">{{ e.replied_at.strftime('%d %b, %H:%M') }}</div>
+                        <div class="enq-replied-meta">{{ e.replied_at.strftime('%d %b, %H:%M') }}</div>
+                      {% endif %}
+                      {% if e.replied_by %}
+                        <div class="enq-replied-meta">by {{ e.replied_by }}</div>
                       {% endif %}
                     {% elif e.status == 'New' %}
-                      <span class="badge pending">New</span>
+                      <span class="badge new-enq">New</span>
                     {% else %}
-                      <span class="badge" style="background:rgba(122,143,128,.1);color:var(--muted)">{{ e.status }}</span>
+                      <span class="badge read">{{ e.status }}</span>
                     {% endif %}
                   </td>
                   <td style="font-size:.8rem;color:var(--muted)">
@@ -270,9 +353,9 @@ th:last-child,td:last-child{white-space:nowrap}
                   <td>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
                       {% if has_permission('edit_inventory') %}
-                        <button class="btn btn-confirm"
+                        <button class="btn btn-reply {% if e.response_message %}has-reply{% endif %}"
                           onclick="openReplyModal({{ e.id }}, {{ e.customer_name|tojson }}, {{ e.customer_email|tojson }}, {{ e.device_type|tojson }}, {{ e.message|tojson }}, {{ (e.response_message or '')|tojson }})">
-                          ✉ Reply
+                          {% if e.response_message %}✓ Edit Reply{% else %}✉ Reply{% endif %}
                         </button>
                       {% endif %}
                       {% if has_permission('delete_inventory') %}
@@ -298,23 +381,26 @@ th:last-child,td:last-child{white-space:nowrap}
 
     <!-- REPLY MODAL -->
     <div id="reply-modal" class="notes-modal">
-      <div class="notes-modal-box" style="max-width:500px;">
+      <div class="notes-modal-box" style="max-width:500px;width:92%;">
         <div class="notes-modal-head">
-          <div id="reply-modal-title" class="notes-modal-title">Reply to Enquiry</div>
+          <div id="reply-modal-title" class="notes-modal-title">✉ Reply to Enquiry</div>
           <button class="notes-modal-close" onclick="closeReplyModal()">×</button>
         </div>
-        <div id="reply-modal-enquiry" style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--text-soft);line-height:1.6;white-space:pre-wrap;"></div>
+        <div class="reply-modal-enquiry">
+          <div class="rme-label">Customer's Enquiry</div>
+          <div id="reply-modal-device" class="rme-device"></div>
+          <div id="reply-modal-enquiry" class="rme-message"></div>
+        </div>
         <form id="reply-form" method="POST">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <textarea name="response_message" id="reply-textarea"
-            placeholder="Type your reply here…"
-            style="width:100%;min-height:130px;padding:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);resize:vertical;outline:none;"
+            class="reply-textarea"
+            placeholder="Type your reply to the customer…"
             required></textarea>
-          <p style="font-size:12px;color:var(--text-muted);margin:8px 0 16px;">This will be emailed to the customer.</p>
-          <div style="display:flex;gap:10px;">
-            <button type="submit" class="notes-modal-btn" style="flex:1;">Send Reply</button>
-            <button type="button" class="notes-modal-btn" onclick="closeReplyModal()"
-              style="flex:0 0 auto;width:auto;padding:10px 20px;background:var(--surface2);border-color:var(--border2);color:var(--text-muted);">Cancel</button>
+          <div class="reply-hint">📧 This will be emailed to the customer immediately.</div>
+          <div class="reply-actions">
+            <button type="submit" class="reply-send-btn">Send Reply</button>
+            <button type="button" class="reply-cancel-btn" onclick="closeReplyModal()">Cancel</button>
           </div>
         </form>
       </div>
@@ -339,11 +425,13 @@ if (window.location.hash === '#tab-enquiries') {
 
 // Reply modal
 function openReplyModal(id, name, email, device, message, existing) {
-  document.getElementById('reply-modal-title').textContent = 'Reply to ' + name + ' (' + email + ')';
-  document.getElementById('reply-modal-enquiry').textContent = 'Device: ' + device + '\n\n' + message;
+  document.getElementById('reply-modal-title').textContent = '✉ Reply to ' + name;
+  document.getElementById('reply-modal-device').textContent = 'Device wanted: ' + device;
+  document.getElementById('reply-modal-enquiry').textContent = message;
   document.getElementById('reply-textarea').value = existing || '';
   document.getElementById('reply-form').action = '/admin/shop/enquiries/' + id + '/reply';
   document.getElementById('reply-modal').classList.add('open');
+  setTimeout(function(){ document.getElementById('reply-textarea').focus(); }, 100);
 }
 function closeReplyModal() {
   document.getElementById('reply-modal').classList.remove('open');
