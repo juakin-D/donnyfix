@@ -229,7 +229,7 @@ th:last-child,td:last-child{white-space:nowrap}
               <th>Message</th>
               <th>Status</th>
               <th>Date</th>
-              {% if has_permission('delete_inventory') %}<th>Actions</th>{% endif %}
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -244,9 +244,21 @@ th:last-child,td:last-child{white-space:nowrap}
                   </td>
                   <td style="font-weight:600">{{ e.device_type }}</td>
                   <td>{{ e.budget or '—' }}</td>
-                  <td style="max-width:220px;white-space:pre-wrap;font-size:.83rem;color:var(--muted)">{{ e.message }}</td>
+                  <td style="max-width:200px;font-size:.83rem;color:var(--muted)">
+                    <div style="white-space:pre-wrap;">{{ e.message }}</div>
+                    {% if e.response_message %}
+                      <div style="margin-top:6px;padding:6px 10px;background:var(--green-glow);border-radius:6px;font-size:.78rem;color:var(--green);white-space:pre-wrap;">
+                        <strong>Reply:</strong> {{ e.response_message }}
+                      </div>
+                    {% endif %}
+                  </td>
                   <td>
-                    {% if e.status == 'New' %}
+                    {% if e.status == 'Replied' %}
+                      <span class="badge" style="background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.3)">✓ Replied</span>
+                      {% if e.replied_at %}
+                        <div style="font-size:.72rem;color:var(--muted);margin-top:3px;">{{ e.replied_at.strftime('%d %b, %H:%M') }}</div>
+                      {% endif %}
+                    {% elif e.status == 'New' %}
                       <span class="badge pending">New</span>
                     {% else %}
                       <span class="badge" style="background:rgba(122,143,128,.1);color:var(--muted)">{{ e.status }}</span>
@@ -255,24 +267,56 @@ th:last-child,td:last-child{white-space:nowrap}
                   <td style="font-size:.8rem;color:var(--muted)">
                     {{ e.created_at.strftime('%d %b %Y') if e.created_at else '—' }}
                   </td>
-                  {% if has_permission('delete_inventory') %}
                   <td>
-                    <form method="POST" action="/admin/shop/enquiries/{{ e.id }}/delete"
-                          data-confirm="Delete this enquiry?">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button class="btn btn-delete" type="submit">Delete</button>
-                    </form>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                      {% if has_permission('edit_inventory') %}
+                        <button class="btn btn-confirm"
+                          onclick="openReplyModal({{ e.id }}, {{ e.customer_name|tojson }}, {{ e.customer_email|tojson }}, {{ e.device_type|tojson }}, {{ e.message|tojson }}, {{ (e.response_message or '')|tojson }})">
+                          ✉ Reply
+                        </button>
+                      {% endif %}
+                      {% if has_permission('delete_inventory') %}
+                        <form method="POST" action="/admin/shop/enquiries/{{ e.id }}/delete"
+                              data-confirm="Delete this enquiry?">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <button class="btn btn-delete" type="submit">Delete</button>
+                        </form>
+                      {% endif %}
+                    </div>
                   </td>
-                  {% endif %}
                 </tr>
               {% endfor %}
             {% else %}
               <tr class="empty-row">
-                <td colspan="{% if has_permission('delete_inventory') %}8{% else %}7{% endif %}">No enquiries yet</td>
+                <td colspan="8">No enquiries yet</td>
               </tr>
             {% endif %}
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- REPLY MODAL -->
+    <div id="reply-modal" class="notes-modal">
+      <div class="notes-modal-box" style="max-width:500px;">
+        <div class="notes-modal-head">
+          <div id="reply-modal-title" class="notes-modal-title">Reply to Enquiry</div>
+          <button class="notes-modal-close" onclick="closeReplyModal()">×</button>
+        </div>
+        <div id="reply-modal-enquiry" style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--text-soft);line-height:1.6;white-space:pre-wrap;"></div>
+        <form id="reply-form" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <textarea name="response_message" id="reply-textarea"
+            placeholder="Type your reply here…"
+            style="width:100%;min-height:130px;padding:12px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);resize:vertical;outline:none;"
+            required></textarea>
+          <p style="font-size:12px;color:var(--text-muted);margin:8px 0 16px;">This will be emailed to the customer.</p>
+          <div style="display:flex;gap:10px;">
+            <button type="submit" class="notes-modal-btn" style="flex:1;">Send Reply</button>
+            <button type="button" class="notes-modal-btn" onclick="closeReplyModal()"
+              style="flex:0 0 auto;width:auto;padding:10px 20px;background:var(--surface2);border-color:var(--border2);color:var(--text-muted);">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
 {% endblock %}
@@ -287,6 +331,27 @@ function showTab(id, btn){
 }
 document.getElementById('tab-btn-reservations').addEventListener('click', function(){ showTab('reservations', this); });
 document.getElementById('tab-btn-enquiries').addEventListener('click', function(){ showTab('enquiries', this); });
+
+// Auto-open enquiries tab if URL hash says so
+if (window.location.hash === '#tab-enquiries') {
+  showTab('enquiries', document.getElementById('tab-btn-enquiries'));
+}
+
+// Reply modal
+function openReplyModal(id, name, email, device, message, existing) {
+  document.getElementById('reply-modal-title').textContent = 'Reply to ' + name + ' (' + email + ')';
+  document.getElementById('reply-modal-enquiry').textContent = 'Device: ' + device + '\n\n' + message;
+  document.getElementById('reply-textarea').value = existing || '';
+  document.getElementById('reply-form').action = '/admin/shop/enquiries/' + id + '/reply';
+  document.getElementById('reply-modal').classList.add('open');
+}
+function closeReplyModal() {
+  document.getElementById('reply-modal').classList.remove('open');
+}
+document.getElementById('reply-modal').addEventListener('click', function(e){
+  if (e.target === this) closeReplyModal();
+});
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeReplyModal(); });
 
 // Admin countdown timers
 document.querySelectorAll('.countdown[data-expires]').forEach(function(el){

@@ -411,6 +411,16 @@ def init_db():
         created_at      TIMESTAMP DEFAULT NOW(),
         FOREIGN KEY (customer_id) REFERENCES customers(id)
     )""")
+    # Migration: add reply columns if they don't exist yet
+    for col, defn in [
+        ('response_message', 'TEXT'),
+        ('replied_at',       'TIMESTAMP'),
+        ('replied_by',       'TEXT'),
+    ]:
+        try:
+            conn.execute(f'ALTER TABLE device_enquiries ADD COLUMN {col} {defn}')
+        except Exception:
+            conn.rollback()
 
     conn.commit()
     conn.close()
@@ -3084,6 +3094,81 @@ def admin_shop_complete(res_id):
     conn.close()
     flash('Sale completed. Device marked as sold.', 'success')
     return redirect(url_for('admin_shop'))
+
+
+@app.route('/admin/shop/enquiries/<int:enq_id>/reply', methods=['POST'])
+@admin_required
+def admin_shop_enquiry_reply(enq_id):
+    if not has_permission('edit_inventory'):
+        flash('You do not have permission to reply to enquiries.', 'error')
+        return redirect(url_for('admin_shop'))
+
+    response_message = request.form.get('response_message', '').strip()
+    if not response_message:
+        flash('Reply message cannot be empty.', 'error')
+        return redirect(url_for('admin_shop') + '#tab-enquiries')
+
+    conn = get_db()
+    enq = conn.execute('SELECT * FROM device_enquiries WHERE id=%s', (enq_id,)).fetchone()
+    if not enq:
+        conn.close()
+        flash('Enquiry not found.', 'error')
+        return redirect(url_for('admin_shop'))
+
+    admin_name = session.get('admin_name', session.get('admin_username', 'Admin'))
+    conn.execute(
+        """UPDATE device_enquiries
+           SET status='Replied', response_message=%s, replied_at=NOW(), replied_by=%s
+           WHERE id=%s""",
+        (response_message, admin_name, enq_id)
+    )
+    conn.commit()
+    conn.close()
+
+    # Email the customer
+    html_body = f"""
+    <div style="font-family:'DM Sans',Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #E8E4DC;">
+      <div style="background:#006B3F;padding:28px 32px;">
+        <div style="font-family:'Syne',Arial,sans-serif;font-size:20px;font-weight:800;color:#fff;">
+          Donny<span style="color:#FCD116;">Phonehub</span> Gh
+        </div>
+      </div>
+      <div style="padding:32px;">
+        <h2 style="font-family:'Syne',Arial,sans-serif;font-size:20px;font-weight:700;color:#111008;margin:0 0 8px;">
+          We've replied to your enquiry
+        </h2>
+        <p style="color:#4A4740;font-size:15px;line-height:1.6;margin:0 0 24px;">
+          Hi {enq['customer_name']}, here's our response to your device enquiry.
+        </p>
+
+        <div style="background:#F7F5F0;border-radius:10px;padding:18px 20px;margin-bottom:24px;">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8C8880;margin-bottom:8px;">Your Enquiry</div>
+          <div style="font-size:14px;color:#4A4740;font-weight:600;margin-bottom:4px;">Device: {enq['device_type']}</div>
+          <div style="font-size:14px;color:#4A4740;white-space:pre-wrap;">{enq['message']}</div>
+        </div>
+
+        <div style="background:#D1FAE5;border-left:4px solid #006B3F;border-radius:0 10px 10px 0;padding:18px 20px;margin-bottom:28px;">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#065F46;margin-bottom:8px;">Our Response</div>
+          <div style="font-size:15px;color:#065F46;white-space:pre-wrap;line-height:1.65;">{response_message}</div>
+        </div>
+
+        <p style="font-size:14px;color:#4A4740;line-height:1.6;">
+          Have more questions? Call us on <a href="tel:+233541057500" style="color:#006B3F;font-weight:600;">0541 057 500</a>
+          or reply to this email.
+        </p>
+      </div>
+      <div style="background:#F7F5F0;padding:20px 32px;text-align:center;font-size:13px;color:#8C8880;">
+        &copy; 2026 DonnyPhonehub Gh Ltd. &mdash; Osu Oxford Street, Accra
+      </div>
+    </div>
+    """
+    sent = send_email(enq['customer_email'], f"Re: Your Device Enquiry — DonnyPhonehub Gh", html_body)
+    if sent:
+        flash(f"Reply sent to {enq['customer_name']} ({enq['customer_email']}).", 'success')
+    else:
+        flash('Reply saved but email could not be sent — check mail settings.', 'warning')
+
+    return redirect(url_for('admin_shop') + '#tab-enquiries')
 
 
 @app.route('/admin/shop/enquiries/<int:enq_id>/delete', methods=['POST'])
