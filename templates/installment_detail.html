@@ -12,17 +12,17 @@
     }
     body{font-family:'DM Sans',sans-serif;background:var(--off-white);color:var(--text);min-height:100vh}
 
-    nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:68px;background:rgba(247,245,240,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--warm-gray)}
-    .nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--green);text-decoration:none}
-    .nav-logo span{color:var(--gold)}
-    .nav-right{display:flex;align-items:center;gap:8px}
-    .nav-right a{color:var(--text-soft);text-decoration:none;font-size:14px;padding:8px 14px;border-radius:8px;transition:all .2s}
-    .nav-right a:hover{background:var(--warm-gray);color:var(--text)}
-    .nav-right a.cta{background:var(--green);color:white;font-weight:500}
-    .nav-cta{background:var(--green)!important;color:#fff!important;font-weight:500!important;padding:9px 20px!important}
-    .nav-cta:hover{background:var(--green-dark)!important}
+    /* ── NAV OVERRIDE ── */
+    .desktop-nav{background:rgba(0,107,63,.97)!important;border-bottom-color:rgba(0,77,45,.6)!important}
+    .nav-logo{color:#fff!important}
+    .nav-logo span{color:var(--gold)!important}
+    .nav-links a{color:rgba(255,255,255,.82)!important}
+    .nav-links a:hover{color:#fff!important;background:rgba(255,255,255,.12)!important}
+    .nav-links a.active{color:#fff!important}
+    .nav-cta{background:rgba(255,255,255,.18)!important;color:#fff!important}
+    .nav-cta:hover{background:rgba(255,255,255,.28)!important}
 
-    .page{max-width:800px;margin:0 auto;padding:48px 48px 80px}
+    .page{max-width:800px;margin:0 auto;padding:88px 24px 80px}
 
     .breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mid-gray);margin-bottom:20px}
     .breadcrumb a{color:var(--mid-gray);text-decoration:none}
@@ -113,15 +113,26 @@
     .flash.success{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
     .flash.error{background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5}
 
+    /* ── TABLE OVERFLOW ── */
+    .history-card .table-wrap{overflow-x:auto}
+    table{min-width:420px}
+
     @media(max-width:640px){
-      .page{padding:28px 20px 60px}
-      .detail-grid{grid-template-columns:1fr}
-      .ph-amounts{grid-template-columns:1fr 1fr}
+      .page{padding:88px 16px 60px}
       .plan-hero{padding:20px}
+      .ph-top{flex-direction:column;gap:10px}
+      .ph-amounts{grid-template-columns:1fr 1fr}
+      .ph-amount-val{font-size:16px}
+      .detail-grid{grid-template-columns:1fr}
+      .tc-grid{grid-template-columns:1fr}
+      .action-card{flex-direction:column;align-items:flex-start}
+      .action-card .ac-btn{width:100%;text-align:center}
     }
     /* ── MOBILE NAV SYSTEM ──────────────────────────────── */
 </style>
 {% endblock %}
+
+{% block flashes %}{% endblock %}
 
 {% block page_content %}
 <div class="page">
@@ -131,7 +142,13 @@
       <span>Plan #{{ plan['id'] }}</span>
     </div>
 
-    
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}
+        <div class="flash {{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+
 
     <!-- HERO CARD -->
     <div class="plan-hero">
@@ -238,6 +255,7 @@
         <div class="history-count">{{ payments|length }} payment{% if payments|length != 1 %}s{% endif %} · {{ fmt_ghs(paid_total) }} paid</div>
       </div>
       {% if payments %}
+      <div class="table-wrap">
       <table>
         <thead>
           <tr>
@@ -258,6 +276,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
       {% else %}
       <div class="no-payments">No payments recorded yet. Your first payment is due on {{ plan['next_due_date'] }}.</div>
       {% endif %}
