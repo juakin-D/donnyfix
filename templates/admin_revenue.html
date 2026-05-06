@@ -2,9 +2,14 @@
 
 {% block head_extra %}
 <style>
-/* ── STAT CARD BLUE ── */
+/* ── STAT CARD OVERRIDES ── */
 .stat-card.blue::before{background:#3B9EE8}
 .stat-card.blue .stat-value{color:#3B9EE8}
+/* Shrink value text so GHS amounts fit without wrapping */
+.stat-value{font-size:20px!important}
+.stat-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Mini stat value */
+.mini-value{font-size:18px}
 
 /* ── EXPORT BTN ── */
 .export-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-size:13px;font-family:'DM Sans',sans-serif;text-decoration:none;transition:all .15s}
