@@ -1796,7 +1796,7 @@ def send_payment_reminders():
     if not ARKESEL_API_KEY:
         flash(f'SMS not configured — set ARKESEL_API_KEY env var. Would have sent {total} reminder(s).', 'error')
     else:
-        flash(f'Sent {sent} SMS reminder(s). {skipped} failed (check AT_API_KEY / phone numbers).', 'success')
+        flash(f'Sent {sent} SMS reminder(s). {skipped} failed (check ARKESEL_API_KEY / phone numbers).', 'success')
     return redirect(url_for('admin_installments'))
 
 
