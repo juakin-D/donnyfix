@@ -66,6 +66,23 @@ th:last-child,td:last-child{white-space:nowrap}
 .act-btn.plan-active  {background:var(--green-glow);border-color:rgba(0,196,106,.3);color:var(--green)}
 .act-btn.plan-paused  {background:var(--amber-dim);border-color:rgba(245,158,11,.3);color:var(--amber)}
 .act-btn.plan-defaulted{background:var(--red-dim);border-color:rgba(232,64,64,.3);color:var(--red)}
+
+/* ── MESSAGE BUTTON ── */
+.act-btn.msg{background:rgba(59,158,232,.12);border-color:rgba(59,158,232,.3);color:#3B9EE8}
+.act-btn.msg:hover{background:rgba(59,158,232,.2)}
+
+/* ── MESSAGE MODAL ── */
+.msg-modal-customer{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text-soft)}
+.msg-modal-customer strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px}
+.msg-input,.msg-textarea{width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s;margin-bottom:14px;box-sizing:border-box}
+.msg-input:focus,.msg-textarea:focus{border-color:rgba(59,158,232,.5)}
+.msg-textarea{resize:vertical;min-height:120px;line-height:1.6}
+.msg-label{display:block;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:6px}
+.msg-actions{display:flex;gap:10px;margin-top:4px}
+.msg-send-btn{flex:1;padding:11px;background:rgba(59,158,232,.15);border:1px solid rgba(59,158,232,.35);border-radius:9px;color:#3B9EE8;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s}
+.msg-send-btn:hover{background:rgba(59,158,232,.25)}
+.msg-cancel-btn{padding:11px 18px;background:transparent;border:1px solid var(--border);border-radius:9px;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:all .15s}
+.msg-cancel-btn:hover{background:var(--surface2);color:var(--text)}
 </style>
 {% endblock %}
 
@@ -189,6 +206,11 @@ th:last-child,td:last-child{white-space:nowrap}
                       {% if m.plan_status == 'Active' %}● Plan{% elif m.plan_status == 'Paused' %}⏸ Plan{% else %}✕ Plan{% endif %}
                     </button>
                     {% endif %}
+                    <button class="act-btn msg open-msg-modal"
+                        data-id="{{ m.id }}"
+                        data-name="{{ m.name }}"
+                        data-email="{{ m.email }}"
+                        title="Send message to {{ m.name }}">✉ Message</button>
                     <button class="act-btn edit open-member-modal"
                         data-id="{{ m.id }}"
                         data-name="{{ m.name }}"
@@ -271,6 +293,33 @@ th:last-child,td:last-child{white-space:nowrap}
         </div>
       </div>
 
+      <!-- MESSAGE MODAL -->
+      <div class="modal-overlay" id="msg-modal">
+        <div class="modal" style="max-width:460px">
+          <div class="modal-head">
+            <div class="modal-title">✉ Send Message</div>
+            <button class="modal-close" type="button" id="msg-modal-close">×</button>
+          </div>
+          <div class="msg-modal-customer">
+            <strong id="msg-customer-name"></strong>
+            <span id="msg-customer-email"></span>
+          </div>
+          <form method="POST" id="msg-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="msg-label">Subject</label>
+            <input class="msg-input" type="text" name="subject" id="msg-subject"
+                   placeholder="e.g. Your membership, Special offer…" required/>
+            <label class="msg-label">Message</label>
+            <textarea class="msg-textarea" name="body" id="msg-body"
+                      placeholder="Type your message to the customer…" required></textarea>
+            <div class="msg-actions">
+              <button type="submit" class="msg-send-btn">Send Message</button>
+              <button type="button" class="msg-cancel-btn" onclick="closeMsgModal()">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <!-- PLAN STATUS MODAL -->
       <div class="modal-overlay" id="plan-modal">
         <div class="modal">
@@ -338,6 +387,23 @@ th:last-child,td:last-child{white-space:nowrap}
       document.getElementById('member-modal').classList.remove('open');
     }
 
+    // Message modal
+    function openMsgModal(btn) {
+      var id    = btn.dataset.id;
+      var name  = btn.dataset.name;
+      var email = btn.dataset.email;
+      document.getElementById('msg-form').action = '/admin/members/' + id + '/message';
+      document.getElementById('msg-customer-name').textContent  = name;
+      document.getElementById('msg-customer-email').textContent = email;
+      document.getElementById('msg-subject').value = '';
+      document.getElementById('msg-body').value    = '';
+      document.getElementById('msg-modal').classList.add('open');
+      setTimeout(function(){ document.getElementById('msg-subject').focus(); }, 100);
+    }
+    function closeMsgModal() {
+      document.getElementById('msg-modal').classList.remove('open');
+    }
+
     // Event delegation replacing onclick handlers
     document.querySelectorAll('.open-plan-modal').forEach(function(btn) {
       btn.addEventListener('click', function() { openPlanModal(this); });
@@ -345,17 +411,22 @@ th:last-child,td:last-child{white-space:nowrap}
     document.querySelectorAll('.open-member-modal').forEach(function(btn) {
       btn.addEventListener('click', function() { openMemberModal(this); });
     });
+    document.querySelectorAll('.open-msg-modal').forEach(function(btn) {
+      btn.addEventListener('click', function() { openMsgModal(this); });
+    });
 
     // Close buttons
     document.getElementById('member-modal-close').addEventListener('click', closeMemberModal);
     document.getElementById('plan-modal-close').addEventListener('click', closePlanModal);
+    document.getElementById('msg-modal-close').addEventListener('click', closeMsgModal);
 
     // Overlay click-to-close
     document.getElementById('member-modal').addEventListener('click', function(e) { if (e.target === this) closeMemberModal(); });
     document.getElementById('plan-modal').addEventListener('click', function(e) { if (e.target === this) closePlanModal(); });
+    document.getElementById('msg-modal').addEventListener('click', function(e) { if (e.target === this) closeMsgModal(); });
 
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') { closeMemberModal(); closePlanModal(); }
+      if (e.key === 'Escape') { closeMemberModal(); closePlanModal(); closeMsgModal(); }
     });
   </script>
 {% endblock %}

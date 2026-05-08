@@ -2017,6 +2017,75 @@ def extend_membership(customer_id):
     return redirect(url_for('admin_members'))
 
 
+@app.route('/admin/members/<int:customer_id>/message', methods=['POST'])
+@admin_required
+def admin_member_message(customer_id):
+    import html as _html
+    if not has_permission('edit_members'):
+        flash('You do not have permission to message members.', 'error')
+        return redirect(url_for('admin_members'))
+
+    subject = request.form.get('subject', '').strip()
+    body    = request.form.get('body', '').strip()
+    if not subject or not body:
+        flash('Subject and message are required.', 'error')
+        return redirect(url_for('admin_members'))
+
+    conn = get_db()
+    try:
+        customer = conn.execute(
+            'SELECT name, email FROM customers WHERE id=%s', (customer_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not customer:
+        flash('Customer not found.', 'error')
+        return redirect(url_for('admin_members'))
+
+    customer_email = (customer['email'] or '').strip()
+    if not customer_email:
+        flash(f'No email on record for {customer["name"]}.', 'warning')
+        return redirect(url_for('admin_members'))
+
+    safe_name = _html.escape(customer['name'] or '')
+    safe_body = _html.escape(body).replace('\n', '<br>')
+
+    html_body = f"""
+    <div style="font-family:'DM Sans',Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #E8E4DC;">
+      <div style="background:#006B3F;padding:28px 32px;">
+        <div style="font-family:'Syne',Arial,sans-serif;font-size:20px;font-weight:800;color:#fff;">
+          Donny<span style="color:#FCD116;">Phonehub</span> Gh
+        </div>
+      </div>
+      <div style="padding:32px;">
+        <p style="color:#4A4740;font-size:15px;line-height:1.6;margin:0 0 20px;">
+          Hi {safe_name},
+        </p>
+        <div style="font-size:15px;color:#111008;line-height:1.7;">
+          {safe_body}
+        </div>
+        <p style="font-size:14px;color:#4A4740;line-height:1.6;margin-top:28px;">
+          Questions? Call us on
+          <a href="tel:+233541057500" style="color:#006B3F;font-weight:600;">0541 057 500</a>
+          or reply to this email.
+        </p>
+      </div>
+      <div style="background:#F7F5F0;padding:20px 32px;text-align:center;font-size:13px;color:#8C8880;">
+        &copy; 2026 DonnyPhonehub Gh Ltd. &mdash; Tamale, Northern Region, Ghana
+      </div>
+    </div>
+    """
+    sent = send_email(customer_email, subject, html_body)
+    if sent:
+        logger.info('Admin %s messaged member #%d (%s)', session.get('admin_username'), customer_id, customer_email)
+        flash(f'Message sent to {customer["name"]} ({customer_email}).', 'success')
+    else:
+        flash('Could not send email — check MAIL_USER / MAIL_PASS settings.', 'warning')
+
+    return redirect(url_for('admin_members'))
+
+
 # ─── INVENTORY ROUTES ─────────────────────────────────────────────────────────
 
 INVENTORY_CONDITIONS = ('New', 'Certified Pre-Owned', 'Good', 'Fair')
