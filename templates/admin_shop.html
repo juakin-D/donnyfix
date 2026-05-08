@@ -336,7 +336,7 @@ th:last-child,td:last-child{white-space:nowrap}
                     {% if e.status == 'Replied' %}
                       <span class="badge replied">✓ Replied</span>
                       {% if e.replied_at %}
-                        <div class="enq-replied-meta">{{ e.replied_at.strftime('%d %b, %H:%M') }}</div>
+                        <div class="enq-replied-meta">{{ e.replied_at | string | truncate(16, False, '') }}</div>
                       {% endif %}
                       {% if e.replied_by %}
                         <div class="enq-replied-meta">by {{ e.replied_by }}</div>
@@ -353,8 +353,13 @@ th:last-child,td:last-child{white-space:nowrap}
                   <td>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
                       {% if has_permission('edit_inventory') %}
-                        <button class="btn btn-reply {% if e.response_message %}has-reply{% endif %}"
-                          onclick="openReplyModal({{ e.id }}, {{ e.customer_name|tojson }}, {{ e.customer_email|tojson }}, {{ e.device_type|tojson }}, {{ e.message|tojson }}, {{ (e.response_message or '')|tojson }})">
+                        <button class="btn btn-reply open-reply-modal {% if e.response_message %}has-reply{% endif %}"
+                          data-id="{{ e.id }}"
+                          data-name="{{ e.customer_name | e }}"
+                          data-email="{{ e.customer_email | e }}"
+                          data-device="{{ e.device_type | e }}"
+                          data-message="{{ e.message | e }}"
+                          data-existing="{{ (e.response_message or '') | e }}">
                           {% if e.response_message %}✓ Edit Reply{% else %}✉ Reply{% endif %}
                         </button>
                       {% endif %}
@@ -424,11 +429,16 @@ if (window.location.hash === '#tab-enquiries') {
 }
 
 // Reply modal
-function openReplyModal(id, name, email, device, message, existing) {
-  document.getElementById('reply-modal-title').textContent = '✉ Reply to ' + name;
-  document.getElementById('reply-modal-device').textContent = 'Device wanted: ' + device;
-  document.getElementById('reply-modal-enquiry').textContent = message;
-  document.getElementById('reply-textarea').value = existing || '';
+function openReplyModal(btn) {
+  var id       = btn.dataset.id;
+  var name     = btn.dataset.name;
+  var device   = btn.dataset.device;
+  var message  = btn.dataset.message;
+  var existing = btn.dataset.existing || '';
+  document.getElementById('reply-modal-title').textContent    = '✉ Reply to ' + name;
+  document.getElementById('reply-modal-device').textContent   = 'Device wanted: ' + device;
+  document.getElementById('reply-modal-enquiry').textContent  = message;
+  document.getElementById('reply-textarea').value             = existing;
   document.getElementById('reply-form').action = '/admin/shop/enquiries/' + id + '/reply';
   document.getElementById('reply-modal').classList.add('open');
   setTimeout(function(){ document.getElementById('reply-textarea').focus(); }, 100);
@@ -436,6 +446,9 @@ function openReplyModal(id, name, email, device, message, existing) {
 function closeReplyModal() {
   document.getElementById('reply-modal').classList.remove('open');
 }
+document.querySelectorAll('.open-reply-modal').forEach(function(btn) {
+  btn.addEventListener('click', function() { openReplyModal(this); });
+});
 document.getElementById('reply-modal').addEventListener('click', function(e){
   if (e.target === this) closeReplyModal();
 });
