@@ -605,7 +605,7 @@ def send_email(to, subject, html_body):
 # ─── SMS (Arkesel) ────────────────────────────────────────────────────────────
 
 ARKESEL_API_KEY  = os.environ.get('ARKESEL_API_KEY', '')
-ARKESEL_SENDER   = os.environ.get('ARKESEL_SENDER_ID', 'PhoneHub')
+ARKESEL_SENDER   = os.environ.get('ARKESEL_SENDER_ID', 'DonnyPhonehub')
 
 
 def _normalize_gh_phone(phone):
@@ -789,7 +789,7 @@ def generate_payment_receipt_pdf(plan, payment, customer_name):
     ]))
     story.append(Spacer(1, 12*mm))
     story.append(HRFlowable(width='100%', thickness=1.5, color=_C_GOLD, spaceAfter=6))
-    story.append(Paragraph('This receipt confirms your installment payment. Thank you for being a PhoneHub member.',
+    story.append(Paragraph('This receipt confirms your installment payment. Thank you for being a DonnyPhonehub Gh member.',
                            ParagraphStyle('ft', parent=styles['Normal'],
                                fontSize=8, textColor=_C_GRAY, alignment=TA_CENTER)))
     doc.build(story)
