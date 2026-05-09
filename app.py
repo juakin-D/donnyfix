@@ -663,7 +663,7 @@ def _pdf_header(styles):
         Paragraph('DonnyPhonehub Gh',
                   ParagraphStyle('ph', parent=styles['Normal'], fontSize=20,
                                  fontName='Helvetica-Bold', textColor=_C_GREEN)),
-        Paragraph('Osu Oxford Street, Accra · 0541057500 · hello@phonehubghana.com',
+        Paragraph('Tamale, Northern Region, Ghana · 0541057500 · hello@phonehubghana.com',
                   ParagraphStyle('phs', parent=styles['Normal'], fontSize=8, textColor=_C_GRAY)),
         Spacer(1, 3*mm),
         HRFlowable(width='100%', thickness=2, color=_C_GOLD, spaceAfter=8),
@@ -957,7 +957,7 @@ def booking():
           <li><b>Service:</b> {_he(service)}</li>
           <li><b>Date:</b> {_he(date)}</li>
         </ul>
-        <p>We'll see you at our Osu Oxford Street location. Call us on 0541057500 with any questions.</p>
+        <p>We'll see you at our Tamale, Northern Region location. Call us on 0541057500 with any questions.</p>
         <p>— DonnyPhonehub Gh Team</p>
         """)
         except Exception as _email_exc:
@@ -1400,7 +1400,7 @@ def update_booking_status(booking_id):
             send_email(booking['email'], 'Your repair is ready — DonnyPhonehub Gh', f"""
         <p>Hi {_he(booking['name'])},</p>
         <p>Great news — your <b>{_he(booking['device'])}</b> ({_he(booking['service'])}) is complete and ready for collection.</p>
-        <p>Visit us at Osu Oxford Street or call 0541057500 to arrange pickup.</p>
+        <p>Visit us at Tamale, Northern Region or call 0541057500 to arrange pickup.</p>
         <p>— DonnyPhonehub Gh Team</p>
         """)
         except Exception as _email_exc:
