@@ -1,0 +1,568 @@
+{% extends "admin_base.html" %}
+
+{% block title %}{{ customer['name'] }} — Member Detail{% endblock %}
+
+{% block topbar_title %}{{ customer['name'] }}{% endblock %}
+
+{% block topbar_subtitle %}Member #{{ customer['id'] }} · Since {{ customer['membership_start'] or 'Unknown' }}{% endblock %}
+
+{% block topbar_right %}
+<a href="/admin/members"
+   style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-size:13px;text-decoration:none;transition:all .15s;"
+   onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'"
+   onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text-soft)'">
+  ← Back to Members
+</a>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+/* ── PROFILE HEADER ── */
+.profile-header{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:24px}
+@media(max-width:900px){.profile-header{flex-direction:column}}
+.ph-left{display:flex;gap:18px;align-items:flex-start}
+.ph-avatar{width:56px;height:56px;border-radius:50%;background:var(--green);color:white;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ph-name{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;margin-bottom:8px}
+.ph-contact{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:6px}
+.ph-contact a{color:var(--text-soft);text-decoration:none;font-size:13px;transition:color .2s}
+.ph-contact a:hover{color:var(--green)}
+.ph-device{font-size:13px;color:var(--text-muted)}
+.ph-right{text-align:right}
+@media(max-width:900px){.ph-right{text-align:left}}
+.ph-membership{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+@media(max-width:900px){.ph-membership{justify-content:flex-start}}
+.ph-tier-badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.tier-active{background:rgba(0,196,106,.15);color:var(--green)}
+.tier-expiring-soon{background:rgba(245,158,11,.15);color:var(--amber)}
+.tier-expired{background:rgba(232,64,64,.15);color:var(--red)}
+.tier-inactive{background:var(--surface2);color:var(--text-muted)}
+.ph-tier-name{font-size:14px;color:#fff;font-weight:600}
+.ph-expiry{font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace}
+.ph-stats-row{display:flex;gap:20px}
+@media(max-width:900px){.ph-stats-row{gap:16px}}
+.ph-stat{text-align:center}
+.ph-stat-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff}
+.ph-stat-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted)}
+
+/* ── QUICK ACTIONS ── */
+.member-actions{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px}
+.ma-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;cursor:pointer;border:1px solid;font-family:'DM Sans',sans-serif;transition:all .2s;background:none;color:inherit}
+.ma-green{border-color:rgba(0,196,106,.3);color:var(--green)}
+.ma-green:hover{background:rgba(0,196,106,.1)}
+.ma-blue{border-color:rgba(59,158,232,.3);color:#3B9EE8}
+.ma-blue:hover{background:rgba(59,158,232,.1)}
+.ma-red{border-color:rgba(232,64,64,.3);color:var(--red)}
+.ma-red:hover{background:rgba(232,64,64,.1)}
+
+/* ── TABS ── */
+.detail-tabs{display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab-btn{background:none;border:none;padding:10px 18px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif;transition:all .2s}
+.tab-btn:hover{color:var(--text-soft)}
+.tab-btn.active{color:var(--green);border-bottom-color:var(--green)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── MINI BADGES ── */
+.mini-badge{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;padding:4px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text-soft)}
+.badge-green{background:rgba(0,196,106,.1);border-color:rgba(0,196,106,.25);color:var(--green)}
+.badge-amber{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25);color:var(--amber)}
+.badge-blue{background:rgba(59,158,232,.1);border-color:rgba(59,158,232,.25);color:#3B9EE8}
+.badge-red{background:rgba(232,64,64,.1);border-color:rgba(232,64,64,.25);color:var(--red)}
+
+/* ── DATA TABLE ── */
+.detail-table{width:100%;border-collapse:collapse;font-size:13px}
+.detail-table thead th{background:var(--surface2);padding:9px 14px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap}
+.detail-table tbody td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text-soft);vertical-align:top}
+.detail-table tbody tr:last-child td{border-bottom:none}
+.detail-table tbody tr:hover td{background:var(--surface2)}
+.detail-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+
+/* ── STATUS BADGES ── */
+.status-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:12px;white-space:nowrap}
+.status-pending{background:rgba(245,158,11,.15);color:var(--amber)}
+.status-in-progress,.status-in_progress{background:rgba(59,158,232,.15);color:#3B9EE8}
+.status-complete,.status-completed{background:rgba(0,196,106,.15);color:var(--green)}
+.status-cancelled,.status-defaulted{background:rgba(232,64,64,.15);color:var(--red)}
+.status-active{background:rgba(0,196,106,.15);color:var(--green)}
+.status-paused{background:rgba(245,158,11,.15);color:var(--amber)}
+.status-confirmed{background:rgba(0,196,106,.15);color:var(--green)}
+.status-expired,.status-inactive{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+
+/* ── STATUS SELECT ── */
+.status-select{font-size:12px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text-soft);font-family:'DM Sans',sans-serif;cursor:pointer;outline:none}
+
+/* ── PLAN CARDS ── */
+.plan-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+.pc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.pc-id{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)}
+.pc-device{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:14px}
+.pc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+@media(max-width:600px){.pc-grid{grid-template-columns:repeat(2,1fr)}}
+.pc-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:2px}
+.pc-value{font-size:15px;font-weight:600;color:#fff}
+.pc-actions{border-top:1px solid var(--border);padding-top:12px}
+.pc-link{font-size:13px;color:var(--green);text-decoration:none}
+.pc-link:hover{text-decoration:underline}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:min(420px,90vw);padding:24px;animation:mpop .18s ease}
+@keyframes mpop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-header h3{font-family:'Syne',sans-serif;font-size:18px;color:#fff;font-weight:700;margin:0}
+.modal-header button{background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;border-radius:6px;transition:background .15s}
+.modal-header button:hover{background:var(--surface2);color:var(--text)}
+.modal-field{margin-bottom:16px}
+.modal-field label{display:block;font-family:'DM Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px}
+.modal-field select,.modal-field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:#fff;padding:10px 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box}
+.modal-field select:focus,.modal-field input:focus{border-color:rgba(0,196,106,.4)}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.modal-actions button{padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.modal-actions button[type="button"]{background:none;border:1px solid var(--border);color:var(--text-soft)}
+.modal-actions button[type="button"]:hover{background:var(--surface2)}
+.modal-submit{background:var(--green)!important;color:#0E1210!important;border:none!important;font-weight:700!important}
+.modal-submit:hover{opacity:.9}
+
+/* ── EMPTY STATE ── */
+.detail-empty{text-align:center;padding:40px 20px;color:var(--text-muted)}
+.detail-empty-icon{font-size:32px;opacity:.4;margin-bottom:10px}
+.detail-empty-text{font-size:14px;color:var(--text-soft)}
+
+/* ── AMOUNT MONO ── */
+.amt{font-family:'DM Mono',monospace;color:var(--green);font-size:13px}
+.mono{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── PROFILE HEADER ── -->
+<div class="profile-header">
+  <div class="ph-left">
+    <div class="ph-avatar">{{ customer['name'][0].upper() }}</div>
+    <div class="ph-info">
+      <h2 class="ph-name">{{ customer['name'] }}</h2>
+      <div class="ph-contact">
+        <a href="tel:{{ customer['phone'] }}">📞 {{ customer['phone'] }}</a>
+        <a href="mailto:{{ customer['email'] }}">✉ {{ customer['email'] }}</a>
+        <a href="https://wa.me/233{{ customer['phone'][1:] }}" target="_blank">💬 WhatsApp</a>
+      </div>
+      <div class="ph-device">
+        {% if customer['device_brand'] %}
+          📱 {{ customer['device_brand'] }} {{ customer['device_model'] or '' }}
+        {% else %}
+          📱 No device registered
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="ph-right">
+    <div class="ph-membership">
+      <span class="ph-tier-badge tier-{{ mem_status|lower|replace(' ','-') }}">{{ mem_status }}</span>
+      <span class="ph-tier-name">{{ customer['membership_tier'] }} Member</span>
+      {% if customer['membership_expiry'] %}
+      <span class="ph-expiry">Expires: {{ customer['membership_expiry'] }}</span>
+      {% endif %}
+    </div>
+    <div class="ph-stats-row">
+      <div class="ph-stat">
+        <div class="ph-stat-val">{{ booking_stats['total'] }}</div>
+        <div class="ph-stat-label">Bookings</div>
+      </div>
+      <div class="ph-stat">
+        <div class="ph-stat-val">{{ plans|length }}</div>
+        <div class="ph-stat-label">Plans</div>
+      </div>
+      <div class="ph-stat">
+        <div class="ph-stat-val">{{ fmt_ghs(total_spent) }}</div>
+        <div class="ph-stat-label">Total Paid</div>
+      </div>
+      <div class="ph-stat">
+        <div class="ph-stat-val">{{ days_as_member }}</div>
+        <div class="ph-stat-label">Days</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── QUICK ACTIONS ── -->
+<div class="member-actions">
+  {% if has_permission('edit_members') %}
+  <button onclick="openMembershipModal()" class="ma-btn ma-green">🎫 Update Membership</button>
+  {% endif %}
+  {% if has_permission('extend_membership') %}
+  <button onclick="openExtendModal()" class="ma-btn ma-green">📅 Extend Membership</button>
+  {% endif %}
+  <a href="tel:{{ customer['phone'] }}" class="ma-btn ma-blue">📞 Call Customer</a>
+  <a href="https://wa.me/233{{ customer['phone'][1:] }}" target="_blank" class="ma-btn ma-green">💬 WhatsApp</a>
+  <a href="mailto:{{ customer['email'] }}" class="ma-btn ma-blue">✉ Send Email</a>
+  {% if has_permission('delete_members') %}
+  <button onclick="if(confirm('Permanently delete {{ customer['name']|e }} and ALL their records?')) document.getElementById('deleteForm').submit();" class="ma-btn ma-red">🗑️ Delete Member</button>
+  <form id="deleteForm" method="POST" action="/admin/members/delete/{{ customer['id'] }}" style="display:none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+  </form>
+  {% endif %}
+</div>
+
+<!-- ── TABS ── -->
+<div class="detail-tabs">
+  <button class="tab-btn active" onclick="showTab('bookings', this)">📋 Bookings ({{ bookings|length }})</button>
+  <button class="tab-btn" onclick="showTab('plans', this)">💳 Plans ({{ plans|length }})</button>
+  <button class="tab-btn" onclick="showTab('payments', this)">💰 Payments ({{ payments|length }})</button>
+  <button class="tab-btn" onclick="showTab('reservations', this)">🛍️ Reservations ({{ reservations|length }})</button>
+  <button class="tab-btn" onclick="showTab('devices', this)">📱 Devices ({{ devices_owned|length }})</button>
+  {% if activity %}
+  <button class="tab-btn" onclick="showTab('activity', this)">📜 History ({{ activity|length }})</button>
+  {% endif %}
+</div>
+
+<!-- ── TAB: BOOKINGS ── -->
+<div id="tab-bookings" class="tab-content active">
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+    <span class="mini-badge">Total: {{ booking_stats['total'] }}</span>
+    <span class="mini-badge badge-green">Completed: {{ booking_stats['completed'] }}</span>
+    <span class="mini-badge badge-amber">Pending: {{ booking_stats['pending'] }}</span>
+    <span class="mini-badge badge-blue">In Progress: {{ booking_stats['in_progress'] }}</span>
+    <span class="mini-badge badge-red">Cancelled: {{ booking_stats['cancelled'] }}</span>
+  </div>
+  {% if bookings %}
+  <div class="detail-wrap" style="overflow-x:auto">
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Device</th>
+          <th>Service</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        <tr>
+          <td class="mono">#{{ b['id'] }}</td>
+          <td><span style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:12px;white-space:nowrap">{{ b['device'] }}</span></td>
+          <td style="color:#fff;font-size:13px">{{ b['service'] }}</td>
+          <td class="mono">{{ b['date'] }}</td>
+          <td>
+            {% if has_permission('edit_bookings') %}
+            <form method="POST" action="/admin/bookings/{{ b['id'] }}/status" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="status" class="status-select" onchange="this.form.submit()">
+                {% set s = b['status'] or 'Pending' %}
+                <option value="Pending"     {% if s == 'Pending'     %}selected{% endif %}>Pending</option>
+                <option value="In Progress" {% if s == 'In Progress' %}selected{% endif %}>In Progress</option>
+                <option value="Complete"    {% if s == 'Complete'    %}selected{% endif %}>Complete</option>
+                <option value="Cancelled"   {% if s == 'Cancelled'   %}selected{% endif %}>Cancelled</option>
+              </select>
+            </form>
+            {% else %}
+            <span class="status-badge status-{{ (b['status'] or 'Pending')|lower|replace(' ','-') }}">{{ b['status'] or 'Pending' }}</span>
+            {% endif %}
+          </td>
+          <td style="font-size:12px;color:var(--text-muted);max-width:200px">{{ b['notes'] or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="detail-empty">
+    <div class="detail-empty-icon">📋</div>
+    <div class="detail-empty-text">No bookings yet for this customer.</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── TAB: PLANS ── -->
+<div id="tab-plans" class="tab-content">
+  {% if plans %}
+    {% for plan in plans %}
+    <div class="plan-card">
+      <div class="pc-header">
+        <span class="pc-id">Plan #{{ plan['id'] }}</span>
+        <span class="status-badge status-{{ plan['status']|lower }}">{{ plan['status'] }}</span>
+      </div>
+      <div class="pc-device">{{ plan['device_name'] }}</div>
+      <div class="pc-grid">
+        <div class="pc-item">
+          <div class="pc-label">Total</div>
+          <div class="pc-value">{{ fmt_ghs(plan['total_payable']) }}</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-label">Deposit</div>
+          <div class="pc-value">{{ fmt_ghs(plan['deposit_amount']) }}</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-label">Monthly</div>
+          <div class="pc-value">{{ fmt_ghs(plan['monthly_amount']) }}</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-label">Balance</div>
+          <div class="pc-value" style="color:{% if plan['balance_remaining'] > 0 %}var(--amber){% else %}var(--green){% endif %}">
+            {{ fmt_ghs(plan['balance_remaining']) }}
+          </div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-label">Payments</div>
+          <div class="pc-value">{{ plan['payments_made'] }}/{{ plan['plan_months'] }}</div>
+        </div>
+        <div class="pc-item">
+          <div class="pc-label">Next Due</div>
+          <div class="pc-value" style="font-size:13px">{{ plan['next_due_date'] or '—' }}</div>
+        </div>
+      </div>
+      <div class="pc-actions">
+        <a href="/admin/installments" class="pc-link">View in Installments →</a>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="detail-empty">
+    <div class="detail-empty-icon">💳</div>
+    <div class="detail-empty-text">No installment plans for this customer.</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── TAB: PAYMENTS ── -->
+<div id="tab-payments" class="tab-content">
+  {% if payments %}
+  <div style="margin-bottom:14px;font-size:13px;color:var(--text-soft)">
+    {{ payment_stats['payment_count'] }} payment{{ 's' if payment_stats['payment_count'] != 1 else '' }} totalling <span class="amt" style="font-size:14px">{{ fmt_ghs(total_spent) }}</span>
+  </div>
+  <div class="detail-wrap" style="overflow-x:auto">
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Plan</th>
+          <th>Device</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Reference</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td class="mono">{{ p['paid_on'] }}</td>
+          <td class="mono">#{{ p['plan_id'] }}</td>
+          <td style="font-size:13px;color:#fff">{{ p['device_name'] }}</td>
+          <td class="amt">{{ fmt_ghs(p['amount']) }}</td>
+          <td style="font-size:13px">{{ p['payment_method'] }}</td>
+          <td class="mono">{{ p['reference'] or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="detail-empty">
+    <div class="detail-empty-icon">💰</div>
+    <div class="detail-empty-text">No payments recorded.</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── TAB: RESERVATIONS ── -->
+<div id="tab-reservations" class="tab-content">
+  {% if reservations %}
+  <div class="detail-wrap" style="overflow-x:auto">
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Device</th>
+          <th>Price</th>
+          <th>Deposit</th>
+          <th>Method</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reservations %}
+        <tr>
+          <td class="mono">#{{ r['id'] }}</td>
+          <td style="color:#fff;font-size:13px">{{ r['brand'] }} {{ r['model'] }}{% if r['color'] %} · {{ r['color'] }}{% endif %}{% if r['storage'] %} · {{ r['storage'] }}{% endif %}</td>
+          <td class="amt">{{ fmt_ghs(r['selling_price']) }}</td>
+          <td class="amt">{{ fmt_ghs(r['deposit_amount']) }}</td>
+          <td style="font-size:13px">{{ r['payment_method'] }}</td>
+          <td><span class="status-badge status-{{ r['status']|lower }}">{{ r['status'] }}</span></td>
+          <td class="mono">{{ r['created_at'].strftime('%d %b %Y') if r['created_at'] else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="detail-empty">
+    <div class="detail-empty-icon">🛍️</div>
+    <div class="detail-empty-text">No reservations.</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── TAB: DEVICES OWNED ── -->
+<div id="tab-devices" class="tab-content">
+  {% if devices_owned %}
+  <div class="detail-wrap" style="overflow-x:auto">
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th>Device</th>
+          <th>Color</th>
+          <th>Storage</th>
+          <th>Price</th>
+          <th>Date Purchased</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in devices_owned %}
+        <tr>
+          <td style="color:#fff;font-weight:600;font-size:13px">{{ d['brand'] }} {{ d['model'] }}</td>
+          <td style="font-size:13px">{{ d['color'] or '—' }}</td>
+          <td class="mono">{{ d['storage'] or '—' }}</td>
+          <td class="amt">{{ fmt_ghs(d['selling_price']) }}</td>
+          <td class="mono">{{ d['updated_at'].strftime('%d %b %Y') if d['updated_at'] else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="detail-empty">
+    <div class="detail-empty-icon">📱</div>
+    <div class="detail-empty-text">No devices purchased yet.</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── TAB: ACTIVITY HISTORY ── -->
+{% if activity %}
+<div id="tab-activity" class="tab-content">
+  {% if activity %}
+  <div class="detail-wrap" style="overflow-x:auto">
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Admin</th>
+          <th>Action</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in activity %}
+        <tr>
+          <td class="mono" style="white-space:nowrap">
+            <div>{{ a['created_at'].strftime('%d %b %Y') if a['created_at'] else '' }}</div>
+            <div style="font-size:10px;color:var(--text-muted)">{{ a['created_at'].strftime('%H:%M') if a['created_at'] else '' }}</div>
+          </td>
+          <td style="font-size:13px;color:#fff">{{ a['user_name'] }}<br><span style="font-size:10px;color:var(--text-muted)">{{ a['user_role'] }}</span></td>
+          <td style="font-size:13px;color:#fff;font-weight:500;white-space:nowrap">{{ a['action'] }}</td>
+          <td style="font-size:12px;color:var(--text-muted);max-width:220px">{{ a['details'] or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="detail-empty">
+    <div class="detail-empty-icon">📜</div>
+    <div class="detail-empty-text">No activity history available.</div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ── MEMBERSHIP UPDATE MODAL ── -->
+<div class="modal-overlay" id="membershipModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Update Membership</h3>
+      <button onclick="closeMembershipModal()">✕</button>
+    </div>
+    <form method="POST" action="/admin/members/{{ customer['id'] }}/update-membership">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="modal-field">
+        <label>Tier</label>
+        <select name="tier">
+          <option value="Standard" {% if customer['membership_tier'] == 'Standard' %}selected{% endif %}>Standard</option>
+          <option value="Silver"   {% if customer['membership_tier'] == 'Silver'   %}selected{% endif %}>Silver</option>
+          <option value="Gold"     {% if customer['membership_tier'] == 'Gold'     %}selected{% endif %}>Gold</option>
+          <option value="Premium"  {% if customer['membership_tier'] == 'Premium'  %}selected{% endif %}>Premium</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Expiry Date</label>
+        <input type="date" name="expiry" value="{{ customer['membership_expiry'] or '' }}" required/>
+      </div>
+      <div class="modal-actions">
+        <button type="button" onclick="closeMembershipModal()">Cancel</button>
+        <button type="submit" class="modal-submit">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── EXTEND MEMBERSHIP MODAL ── -->
+<div class="modal-overlay" id="extendModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Extend Membership</h3>
+      <button onclick="closeExtendModal()">✕</button>
+    </div>
+    <form method="POST" action="/admin/members/{{ customer['id'] }}/extend">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="modal-field">
+        <label>Extend by</label>
+        <select name="months">
+          <option value="1">1 Month</option>
+          <option value="3">3 Months</option>
+          <option value="6">6 Months</option>
+          <option value="12">12 Months</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" onclick="closeExtendModal()">Cancel</button>
+        <button type="submit" class="modal-submit">Extend</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+  function showTab(tabName, btn) {
+    document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function(el) { el.classList.remove('active'); });
+    var tabEl = document.getElementById('tab-' + tabName);
+    if (tabEl) tabEl.classList.add('active');
+    if (btn) btn.classList.add('active');
+  }
+
+  function openMembershipModal() {
+    document.getElementById('membershipModal').classList.add('open');
+  }
+  function closeMembershipModal() {
+    document.getElementById('membershipModal').classList.remove('open');
+  }
+  function openExtendModal() {
+    document.getElementById('extendModal').classList.add('open');
+  }
+  function closeExtendModal() {
+    document.getElementById('extendModal').classList.remove('open');
+  }
+
+  document.getElementById('membershipModal').addEventListener('click', function(e) { if (e.target === this) closeMembershipModal(); });
+  document.getElementById('extendModal').addEventListener('click', function(e) { if (e.target === this) closeExtendModal(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeMembershipModal(); closeExtendModal(); } });
+</script>
+{% endblock %}

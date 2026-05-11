@@ -1628,6 +1628,105 @@ def admin_members():
                            page=page, total_pages=total_pages, total=total)
 
 
+@app.route('/admin/members/<int:customer_id>')
+@admin_required
+def admin_member_detail(customer_id):
+    if not has_permission('view_members'):
+        flash('You do not have permission.', 'error')
+        return redirect(url_for('admin'))
+    conn = get_db()
+    customer = conn.execute('SELECT * FROM customers WHERE id=%s', (customer_id,)).fetchone()
+    if not customer:
+        conn.close()
+        flash('Member not found.', 'error')
+        return redirect(url_for('admin_members'))
+    mem_status = membership_status(customer['membership_expiry'])
+    bookings = conn.execute(
+        'SELECT * FROM bookings WHERE customer_id=%s ORDER BY date DESC',
+        (customer_id,)
+    ).fetchall()
+    booking_stats = conn.execute(
+        """SELECT
+           COUNT(*) AS total,
+           COUNT(*) FILTER (WHERE status='Complete') AS completed,
+           COUNT(*) FILTER (WHERE status='Pending') AS pending,
+           COUNT(*) FILTER (WHERE status='In Progress') AS in_progress,
+           COUNT(*) FILTER (WHERE status='Cancelled') AS cancelled
+           FROM bookings WHERE customer_id=%s""",
+        (customer_id,)
+    ).fetchone()
+    plans = conn.execute(
+        'SELECT * FROM installment_plans WHERE customer_id=%s ORDER BY created_at DESC',
+        (customer_id,)
+    ).fetchall()
+    payments = conn.execute(
+        """SELECT p.*, ip.device_name, ip.id AS plan_id
+           FROM payments p
+           JOIN installment_plans ip ON ip.id=p.plan_id
+           WHERE ip.customer_id=%s
+           ORDER BY p.created_at DESC""",
+        (customer_id,)
+    ).fetchall()
+    payment_stats = conn.execute(
+        """SELECT
+           COALESCE(SUM(p.amount), 0) AS total_paid,
+           COUNT(p.id) AS payment_count
+           FROM payments p
+           JOIN installment_plans ip ON ip.id=p.plan_id
+           WHERE ip.customer_id=%s""",
+        (customer_id,)
+    ).fetchone()
+    reservations = conn.execute(
+        """SELECT r.*, i.brand, i.model, i.color, i.storage, i.selling_price
+           FROM reservations r
+           JOIN inventory i ON i.id=r.item_id
+           WHERE r.customer_id=%s
+           ORDER BY r.created_at DESC""",
+        (customer_id,)
+    ).fetchall()
+    devices_owned = conn.execute(
+        """SELECT brand, model, color, storage, selling_price, updated_at
+           FROM inventory
+           WHERE sold_to=%s
+           ORDER BY updated_at DESC""",
+        (customer_id,)
+    ).fetchall()
+    try:
+        activity = conn.execute(
+            """SELECT * FROM activity_log
+               WHERE target_type='customer'
+               AND target_id=%s
+               ORDER BY created_at DESC
+               LIMIT 20""",
+            (customer_id,)
+        ).fetchall()
+    except Exception:
+        activity = []
+    conn.close()
+    total_spent = float(payment_stats['total_paid'])
+    days_as_member = 0
+    if customer['membership_start']:
+        try:
+            start = datetime.strptime(customer['membership_start'], '%Y-%m-%d')
+            days_as_member = (datetime.today() - start).days
+        except ValueError:
+            pass
+    return render_template('admin_member_detail.html',
+        customer=customer,
+        mem_status=mem_status,
+        bookings=bookings,
+        booking_stats=booking_stats,
+        plans=plans,
+        payments=payments,
+        payment_stats=payment_stats,
+        total_spent=total_spent,
+        reservations=reservations,
+        devices_owned=devices_owned,
+        activity=activity,
+        days_as_member=days_as_member,
+    )
+
+
 @app.route('/admin/members/delete/<int:customer_id>', methods=['POST'])
 @admin_required
 def delete_member(customer_id):
@@ -2157,7 +2256,7 @@ def update_membership(customer_id):
     log_activity('Updated membership', 'member', target_type='customer', target_id=customer_id,
                  details=f'Tier → {tier}, Expiry → {expiry}')
     flash(f'Membership updated — {tier}, expires {expiry}.', 'success')
-    return redirect(url_for('admin_members'))
+    return redirect(url_for('admin_member_detail', customer_id=customer_id))
 
 
 @app.route('/admin/members/<int:customer_id>/extend', methods=['POST'])
@@ -2192,7 +2291,7 @@ def extend_membership(customer_id):
     log_activity('Extended membership', 'member', target_type='customer', target_id=customer_id,
                  details=f'Extended by {months} month(s). New expiry: {new_expiry}')
     flash(f'Membership extended by {months} month(s). New expiry: {new_expiry}.', 'success')
-    return redirect(url_for('admin_members'))
+    return redirect(url_for('admin_member_detail', customer_id=customer_id))
 
 
 @app.route('/admin/members/<int:customer_id>/message', methods=['POST'])

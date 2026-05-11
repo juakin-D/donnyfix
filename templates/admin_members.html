@@ -166,7 +166,9 @@ th:last-child,td:last-child{white-space:nowrap}
               {% for m in members %}
               <tr>
                 <td class="td-mono">{{ m.id }}</td>
-                <td class="td-name">{{ m.name }}</td>
+                <td class="td-name">
+                  <a href="/admin/members/{{ m.id }}" style="color:var(--green);text-decoration:none;font-weight:600;">{{ m.name }}</a>
+                </td>
                 <td class="td-mono">{{ m.phone }}</td>
                 <td class="td-email" style="color:var(--text-muted);font-size:13px">{{ m.email }}</td>
                 <td>
@@ -196,6 +198,7 @@ th:last-child,td:last-child{white-space:nowrap}
                 <td class="td-mono">{{ m.created_at[:10] if m.created_at else '—' }}</td>
                 <td>
                   <div class="action-cell">
+                    <a href="/admin/members/{{ m.id }}" class="act-btn" style="font-size:12px;color:var(--blue);background:rgba(59,158,232,.08);border-color:rgba(59,158,232,.25);">👁 View</a>
                     {% if m.plan_id %}
                     <button class="act-btn plan-{{ m.plan_status | lower }} open-plan-modal"
                         data-plan-id="{{ m.plan_id }}"
