@@ -1342,6 +1342,121 @@ def admin_logout():
 @app.route('/admin')
 @admin_required
 def admin():
+    today = datetime.today().strftime('%Y-%m-%d')
+    now   = datetime.now()
+    conn  = get_db()
+    try:
+        bookings_today = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM bookings WHERE date=%s", (today,)
+        ).fetchone()['cnt']
+        bookings_pending = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM bookings WHERE status='Pending'"
+        ).fetchone()['cnt']
+        members_today = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM customers WHERE DATE(created_at)=CURRENT_DATE"
+        ).fetchone()['cnt']
+        members_active = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM customers WHERE membership_expiry >= %s", (today,)
+        ).fetchone()['cnt']
+        payments_today = conn.execute(
+            "SELECT COALESCE(SUM(amount),0) AS total FROM payments WHERE paid_on=%s", (today,)
+        ).fetchone()['total']
+        payments_month = conn.execute(
+            "SELECT COALESCE(SUM(amount),0) AS total FROM payments "
+            "WHERE DATE_TRUNC('month',paid_on::date)=DATE_TRUNC('month',CURRENT_DATE)"
+        ).fetchone()['total']
+        active_plans = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM installment_plans WHERE status='Active'"
+        ).fetchone()['cnt']
+        overdue_plans = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM installment_plans "
+            "WHERE status='Active' AND next_due_date < %s", (today,)
+        ).fetchone()['cnt']
+        outstanding = conn.execute(
+            "SELECT COALESCE(SUM(balance_remaining),0) AS total "
+            "FROM installment_plans WHERE status='Active'"
+        ).fetchone()['total']
+        inventory_stock = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM inventory WHERE status='In Stock'"
+        ).fetchone()['cnt']
+        inventory_reserved = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM inventory WHERE status='Reserved'"
+        ).fetchone()['cnt']
+        pending_reservations = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM reservations WHERE status='Pending'"
+        ).fetchone()['cnt']
+        new_enquiries = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM device_enquiries WHERE status='New'"
+        ).fetchone()['cnt']
+        expiring_soon = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM customers "
+            "WHERE membership_expiry::date BETWEEN "
+            "CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'"
+        ).fetchone()['cnt']
+        recent_pending = conn.execute(
+            "SELECT id, name, device, service, date FROM bookings "
+            "WHERE status='Pending' ORDER BY date LIMIT 5"
+        ).fetchall()
+        overdue_list = conn.execute(
+            "SELECT ip.id, ip.device_name, ip.next_due_date, ip.monthly_amount, "
+            "ip.balance_remaining, c.name AS customer_name, c.phone AS customer_phone "
+            "FROM installment_plans ip JOIN customers c ON c.id=ip.customer_id "
+            "WHERE ip.status='Active' AND ip.next_due_date < %s "
+            "ORDER BY ip.next_due_date LIMIT 5", (today,)
+        ).fetchall()
+        recent_payments = conn.execute(
+            "SELECT p.amount, p.paid_on, p.payment_method, ip.device_name, "
+            "c.name AS customer_name "
+            "FROM payments p "
+            "JOIN installment_plans ip ON ip.id=p.plan_id "
+            "JOIN customers c ON c.id=ip.customer_id "
+            "ORDER BY p.created_at DESC LIMIT 5"
+        ).fetchall()
+        recent_members = conn.execute(
+            "SELECT name, phone, email, created_at "
+            "FROM customers ORDER BY created_at DESC LIMIT 5"
+        ).fetchall()
+        daily_payments = conn.execute(
+            "SELECT paid_on, COALESCE(SUM(amount),0) AS total FROM payments "
+            "WHERE paid_on::date >= CURRENT_DATE - INTERVAL '7 days' "
+            "GROUP BY paid_on ORDER BY paid_on"
+        ).fetchall()
+        daily_bookings = conn.execute(
+            "SELECT date, COUNT(*) AS cnt FROM bookings "
+            "WHERE date::date >= CURRENT_DATE - INTERVAL '7 days' "
+            "GROUP BY date ORDER BY date"
+        ).fetchall()
+    finally:
+        conn.close()
+    return render_template('admin_dashboard.html',
+        bookings_today=bookings_today,
+        bookings_pending=bookings_pending,
+        members_today=members_today,
+        members_active=members_active,
+        payments_today=float(payments_today),
+        payments_month=float(payments_month),
+        active_plans=active_plans,
+        overdue_plans=overdue_plans,
+        outstanding=float(outstanding),
+        inventory_stock=inventory_stock,
+        inventory_reserved=inventory_reserved,
+        pending_reservations=pending_reservations,
+        new_enquiries=new_enquiries,
+        expiring_soon=expiring_soon,
+        recent_pending=recent_pending,
+        overdue_list=overdue_list,
+        recent_payments=recent_payments,
+        recent_members=recent_members,
+        daily_payments=[{'paid_on': str(r['paid_on']), 'total': float(r['total'])} for r in daily_payments],
+        daily_bookings=[{'date': str(r['date']), 'cnt': r['cnt']} for r in daily_bookings],
+        today=today,
+        now=now,
+    )
+
+
+@app.route('/admin/bookings')
+@admin_required
+def admin_bookings():
     search  = request.args.get('search', '').strip()
     service = request.args.get('service', '').strip()
     if service not in BOOKING_SERVICES:
@@ -1372,13 +1487,13 @@ def admin():
 def delete_booking(booking_id):
     if not has_permission('delete_bookings'):
         flash('You do not have permission to do that.', 'error')
-        return redirect(url_for('admin'))
+        return redirect(url_for('admin_bookings'))
     conn = get_db()
     conn.execute('DELETE FROM bookings WHERE id=%s', (booking_id,))
     conn.commit(); conn.close()
     logger.warning('Admin %s deleted booking #%d', session.get('admin_username'), booking_id)
     flash('Booking deleted.', 'success')
-    return redirect(url_for('admin'))
+    return redirect(url_for('admin_bookings'))
 
 
 @app.route('/admin/bookings/<int:booking_id>/status', methods=['POST'])
@@ -1386,11 +1501,11 @@ def delete_booking(booking_id):
 def update_booking_status(booking_id):
     if not has_permission('edit_bookings'):
         flash('You do not have permission to do that.', 'error')
-        return redirect(url_for('admin'))
+        return redirect(url_for('admin_bookings'))
     new_status = request.form.get('status', '')
     if new_status not in ('Pending', 'In Progress', 'Complete', 'Cancelled'):
         flash('Invalid status.', 'error')
-        return redirect(url_for('admin'))
+        return redirect(url_for('admin_bookings'))
     conn = get_db()
     booking = conn.execute('SELECT * FROM bookings WHERE id=%s', (booking_id,)).fetchone()
     conn.execute('UPDATE bookings SET status=%s WHERE id=%s', (new_status, booking_id))
@@ -1406,7 +1521,7 @@ def update_booking_status(booking_id):
         except Exception as _email_exc:
             logger.error('Email notification failed: %s', _email_exc)
     flash(f'Booking #{booking_id} marked as {new_status}.', 'success')
-    return redirect(url_for('admin'))
+    return redirect(url_for('admin_bookings'))
 
 
 @app.route('/admin/members')

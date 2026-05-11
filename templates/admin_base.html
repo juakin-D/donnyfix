@@ -169,6 +169,10 @@
     <div class="nav-section">Operations</div>
 
     <a href="/admin" class="nav-item{% if request.endpoint == 'admin' %} active{% endif %}">
+      <span class="nav-icon">🏠</span>
+      Dashboard
+    </a>
+    <a href="/admin/bookings" class="nav-item{% if request.endpoint in ('admin_bookings','delete_booking','update_booking_status') %} active{% endif %}">
       <span class="nav-icon">📋</span>
       Bookings
       {% if bookings is defined %}<span class="nav-badge">{{ bookings|length }}</span>{% endif %}
@@ -238,7 +242,8 @@
     <!-- Mobile Admin Nav -->
     <div class="admin-mobile-nav">
       <div class="amn-inner">
-        <a href="/admin" class="amn-link{% if request.endpoint == 'admin' %} active{% endif %}"><span class="amn-icon">📋</span>Bookings</a>
+        <a href="/admin" class="amn-link{% if request.endpoint == 'admin' %} active{% endif %}"><span class="amn-icon">🏠</span>Home</a>
+        <a href="/admin/bookings" class="amn-link{% if request.endpoint in ('admin_bookings','delete_booking','update_booking_status') %} active{% endif %}"><span class="amn-icon">📋</span>Bookings</a>
         <a href="/admin/members" class="amn-link{% if request.endpoint in ('admin_members','delete_member','update_membership','extend_membership') %} active{% endif %}"><span class="amn-icon">👤</span>Members</a>
         <a href="/admin/installments" class="amn-link{% if request.endpoint in ('admin_installments','record_payment','update_plan_status') %} active{% endif %}"><span class="amn-icon">💳</span>Plans</a>
         <a href="/admin/inventory" class="amn-link{% if request.endpoint in ('admin_inventory','admin_inventory_add','admin_inventory_edit','admin_inventory_sell') %} active{% endif %}"><span class="amn-icon">📦</span>Inventory</a>

@@ -1,0 +1,367 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Dashboard — Admin{% endblock %}
+
+{% block topbar_title %}Dashboard{% endblock %}
+
+{% block topbar_subtitle %}
+  {{ now.strftime('%A, %d %B %Y') if now is defined else today }}
+{% endblock %}
+
+{% block topbar_right %}
+<span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-soft);">
+  {% if now is defined %}
+    {% set hour = now.hour %}
+    {% if hour < 12 %}Good morning{% elif hour < 17 %}Good afternoon{% else %}Good evening{% endif %},
+    {{ session.get('admin_username', 'Admin') }}
+  {% endif %}
+</span>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+/* ── DASH TOP CARDS ── */
+.dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:1200px){.dash-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.dash-grid{grid-template-columns:1fr}}
+
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;align-items:flex-start;gap:16px;transition:transform .2s,box-shadow .2s;text-decoration:none;color:inherit}
+.dash-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.dc-icon{font-size:22px;width:46px;height:46px;background:var(--surface2);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dc-body{flex:1;min-width:0}
+.dc-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.dc-value{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#fff;line-height:1.1;margin-bottom:2px}
+.dc-sub{font-size:12px;color:var(--text-soft);margin-top:3px}
+.dc-green .dc-value{color:var(--green)}
+.dc-gold  .dc-value{color:var(--gold)}
+.dc-blue  .dc-value{color:#3B9EE8}
+
+/* ── ALERTS ── */
+.dash-alerts{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px}
+.alert-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;transition:all .2s}
+.alert-red  {background:rgba(232,64,64,.15);color:var(--red);border:1px solid rgba(232,64,64,.3)}
+.alert-red:hover  {background:rgba(232,64,64,.25)}
+.alert-amber{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.alert-amber:hover{background:rgba(245,158,11,.25)}
+.alert-blue {background:rgba(59,158,232,.15);color:#3B9EE8;border:1px solid rgba(59,158,232,.3)}
+.alert-blue:hover {background:rgba(59,158,232,.25)}
+
+/* ── MINI CARDS ── */
+.dash-mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+@media(max-width:700px){.dash-mini-grid{grid-template-columns:1fr}}
+.mini-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;text-align:center}
+.mini-value{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:4px;color:#fff}
+.mini-value.green{color:var(--green)}
+.mini-value.red  {color:var(--red)}
+.mini-value.gold {color:var(--gold)}
+.mini-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted)}
+
+/* ── TWO COLUMNS ── */
+.dash-columns{display:grid;grid-template-columns:3fr 2fr;gap:20px;margin-bottom:24px}
+@media(max-width:900px){.dash-columns{grid-template-columns:1fr}}
+
+/* ── SECTION CARD ── */
+.dash-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.dash-section-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.dash-section-title{font-family:'DM Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-soft);font-weight:500}
+.dash-section-link{font-size:12px;color:var(--green);text-decoration:none;font-weight:600}
+.dash-section-link:hover{text-decoration:underline}
+.dash-empty{padding:28px 18px;text-align:center;font-size:13px;color:var(--text-muted)}
+
+/* ── PENDING BOOKINGS TABLE ── */
+.db-table{width:100%;border-collapse:collapse}
+.db-table th{padding:10px 16px;font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);background:var(--surface2);text-align:left;white-space:nowrap}
+.db-table td{padding:11px 16px;font-size:13px;color:var(--text-soft);border-bottom:1px solid var(--border);vertical-align:middle}
+.db-table tbody tr:last-child td{border-bottom:none}
+.db-table tbody tr:hover td{background:var(--surface2);color:var(--text)}
+.td-bold{font-weight:500;color:var(--text)}
+.td-mono-sm{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)}
+.td-red{color:var(--red);font-family:'DM Mono',monospace;font-size:11px}
+.tag-sm{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;background:var(--surface2);color:var(--text-soft);border:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.btn-call{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.2);text-decoration:none;white-space:nowrap}
+.btn-call:hover{background:rgba(0,196,106,.2)}
+
+/* ── PAYMENT LIST ── */
+.pay-list{padding:0 18px}
+.pay-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.pay-item:last-child{border-bottom:none}
+.pay-amount{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--green);white-space:nowrap;min-width:90px}
+.pay-info{flex:1;min-width:0}
+.pay-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pay-device{font-size:11px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pay-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-align:right;white-space:nowrap}
+
+/* ── MEMBER LIST ── */
+.mem-list{padding:0 18px}
+.mem-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.mem-item:last-child{border-bottom:none}
+.mem-avatar{width:34px;height:34px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--green);flex-shrink:0}
+.mem-info{flex:1;min-width:0}
+.mem-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mem-email{font-size:11px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mem-when{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-align:right;white-space:nowrap}
+
+/* ── QUICK ACTIONS ── */
+.quick-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.qa-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text-soft);text-decoration:none;font-size:13px;font-weight:500;transition:all .2s}
+.qa-btn:hover{background:var(--surface2);border-color:var(--green);color:var(--green)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── ROW 1: Today's Numbers ── -->
+<div class="dash-grid">
+
+  <div class="dash-card">
+    <div class="dc-icon">📋</div>
+    <div class="dc-body">
+      <div class="dc-label">Today's Bookings</div>
+      <div class="dc-value dc-green">{{ bookings_today }}</div>
+      <div class="dc-sub">{{ bookings_pending }} pending overall</div>
+    </div>
+  </div>
+
+  <div class="dash-card">
+    <div class="dc-icon">💰</div>
+    <div class="dc-body">
+      <div class="dc-label">Payments Today</div>
+      <div class="dc-value dc-gold">{{ fmt_ghs(payments_today) }}</div>
+      <div class="dc-sub">{{ fmt_ghs(payments_month) }} this month</div>
+    </div>
+  </div>
+
+  <div class="dash-card">
+    <div class="dc-icon">👤</div>
+    <div class="dc-body">
+      <div class="dc-label">New Members Today</div>
+      <div class="dc-value dc-blue">{{ members_today }}</div>
+      <div class="dc-sub">{{ members_active }} active total</div>
+    </div>
+  </div>
+
+  <div class="dash-card">
+    <div class="dc-icon">📱</div>
+    <div class="dc-body">
+      <div class="dc-label">Devices In Stock</div>
+      <div class="dc-value dc-green">{{ inventory_stock }}</div>
+      <div class="dc-sub">{{ inventory_reserved }} reserved</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── ROW 2: Alert Badges ── -->
+{% set has_alerts = overdue_plans > 0 or bookings_pending > 0 or pending_reservations > 0 or new_enquiries > 0 or expiring_soon > 0 %}
+{% if has_alerts %}
+<div class="dash-alerts">
+  {% if overdue_plans > 0 %}
+  <a href="/admin/installments?status=Active" class="alert-badge alert-red">
+    ⚠️ {{ overdue_plans }} overdue plan{{ 's' if overdue_plans != 1 else '' }}
+  </a>
+  {% endif %}
+  {% if bookings_pending > 0 %}
+  <a href="/admin/bookings" class="alert-badge alert-amber">
+    📋 {{ bookings_pending }} pending booking{{ 's' if bookings_pending != 1 else '' }}
+  </a>
+  {% endif %}
+  {% if pending_reservations > 0 %}
+  <a href="/admin/shop" class="alert-badge alert-amber">
+    🛍️ {{ pending_reservations }} pending reservation{{ 's' if pending_reservations != 1 else '' }}
+  </a>
+  {% endif %}
+  {% if new_enquiries > 0 %}
+  <a href="/admin/shop" class="alert-badge alert-blue">
+    💬 {{ new_enquiries }} new enquir{{ 'ies' if new_enquiries != 1 else 'y' }}
+  </a>
+  {% endif %}
+  {% if expiring_soon > 0 %}
+  <a href="/admin/members" class="alert-badge alert-amber">
+    ⏰ {{ expiring_soon }} membership{{ 's' if expiring_soon != 1 else '' }} expiring this week
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ── ROW 3: Installment Mini Cards ── -->
+<div class="dash-mini-grid">
+  <div class="mini-card">
+    <div class="mini-value green">{{ active_plans }}</div>
+    <div class="mini-label">Active Plans</div>
+  </div>
+  <div class="mini-card">
+    <div class="mini-value {% if overdue_plans > 0 %}red{% else %}{% endif %}">{{ overdue_plans }}</div>
+    <div class="mini-label">Overdue Plans</div>
+  </div>
+  <div class="mini-card">
+    <div class="mini-value gold">{{ fmt_ghs(outstanding) }}</div>
+    <div class="mini-label">Outstanding Balance</div>
+  </div>
+</div>
+
+<!-- ── ROW 4: Two Columns ── -->
+<div class="dash-columns">
+
+  <!-- LEFT -->
+  <div>
+
+    <!-- Pending Bookings -->
+    <div class="dash-section">
+      <div class="dash-section-header">
+        <span class="dash-section-title">Recent Pending Bookings</span>
+        <a href="/admin/bookings" class="dash-section-link">View All →</a>
+      </div>
+      {% if recent_pending %}
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Customer</th>
+            <th>Device</th>
+            <th>Service</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in recent_pending %}
+          <tr>
+            <td class="td-mono-sm">#{{ b['id'] }}</td>
+            <td class="td-bold">{{ b['name'] }}</td>
+            <td><span class="tag-sm">{{ b['device'] }}</span></td>
+            <td><span class="tag-sm">{{ b['service'] }}</span></td>
+            <td class="td-mono-sm">{{ b['date'] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="dash-empty">All clear — no pending bookings 🎉</div>
+      {% endif %}
+    </div>
+
+    <!-- Overdue Installments -->
+    <div class="dash-section">
+      <div class="dash-section-header">
+        <span class="dash-section-title">Overdue Installments</span>
+        <a href="/admin/installments" class="dash-section-link">View All →</a>
+      </div>
+      {% if overdue_list %}
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Device</th>
+            <th>Due Date</th>
+            <th>Monthly</th>
+            <th>Balance</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in overdue_list %}
+          <tr>
+            <td class="td-bold">{{ o['customer_name'] }}</td>
+            <td><span class="tag-sm">{{ o['device_name'] }}</span></td>
+            <td class="td-red">{{ o['next_due_date'] }}</td>
+            <td class="td-mono-sm">{{ fmt_ghs(o['monthly_amount']) }}</td>
+            <td class="td-mono-sm">{{ fmt_ghs(o['balance_remaining']) }}</td>
+            <td><a href="tel:{{ o['customer_phone'] }}" class="btn-call">📞 Call</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="dash-empty">No overdue plans — all payments on track ✅</div>
+      {% endif %}
+    </div>
+
+  </div><!-- end left -->
+
+  <!-- RIGHT -->
+  <div>
+
+    <!-- Recent Payments -->
+    <div class="dash-section">
+      <div class="dash-section-header">
+        <span class="dash-section-title">Recent Payments</span>
+        <a href="/admin/revenue" class="dash-section-link">Revenue →</a>
+      </div>
+      {% if recent_payments %}
+      <div class="pay-list">
+        {% for p in recent_payments %}
+        <div class="pay-item">
+          <div class="pay-amount">{{ fmt_ghs(p['amount']) }}</div>
+          <div class="pay-info">
+            <div class="pay-name">{{ p['customer_name'] }}</div>
+            <div class="pay-device">{{ p['device_name'] }}</div>
+          </div>
+          <div class="pay-meta">{{ p['paid_on'] }}<br>{{ p['payment_method'] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="dash-empty">No payments recorded yet.</div>
+      {% endif %}
+    </div>
+
+    <!-- New Members -->
+    <div class="dash-section">
+      <div class="dash-section-header">
+        <span class="dash-section-title">New Members</span>
+        <a href="/admin/members" class="dash-section-link">View All →</a>
+      </div>
+      {% if recent_members %}
+      <div class="mem-list">
+        {% for m in recent_members %}
+        {% set joined_date = m['created_at'].date() if m['created_at'] else none %}
+        {% if joined_date and now is defined %}
+          {% set delta = (now.date() - joined_date).days %}
+          {% if delta == 0 %}{% set when = 'Today' %}
+          {% elif delta == 1 %}{% set when = 'Yesterday' %}
+          {% else %}{% set when = delta|string + ' days ago' %}
+          {% endif %}
+        {% else %}{% set when = '' %}{% endif %}
+        <div class="mem-item">
+          <div class="mem-avatar">{{ (m['name'][:2])|upper }}</div>
+          <div class="mem-info">
+            <div class="mem-name">{{ m['name'] }}</div>
+            <div class="mem-email">{{ m['email'] or m['phone'] }}</div>
+          </div>
+          <div class="mem-when">{{ when }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="dash-empty">No members yet.</div>
+      {% endif %}
+    </div>
+
+  </div><!-- end right -->
+
+</div><!-- end dash-columns -->
+
+<!-- ── ROW 5: Quick Actions ── -->
+<div class="dash-section" style="margin-bottom:0">
+  <div class="dash-section-header">
+    <span class="dash-section-title">Quick Actions</span>
+  </div>
+  <div style="padding:16px 18px">
+    <div class="quick-actions">
+      <a href="/admin/bookings" class="qa-btn">📋 Manage Bookings</a>
+      {% if has_permission('edit_inventory') %}
+      <a href="/admin/inventory" class="qa-btn">📦 Add Device</a>
+      {% endif %}
+      {% if has_permission('send_reminders') %}
+      <a href="/admin/installments/send-reminders"
+         class="qa-btn"
+         onclick="return confirm('Send SMS reminders to all overdue plan holders?')">
+        📲 Send Reminders
+      </a>
+      {% endif %}
+      <a href="/admin/revenue" class="qa-btn">📊 Revenue Report</a>
+      <a href="/admin/inventory/export" class="qa-btn">📥 Export Inventory</a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -67,7 +67,7 @@ th:last-child,td:last-child{white-space:nowrap}
       </div>
 
       <!-- FILTER BAR -->
-      <form method="GET" action="/admin">
+      <form method="GET" action="/admin/bookings">
         <div class="filter-bar">
           <div class="search-wrap">
             <span class="search-icon">🔍</span>
@@ -92,7 +92,7 @@ th:last-child,td:last-child{white-space:nowrap}
           </select>
           <button type="submit" class="filter-btn filter-btn-primary">Filter</button>
           {% if search or service %}
-            <a href="/admin" class="filter-btn filter-btn-ghost" style="text-decoration:none;">Clear</a>
+            <a href="/admin/bookings" class="filter-btn filter-btn-ghost" style="text-decoration:none;">Clear</a>
           {% endif %}
         </div>
       </form>
