@@ -196,6 +196,9 @@
     <a href="/admin/staff" class="nav-item{% if request.endpoint in ('admin_staff','admin_staff_add','admin_staff_edit','admin_staff_reset_password','admin_staff_deactivate','admin_staff_delete') %} active{% endif %}">
       <span class="nav-icon">👥</span>Staff
     </a>
+    <a href="/admin/activity" class="nav-item{% if request.endpoint in ('admin_activity','admin_activity_export') %} active{% endif %}">
+      <span class="nav-icon">📜</span>Activity Log
+    </a>
     {% endif %}
 
     <div class="nav-section">Quick Links</div>

@@ -360,6 +360,9 @@
       {% endif %}
       <a href="/admin/revenue" class="qa-btn">📊 Revenue Report</a>
       <a href="/admin/inventory/export" class="qa-btn">📥 Export Inventory</a>
+      {% if has_permission('manage_staff') %}
+      <a href="/admin/activity" class="qa-btn">📜 Activity Log ({{ activity_today }} today)</a>
+      {% endif %}
     </div>
   </div>
 </div>

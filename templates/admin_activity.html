@@ -1,0 +1,188 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Activity Log — Admin{% endblock %}
+
+{% block topbar_title %}Activity Log{% endblock %}
+
+{% block topbar_subtitle %}{{ today_count }} action{{ 's' if today_count != 1 else '' }} today{% endblock %}
+
+{% block topbar_right %}
+<a href="/admin/activity/export?category={{ selected_category }}&user={{ selected_user }}&search={{ search or '' }}&date_from={{ date_from or '' }}&date_to={{ date_to or '' }}"
+   style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-size:13px;text-decoration:none;transition:all .15s;"
+   onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'"
+   onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text-soft)'">
+  &#11015; Export CSV
+</a>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+/* ── FILTER BAR ── */
+.act-filter-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px}
+.act-filter-form{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.filter-group{display:flex;flex-direction:column;gap:4px}
+.filter-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted)}
+.filter-select,.filter-input{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text-soft);padding:8px 12px;font-size:13px;font-family:'DM Sans',sans-serif;min-width:140px;outline:none;transition:border-color .15s}
+.filter-select:focus,.filter-input:focus{border-color:var(--green)}
+.filter-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234A5E58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+.filter-submit{background:var(--green);color:#fff;border:none;border-radius:6px;padding:8px 20px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;height:36px;align-self:flex-end;transition:opacity .15s}
+.filter-submit:hover{opacity:.9}
+.filter-clear{color:var(--text-muted);font-size:13px;text-decoration:none;align-self:flex-end;height:36px;display:flex;align-items:center;padding:0 4px;transition:color .15s}
+.filter-clear:hover{color:var(--red)}
+
+/* ── LOG TABLE ── */
+.log-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.log-table{width:100%;border-collapse:collapse;font-size:13px}
+.log-table thead th{background:var(--surface2);padding:10px 14px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap}
+.log-table tbody td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text-soft);vertical-align:top}
+.log-table tbody tr:last-child td{border-bottom:none}
+.log-table tbody tr:hover td{background:var(--surface2)}
+
+.log-time{white-space:nowrap;min-width:100px}
+.log-date{font-size:12px;color:var(--text-soft)}
+.log-hour{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)}
+.log-user-name{font-weight:600;color:#fff;margin-bottom:3px}
+.log-role-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:2px 8px;border-radius:4px}
+.role-owner    {background:rgba(245,200,66,.15);color:var(--gold)}
+.role-manager  {background:rgba(59,158,232,.15);color:#3B9EE8}
+.role-technician{background:rgba(0,196,106,.15);color:var(--green)}
+.role-sales    {background:rgba(245,158,11,.15);color:var(--amber)}
+.log-action{font-weight:500;color:#fff;white-space:nowrap}
+.cat-badge{display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:12px;white-space:nowrap}
+.cat-auth       {background:rgba(245,158,11,.15);color:var(--amber)}
+.cat-booking    {background:rgba(59,158,232,.15);color:#3B9EE8}
+.cat-member     {background:rgba(0,196,106,.15);color:var(--green)}
+.cat-installment{background:rgba(245,200,66,.15);color:var(--gold)}
+.cat-inventory  {background:rgba(139,92,246,.15);color:#8B5CF6}
+.cat-staff      {background:rgba(232,64,64,.15);color:var(--red)}
+.cat-shop       {background:rgba(236,72,153,.15);color:#EC4899}
+.cat-system     {background:rgba(74,94,88,.15);color:var(--text-soft)}
+.log-details{max-width:280px;font-size:12px;color:var(--text-muted)}
+.log-target{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;background:var(--surface2);padding:1px 6px;border-radius:4px;margin-left:4px;color:var(--text-muted);white-space:nowrap}
+.log-ip{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);white-space:nowrap}
+
+/* ── PAGINATION ── */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);flex-wrap:wrap;gap:10px}
+.page-btns{display:flex;gap:6px}
+.page-btn{padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text-soft);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center}
+.page-btn:hover{border-color:var(--border2);color:var(--text)}
+.page-btn.active{background:var(--green-glow);border-color:rgba(0,196,106,.3);color:var(--green)}
+
+/* ── RESULT COUNT ── */
+.result-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:14px}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── FILTER BAR ── -->
+<div class="act-filter-bar">
+  <form method="GET" action="/admin/activity" class="act-filter-form">
+    <div class="filter-group">
+      <label class="filter-label">Category</label>
+      <select name="category" class="filter-select">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label">User</label>
+      <select name="user" class="filter-select">
+        <option value="">All Users</option>
+        {% for u in users %}
+        <option value="{{ u }}" {% if u == selected_user %}selected{% endif %}>{{ u }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label">Search</label>
+      <input type="text" name="search" value="{{ search or '' }}" placeholder="Search actions, details…" class="filter-input" style="min-width:180px"/>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label">From</label>
+      <input type="date" name="date_from" value="{{ date_from or '' }}" class="filter-input" style="min-width:140px"/>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label">To</label>
+      <input type="date" name="date_to" value="{{ date_to or '' }}" class="filter-input" style="min-width:140px"/>
+    </div>
+    <button type="submit" class="filter-submit">Filter</button>
+    {% if selected_category or selected_user or search or date_from or date_to %}
+    <a href="/admin/activity" class="filter-clear">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- ── RESULT COUNT ── -->
+<div class="result-meta">{{ total }} record{{ 's' if total != 1 else '' }} found</div>
+
+<!-- ── TABLE ── -->
+{% if logs %}
+<div class="log-wrap" style="overflow-x:auto">
+  <table class="log-table">
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>User</th>
+        <th>Action</th>
+        <th>Category</th>
+        <th>Details</th>
+        <th>IP</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td class="log-time">
+          <div class="log-date">{{ log['created_at'].strftime('%d %b %Y') if log['created_at'] else '' }}</div>
+          <div class="log-hour">{{ log['created_at'].strftime('%H:%M:%S') if log['created_at'] else '' }}</div>
+        </td>
+        <td>
+          <div class="log-user-name">{{ log['user_name'] }}</div>
+          <span class="log-role-badge role-{{ log['user_role'] }}">{{ log['user_role'] }}</span>
+        </td>
+        <td class="log-action">{{ log['action'] }}</td>
+        <td><span class="cat-badge cat-{{ log['category'] }}">{{ log['category'] }}</span></td>
+        <td class="log-details">
+          {{ log['details'] or '' }}
+          {% if log['target_type'] and log['target_id'] %}
+          <span class="log-target">{{ log['target_type'] }} #{{ log['target_id'] }}</span>
+          {% endif %}
+        </td>
+        <td class="log-ip">{{ log['ip_address'] or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="pagination">
+    <span>Showing {{ logs|length }} of {{ total }} record{{ 's' if total != 1 else '' }}</span>
+    <div class="page-btns">
+      {% if page > 1 %}
+      <a class="page-btn" href="?page={{ page - 1 }}&category={{ selected_category }}&user={{ selected_user }}&search={{ search or '' }}&date_from={{ date_from or '' }}&date_to={{ date_to or '' }}">← Prev</a>
+      {% endif %}
+      <span class="page-btn active">{{ page }} / {{ total_pages }}</span>
+      {% if page < total_pages %}
+      <a class="page-btn" href="?page={{ page + 1 }}&category={{ selected_category }}&user={{ selected_user }}&search={{ search or '' }}&date_from={{ date_from or '' }}&date_to={{ date_to or '' }}">Next →</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
+  <div style="font-size:40px;margin-bottom:12px;opacity:.4">📜</div>
+  <div style="font-size:15px;color:var(--text-soft);font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px">No activity logs found</div>
+  <div style="font-size:13px">
+    {% if selected_category or selected_user or search or date_from or date_to %}
+    Try adjusting your filters — <a href="/admin/activity" style="color:var(--green)">clear all</a>
+    {% else %}
+    Activity will appear here as admins perform actions.
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -202,6 +202,27 @@ def has_permission(permission):
     return ROLE_PERMISSIONS.get(role, {}).get(permission, False)
 
 
+def log_activity(action, category, target_type=None, target_id=None, details=None):
+    try:
+        user_name = session.get('admin_username', 'unknown')
+        user_role = session.get('admin_role', 'unknown')
+        staff_id  = session.get('admin_staff_id')
+        ip        = request.remote_addr
+        conn = get_db()
+        conn.execute(
+            """INSERT INTO activity_log
+               (user_name, user_role, staff_id, action,
+                category, target_type, target_id, details, ip_address)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (user_name, user_role, staff_id, action,
+             category, target_type, target_id, details, ip)
+        )
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        logger.error('Activity log failed: %s', exc)
+
+
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
 
 _db_pool = None
@@ -421,6 +442,22 @@ def init_db():
             conn.execute(f'ALTER TABLE device_enquiries ADD COLUMN {col} {defn}')
         except Exception:
             conn.rollback()
+
+    conn.execute("""
+CREATE TABLE IF NOT EXISTS activity_log (
+    id          SERIAL PRIMARY KEY,
+    user_name   TEXT NOT NULL,
+    user_role   TEXT NOT NULL,
+    staff_id    INTEGER,
+    action      TEXT NOT NULL,
+    category    TEXT NOT NULL,
+    target_type TEXT,
+    target_id   INTEGER,
+    details     TEXT,
+    ip_address  TEXT,
+    created_at  TIMESTAMP DEFAULT NOW()
+)
+""")
 
     conn.commit()
     conn.close()
@@ -1302,6 +1339,7 @@ def admin_login():
             session['admin_role']          = 'owner'
             session['admin_is_master']     = True
             session['admin_last_activity'] = datetime.now(timezone.utc).isoformat()
+            log_activity('Logged in', 'auth', details=f'Login as {session.get("admin_role")}')
             flash('Welcome back.', 'success')
             return redirect(url_for('admin'))
 
@@ -1325,6 +1363,7 @@ def admin_login():
             session['admin_staff_id']      = staff['id']
             session['admin_is_master']     = False
             session['admin_last_activity'] = datetime.now(timezone.utc).isoformat()
+            log_activity('Logged in', 'auth', details=f'Login as {session.get("admin_role")}')
             flash(f'Welcome, {staff["name"]}.', 'success')
             return redirect(url_for('admin'))
 
@@ -1334,6 +1373,7 @@ def admin_login():
 
 @app.route('/admin/logout', methods=['POST'])
 def admin_logout():
+    log_activity('Logged out', 'auth')
     session.clear()
     flash('You have been logged out.', 'success')
     return redirect(url_for('admin_login'))
@@ -1426,6 +1466,10 @@ def admin():
             "WHERE date::date >= CURRENT_DATE - INTERVAL '7 days' "
             "GROUP BY date ORDER BY date"
         ).fetchall()
+        activity_today = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM activity_log "
+            "WHERE DATE(created_at) = CURRENT_DATE"
+        ).fetchone()['cnt']
     finally:
         conn.close()
     return render_template('admin_dashboard.html',
@@ -1451,6 +1495,7 @@ def admin():
         daily_bookings=[{'date': str(r['date']), 'cnt': r['cnt']} for r in daily_bookings],
         today=today,
         now=now,
+        activity_today=activity_today,
     )
 
 
@@ -1492,6 +1537,8 @@ def delete_booking(booking_id):
     conn.execute('DELETE FROM bookings WHERE id=%s', (booking_id,))
     conn.commit(); conn.close()
     logger.warning('Admin %s deleted booking #%d', session.get('admin_username'), booking_id)
+    log_activity('Deleted booking', 'booking', target_type='booking', target_id=booking_id,
+                 details=f'Booking #{booking_id} deleted')
     flash('Booking deleted.', 'success')
     return redirect(url_for('admin_bookings'))
 
@@ -1520,6 +1567,9 @@ def update_booking_status(booking_id):
         """)
         except Exception as _email_exc:
             logger.error('Email notification failed: %s', _email_exc)
+    log_activity(f'Changed booking status to {new_status}', 'booking',
+                 target_type='booking', target_id=booking_id,
+                 details=f'Booking #{booking_id}: status → {new_status}')
     flash(f'Booking #{booking_id} marked as {new_status}.', 'success')
     return redirect(url_for('admin_bookings'))
 
@@ -1603,6 +1653,8 @@ def delete_member(customer_id):
         conn.execute('DELETE FROM customers WHERE id=%s', (customer_id,))
         conn.commit()
         logger.warning('Admin %s deleted member #%d (%s)', session.get('admin_username'), customer_id, customer['email'])
+        log_activity('Deleted member', 'member', target_type='customer', target_id=customer_id,
+                     details=f'Deleted member "{customer["name"]}" ({customer["email"]}) and all records')
         flash(f'Member "{customer["name"]}" and all related records deleted.', 'success')
     except Exception as exc:
         conn.rollback()
@@ -1751,6 +1803,8 @@ def record_payment(plan_id):
 
     logger.info('Admin %s recorded payment for plan #%d', session.get('admin_username'), plan_id)
     conn.close()
+    log_activity('Recorded payment', 'installment', target_type='payment', target_id=payment_id,
+                 details=f'Plan #{plan_id}: {fmt_ghs(amount)} via {method}. Balance: {fmt_ghs(new_balance)}')
 
     customer_name  = plan.get('customer_name') or ''
     customer_phone = plan.get('customer_phone') or ''
@@ -1782,6 +1836,9 @@ def update_plan_status(plan_id):
     conn.execute('UPDATE installment_plans SET status=%s WHERE id=%s', (new_status, plan_id))
     conn.commit(); conn.close()
     logger.info('Admin %s set plan #%d status to %s', session.get('admin_username'), plan_id, new_status)
+    log_activity(f'Changed plan status to {new_status}', 'installment',
+                 target_type='plan', target_id=plan_id,
+                 details=f'Plan #{plan_id}: status → {new_status}')
     flash(f'Plan #{plan_id} updated to {new_status}.', 'success')
     back = request.form.get('next', 'admin_installments')
     if back == 'admin_members':
@@ -1908,6 +1965,8 @@ def send_payment_reminders():
             skipped += 1
 
     total = len(plans)
+    log_activity('Sent payment reminders', 'installment',
+                 details=f'Sent {sent} SMS, {skipped} failed, {total} total plans targeted')
     if not ARKESEL_API_KEY:
         flash(f'SMS not configured — set ARKESEL_API_KEY env var. Would have sent {total} reminder(s).', 'error')
     else:
@@ -2095,6 +2154,8 @@ def update_membership(customer_id):
     conn.commit(); conn.close()
     logger.info('Admin %s updated membership for customer #%d: tier=%s expiry=%s',
                 session.get('admin_username'), customer_id, tier, expiry)
+    log_activity('Updated membership', 'member', target_type='customer', target_id=customer_id,
+                 details=f'Tier → {tier}, Expiry → {expiry}')
     flash(f'Membership updated — {tier}, expires {expiry}.', 'success')
     return redirect(url_for('admin_members'))
 
@@ -2128,6 +2189,8 @@ def extend_membership(customer_id):
     conn.commit(); conn.close()
     logger.info('Admin %s extended membership for customer #%d by %d months (new expiry: %s)',
                 session.get('admin_username'), customer_id, months, new_expiry)
+    log_activity('Extended membership', 'member', target_type='customer', target_id=customer_id,
+                 details=f'Extended by {months} month(s). New expiry: {new_expiry}')
     flash(f'Membership extended by {months} month(s). New expiry: {new_expiry}.', 'success')
     return redirect(url_for('admin_members'))
 
@@ -2331,6 +2394,8 @@ def admin_inventory_add():
 
     conn.close()
     logger.info('Admin %s added inventory: %s %s', session.get('admin_username'), brand, model)
+    log_activity('Added device to inventory', 'inventory', target_type='inventory', target_id=item_id,
+                 details=f'{brand} {model} — cost {fmt_ghs(cost_price)}, sell {fmt_ghs(selling_price)}')
     count = sum(1 for r in [img1_result, img2_result] if r)
     if count:
         flash(f'Device added with {count} photo(s) uploaded.', 'success')
@@ -2429,6 +2494,8 @@ def admin_inventory_edit(item_id):
     )
     conn.commit()
     conn.close()
+    log_activity('Edited inventory device', 'inventory', target_type='inventory', target_id=item_id,
+                 details=f'{brand} {model} — status: {status}')
     flash('Device updated.', 'success')
     return redirect(url_for('admin_inventory'))
 
@@ -2464,6 +2531,8 @@ def admin_inventory_sell(item_id):
     conn.execute('UPDATE inventory SET status=%s,sold_to=%s,updated_at=NOW() WHERE id=%s',
                  ('Sold', customer_id, item_id))
     conn.commit(); conn.close()
+    log_activity('Marked device as sold', 'inventory', target_type='inventory', target_id=item_id,
+                 details=f'Sold to customer #{customer_id}')
     flash('Device marked as sold.', 'success')
     return redirect(url_for('admin_inventory'))
 
@@ -2495,6 +2564,8 @@ def admin_inventory_reserve(item_id):
     conn.execute('UPDATE inventory SET status=%s,plan_id=%s,updated_at=NOW() WHERE id=%s',
                  ('Reserved', plan_id, item_id))
     conn.commit(); conn.close()
+    log_activity('Reserved device for plan', 'inventory', target_type='inventory', target_id=item_id,
+                 details=f'Reserved for plan #{plan_id}')
     flash(f'Device reserved for plan #{plan_id}.', 'success')
     return redirect(url_for('admin_inventory'))
 
@@ -2516,6 +2587,8 @@ def admin_inventory_delete(item_id):
     delete_image_from_cloudinary(item.get('image2_public_id'))
     conn.execute('DELETE FROM inventory WHERE id=%s', (item_id,))
     conn.commit(); conn.close()
+    log_activity('Deleted device from inventory', 'inventory', target_type='inventory', target_id=item_id,
+                 details=f'{item["brand"]} {item["model"]}')
     flash('Device removed from inventory.', 'success')
     return redirect(url_for('admin_inventory'))
 
@@ -2835,6 +2908,8 @@ def admin_staff_add():
     conn.commit()
     conn.close()
     logger.info('Admin %s created staff account for %s (%s)', session.get('admin_username'), name, role)
+    log_activity('Created staff account', 'staff', target_type='staff',
+                 details=f'{name} ({email}) — role: {role}')
     flash(f'Staff account created for {name}.', 'success')
     return redirect(url_for('admin_staff'))
 
@@ -2880,6 +2955,8 @@ def admin_staff_edit(staff_id):
     conn.commit()
     conn.close()
     logger.info('Admin %s edited staff #%d', session.get('admin_username'), staff_id)
+    log_activity('Edited staff account', 'staff', target_type='staff', target_id=staff_id,
+                 details=f'Role → {role}, Active → {is_active}')
     flash('Staff account updated.', 'success')
     return redirect(url_for('admin_staff'))
 
@@ -2915,6 +2992,8 @@ def admin_staff_reset_password(staff_id):
     conn.commit()
     conn.close()
     logger.info('Admin %s reset password for staff #%d (%s)', session.get('admin_username'), staff_id, staff['name'])
+    log_activity('Reset staff password', 'staff', target_type='staff', target_id=staff_id,
+                 details=f'Password reset for {staff["name"]}')
     flash(f'Password reset for {staff["name"]}.', 'success')
     return redirect(url_for('admin_staff'))
 
@@ -2941,6 +3020,8 @@ def admin_staff_deactivate(staff_id):
     conn.commit()
     conn.close()
     logger.info('Admin %s deactivated staff #%d (%s)', session.get('admin_username'), staff_id, staff['name'])
+    log_activity('Deactivated staff account', 'staff', target_type='staff', target_id=staff_id,
+                 details=f'Deactivated {staff["name"]}')
     flash(f"{staff['name']}'s account has been deactivated.", 'success')
     return redirect(url_for('admin_staff'))
 
@@ -2970,6 +3051,8 @@ def admin_staff_delete(staff_id):
     conn.commit()
     conn.close()
     logger.info('Master admin permanently deleted staff #%d (%s)', staff_id, staff['name'])
+    log_activity('Permanently deleted staff', 'staff', target_type='staff', target_id=staff_id,
+                 details=f'Deleted {staff["name"]}')
     flash(f"Staff account for {staff['name']} permanently deleted.", 'success')
     return redirect(url_for('admin_staff'))
 
@@ -3230,6 +3313,8 @@ def admin_shop_confirm(res_id):
     )
     conn.commit()
     conn.close()
+    log_activity('Confirmed reservation', 'shop', target_type='reservation', target_id=res_id,
+                 details=f'Deposit confirmed for reservation #{res_id}')
     flash('Reservation confirmed.', 'success')
     return redirect(url_for('admin_shop'))
 
@@ -3253,6 +3338,8 @@ def admin_shop_cancel(res_id):
     )
     conn.commit()
     conn.close()
+    log_activity('Cancelled reservation', 'shop', target_type='reservation', target_id=res_id,
+                 details=f'Reservation #{res_id} cancelled')
     flash('Reservation cancelled. Device returned to stock.', 'success')
     return redirect(url_for('admin_shop'))
 
@@ -3276,6 +3363,8 @@ def admin_shop_complete(res_id):
     )
     conn.commit()
     conn.close()
+    log_activity('Completed sale', 'shop', target_type='reservation', target_id=res_id,
+                 details=f'Reservation #{res_id} → sale completed')
     flash('Sale completed. Device marked as sold.', 'success')
     return redirect(url_for('admin_shop'))
 
@@ -3382,8 +3471,121 @@ def admin_shop_enquiry_delete(enq_id):
     conn.execute('DELETE FROM device_enquiries WHERE id=%s', (enq_id,))
     conn.commit()
     conn.close()
+    log_activity('Deleted enquiry', 'shop', target_type='enquiry', target_id=enq_id,
+                 details=f'Enquiry #{enq_id} deleted')
     flash('Enquiry deleted.', 'success')
     return redirect(url_for('admin_shop'))
+
+
+# ─── ACTIVITY LOG ────────────────────────────────────────────────────────────
+
+@app.route('/admin/activity')
+@admin_required
+def admin_activity():
+    if not has_permission('manage_staff'):
+        flash('You do not have permission to view the activity log.', 'error')
+        return redirect(url_for('admin'))
+
+    category  = request.args.get('category', '').strip()
+    user      = request.args.get('user', '').strip()
+    search    = request.args.get('search', '').strip()
+    date_from = request.args.get('date_from', '').strip()
+    date_to   = request.args.get('date_to', '').strip()
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except ValueError:
+        page = 1
+
+    conn = get_db()
+    q      = "SELECT * FROM activity_log WHERE 1=1"
+    params = []
+    if category:
+        q += " AND category=%s"; params.append(category)
+    if user:
+        q += " AND user_name=%s"; params.append(user)
+    if search:
+        q += " AND (details ILIKE %s OR action ILIKE %s)"
+        params += [f'%{search}%', f'%{search}%']
+    if date_from:
+        q += " AND DATE(created_at) >= %s"; params.append(date_from)
+    if date_to:
+        q += " AND DATE(created_at) <= %s"; params.append(date_to)
+
+    total     = conn.execute(q.replace("SELECT *", "SELECT COUNT(*) AS cnt"), params).fetchone()['cnt']
+    logs      = conn.execute(q + " ORDER BY created_at DESC LIMIT %s OFFSET %s",
+                             params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
+    users      = conn.execute("SELECT DISTINCT user_name FROM activity_log ORDER BY user_name").fetchall()
+    categories = conn.execute("SELECT DISTINCT category FROM activity_log ORDER BY category").fetchall()
+    today_count = conn.execute(
+        "SELECT COUNT(*) AS cnt FROM activity_log WHERE DATE(created_at) = CURRENT_DATE"
+    ).fetchone()['cnt']
+    conn.close()
+
+    total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
+    return render_template('admin_activity.html',
+        logs=logs, total=total,
+        page=page, total_pages=total_pages,
+        users=[u['user_name'] for u in users],
+        categories=[c['category'] for c in categories],
+        selected_category=category,
+        selected_user=user,
+        search=search,
+        date_from=date_from,
+        date_to=date_to,
+        today_count=today_count,
+    )
+
+
+@app.route('/admin/activity/export')
+@admin_required
+def admin_activity_export():
+    import csv, io
+    if not has_permission('manage_staff'):
+        flash('No permission.', 'error')
+        return redirect(url_for('admin'))
+
+    category  = request.args.get('category', '').strip()
+    user      = request.args.get('user', '').strip()
+    search    = request.args.get('search', '').strip()
+    date_from = request.args.get('date_from', '').strip()
+    date_to   = request.args.get('date_to', '').strip()
+
+    conn   = get_db()
+    q      = "SELECT * FROM activity_log WHERE 1=1"
+    params = []
+    if category:
+        q += " AND category=%s"; params.append(category)
+    if user:
+        q += " AND user_name=%s"; params.append(user)
+    if search:
+        q += " AND (details ILIKE %s OR action ILIKE %s)"
+        params += [f'%{search}%', f'%{search}%']
+    if date_from:
+        q += " AND DATE(created_at) >= %s"; params.append(date_from)
+    if date_to:
+        q += " AND DATE(created_at) <= %s"; params.append(date_to)
+
+    logs = conn.execute(q + " ORDER BY created_at DESC", params).fetchall()
+    conn.close()
+
+    buf    = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['ID', 'Timestamp', 'User', 'Role', 'Action', 'Category',
+                     'Target Type', 'Target ID', 'Details', 'IP Address'])
+    for log in logs:
+        writer.writerow([
+            log['id'],
+            log['created_at'].strftime('%Y-%m-%d %H:%M:%S') if log['created_at'] else '',
+            log['user_name'], log['user_role'], log['action'], log['category'],
+            log['target_type'] or '', log['target_id'] or '',
+            log['details'] or '', log['ip_address'] or '',
+        ])
+
+    today_str = datetime.today().strftime('%Y-%m-%d')
+    resp = make_response(buf.getvalue())
+    resp.headers['Content-Type']        = 'text/csv'
+    resp.headers['Content-Disposition'] = f'attachment; filename=phonehub-activity-log-{today_str}.csv'
+    return resp
 
 
 # ─── ERROR HANDLERS ───────────────────────────────────────────────────────────
