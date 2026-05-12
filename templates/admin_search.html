@@ -1,0 +1,246 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Search Results — Admin{% endblock %}
+
+{% block topbar_title %}Search Results{% endblock %}
+
+{% block topbar_subtitle %}
+  {% if results and total_results %}
+    {{ total_results }} result{{ 's' if total_results != 1 else '' }} for "{{ query }}"
+  {% elif query %}
+    Searching for "{{ query }}"
+  {% else %}
+    Search the admin panel
+  {% endif %}
+{% endblock %}
+
+{% block head_extra %}
+<style>
+/* ── SEARCH SECTIONS ── */
+.search-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.ss-header{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.ss-icon{font-size:17px}
+.ss-title{font-family:'DM Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-soft);font-weight:600}
+.ss-viewall{margin-left:auto;font-size:12px;color:var(--green);text-decoration:none;white-space:nowrap}
+.ss-viewall:hover{text-decoration:underline}
+.ss-item{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);text-decoration:none;color:inherit;transition:background .12s;gap:16px}
+.ss-item:last-child{border-bottom:none}
+.ss-item:hover{background:var(--surface2)}
+.ss-item-main{flex:1;min-width:0}
+.ss-item-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:3px}
+.ss-item-sub{font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-item-meta{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+/* ── STATUS / TIER / ROLE BADGES ── */
+.status-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:12px;white-space:nowrap}
+.status-pending{background:rgba(245,158,11,.15);color:var(--amber)}
+.status-in-progress,.status-in_progress{background:rgba(59,158,232,.15);color:#3B9EE8}
+.status-complete,.status-completed{background:rgba(0,196,106,.15);color:var(--green)}
+.status-cancelled,.status-defaulted{background:rgba(232,64,64,.15);color:var(--red)}
+.status-active{background:rgba(0,196,106,.15);color:var(--green)}
+.status-paused{background:rgba(245,158,11,.15);color:var(--amber)}
+.status-confirmed{background:rgba(0,196,106,.15);color:var(--green)}
+.status-expired,.status-inactive{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+.status-in-stock{background:rgba(0,196,106,.12);color:var(--green)}
+.status-reserved{background:rgba(245,200,66,.12);color:var(--gold)}
+.status-sold{background:var(--surface2);color:var(--text-muted)}
+.tier-badge{display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:12px;background:var(--surface2);color:var(--text-soft);border:1px solid var(--border)}
+.role-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:12px}
+.role-owner{background:rgba(245,200,66,.15);color:var(--gold)}
+.role-manager{background:rgba(59,158,232,.15);color:#3B9EE8}
+.role-technician{background:rgba(0,196,106,.15);color:var(--green)}
+.role-sales{background:rgba(245,158,11,.15);color:var(--amber)}
+
+/* ── SEARCH PROMPT ── */
+.search-prompt{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px 24px;margin-bottom:20px}
+.search-prompt-form{display:flex;gap:10px}
+.search-prompt-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:#fff;padding:10px 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s}
+.search-prompt-input:focus{border-color:var(--green)}
+.search-prompt-btn{padding:10px 22px;background:var(--green);border:none;border-radius:8px;color:#0E1210;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s;white-space:nowrap}
+.search-prompt-btn:hover{opacity:.9}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── SEARCH BAR ON PAGE ── -->
+<div class="search-prompt">
+  <form method="GET" action="/admin/search" class="search-prompt-form">
+    <input type="text" name="q" value="{{ query or '' }}"
+           class="search-prompt-input"
+           placeholder="Search customers, bookings, devices, plans…"
+           autofocus/>
+    <button type="submit" class="search-prompt-btn">Search</button>
+  </form>
+</div>
+
+{% if error %}
+<div style="text-align:center;padding:48px 20px;color:var(--text-muted)">
+  <div style="font-size:40px;margin-bottom:12px;opacity:.4">🔍</div>
+  <div style="font-size:15px;color:var(--text-soft);font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px">{{ error }}</div>
+</div>
+
+{% elif results is not none %}
+
+  {% if total_results == 0 %}
+  <div style="text-align:center;padding:60px 20px">
+    <div style="font-size:48px;margin-bottom:16px">🔍</div>
+    <div style="font-size:18px;color:#fff;font-weight:600;font-family:'Syne',sans-serif;margin-bottom:8px">No results found</div>
+    <div style="font-size:14px;color:var(--text-muted)">Try a different name, phone number, email, or device name.</div>
+  </div>
+
+  {% else %}
+
+  {% if results.customers %}
+  <div class="search-section">
+    <div class="ss-header">
+      <span class="ss-icon">👤</span>
+      <span class="ss-title">Customers ({{ results.customers|length }})</span>
+      <a href="/admin/members?search={{ query|urlencode }}" class="ss-viewall">View all in Members →</a>
+    </div>
+    {% for c in results.customers %}
+    <a href="/admin/members/{{ c.id }}" class="ss-item">
+      <div class="ss-item-main">
+        <div class="ss-item-title">{{ c.name }}</div>
+        <div class="ss-item-sub">{{ c.phone }} · {{ c.email }}</div>
+      </div>
+      <div class="ss-item-meta">
+        <span class="tier-badge">{{ c.membership_tier }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results.bookings %}
+  <div class="search-section">
+    <div class="ss-header">
+      <span class="ss-icon">📋</span>
+      <span class="ss-title">Bookings ({{ results.bookings|length }})</span>
+      <a href="/admin/bookings?search={{ query|urlencode }}" class="ss-viewall">View all in Bookings →</a>
+    </div>
+    {% for b in results.bookings %}
+    <div class="ss-item">
+      <div class="ss-item-main">
+        <div class="ss-item-title">#{{ b.id }} — {{ b.name }}</div>
+        <div class="ss-item-sub">{{ b.device }} · {{ b.service }} · {{ b.date }}</div>
+      </div>
+      <div class="ss-item-meta">
+        <span class="status-badge status-{{ (b.status or 'pending')|lower|replace(' ','-') }}">{{ b.status or 'Pending' }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results.plans %}
+  <div class="search-section">
+    <div class="ss-header">
+      <span class="ss-icon">💳</span>
+      <span class="ss-title">Installment Plans ({{ results.plans|length }})</span>
+      <a href="/admin/installments" class="ss-viewall">View all in Installments →</a>
+    </div>
+    {% for p in results.plans %}
+    <div class="ss-item">
+      <div class="ss-item-main">
+        <div class="ss-item-title">Plan #{{ p.id }} — {{ p.customer_name }}</div>
+        <div class="ss-item-sub">{{ p.device_name }} · {{ fmt_ghs(p.total_payable) }} · Balance: {{ fmt_ghs(p.balance_remaining) }}</div>
+      </div>
+      <div class="ss-item-meta">
+        <span class="status-badge status-{{ p.status|lower }}">{{ p.status }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results.inventory %}
+  <div class="search-section">
+    <div class="ss-header">
+      <span class="ss-icon">📱</span>
+      <span class="ss-title">Inventory ({{ results.inventory|length }})</span>
+      <a href="/admin/inventory" class="ss-viewall">View all in Inventory →</a>
+    </div>
+    {% for i in results.inventory %}
+    <div class="ss-item">
+      <div class="ss-item-main">
+        <div class="ss-item-title">{{ i.brand }} {{ i.model }}</div>
+        <div class="ss-item-sub">{% if i.color %}{{ i.color }} · {% endif %}{% if i.storage %}{{ i.storage }} · {% endif %}{% if i.imei %}IMEI: {{ i.imei }} · {% endif %}{{ i.condition }}</div>
+      </div>
+      <div class="ss-item-meta">
+        <span style="color:var(--green);font-weight:700;font-size:13px;font-family:'DM Mono',monospace">{{ fmt_ghs(i.selling_price) }}</span>
+        <span class="status-badge status-{{ (i.status or '')|lower|replace(' ','-') }}">{{ i.status }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results.reservations %}
+  <div class="search-section">
+    <div class="ss-header">
+      <span class="ss-icon">🛍️</span>
+      <span class="ss-title">Reservations ({{ results.reservations|length }})</span>
+      <a href="/admin/shop" class="ss-viewall">View in Shop →</a>
+    </div>
+    {% for r in results.reservations %}
+    <div class="ss-item">
+      <div class="ss-item-main">
+        <div class="ss-item-title">RES-{{ '%04d' % r.id }} — {{ r.customer_name }}</div>
+        <div class="ss-item-sub">{{ r.brand }} {{ r.model }} · {{ r.customer_phone }} · Deposit: {{ fmt_ghs(r.deposit_amount) }}</div>
+      </div>
+      <div class="ss-item-meta">
+        <span class="status-badge status-{{ r.status|lower }}">{{ r.status }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results.staff %}
+  <div class="search-section">
+    <div class="ss-header">
+      <span class="ss-icon">👥</span>
+      <span class="ss-title">Staff ({{ results.staff|length }})</span>
+      <a href="/admin/staff" class="ss-viewall">View in Staff →</a>
+    </div>
+    {% for s in results.staff %}
+    <div class="ss-item">
+      <div class="ss-item-main">
+        <div class="ss-item-title">{{ s.name }}</div>
+        <div class="ss-item-sub">{{ s.email }} · {{ s.phone or 'No phone' }}</div>
+      </div>
+      <div class="ss-item-meta">
+        <span class="role-badge role-{{ s.role }}">{{ s.role }}</span>
+        {% if not s.is_active %}<span style="color:var(--red);font-size:11px">Inactive</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results.enquiries %}
+  <div class="search-section">
+    <div class="ss-header">
+      <span class="ss-icon">💬</span>
+      <span class="ss-title">Enquiries ({{ results.enquiries|length }})</span>
+      <a href="/admin/shop" class="ss-viewall">View in Shop →</a>
+    </div>
+    {% for e in results.enquiries %}
+    <div class="ss-item">
+      <div class="ss-item-main">
+        <div class="ss-item-title">{{ e.customer_name }}</div>
+        <div class="ss-item-sub">{{ e.device_type }} · {{ e.customer_phone }}</div>
+      </div>
+      <div class="ss-item-meta">
+        <span class="status-badge">{{ e.status }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% endif %}{# end total_results == 0 #}
+{% endif %}{# end results is not none #}
+
+{% endblock %}

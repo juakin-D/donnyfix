@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response, g
+from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response, g, jsonify
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from markupsafe import escape as _he
 from flask_limiter import Limiter
@@ -3685,6 +3685,163 @@ def admin_activity_export():
     resp.headers['Content-Type']        = 'text/csv'
     resp.headers['Content-Disposition'] = f'attachment; filename=phonehub-activity-log-{today_str}.csv'
     return resp
+
+
+# ─── GLOBAL SEARCH ────────────────────────────────────────────────────────────
+
+@app.route('/admin/search')
+@admin_required
+def admin_search():
+    q = request.args.get('q', '').strip()
+    if not q or len(q) < 2:
+        return render_template('admin_search.html',
+            query=q, results=None, total_results=0,
+            error='Enter at least 2 characters to search.')
+    search_term = f'%{q}%'
+    conn = get_db()
+    results = {}
+    if has_permission('view_members'):
+        rows = conn.execute(
+            """SELECT id, name, phone, email, membership_tier, membership_expiry
+               FROM customers
+               WHERE name ILIKE %s OR phone ILIKE %s OR email ILIKE %s
+               ORDER BY name LIMIT 10""",
+            (search_term, search_term, search_term)
+        ).fetchall()
+        results['customers'] = [dict(r) for r in rows]
+    if has_permission('view_bookings'):
+        rows = conn.execute(
+            """SELECT id, name, phone, email, device, service, date, status
+               FROM bookings
+               WHERE name ILIKE %s OR phone ILIKE %s OR email ILIKE %s
+               OR device ILIKE %s OR service ILIKE %s OR CAST(id AS TEXT) = %s
+               ORDER BY date DESC LIMIT 10""",
+            (search_term, search_term, search_term, search_term, search_term, q)
+        ).fetchall()
+        results['bookings'] = [dict(r) for r in rows]
+    if has_permission('view_installments'):
+        rows = conn.execute(
+            """SELECT ip.id, ip.device_name, ip.total_payable, ip.balance_remaining,
+               ip.status, ip.plan_months, c.name AS customer_name, c.phone AS customer_phone
+               FROM installment_plans ip
+               JOIN customers c ON c.id=ip.customer_id
+               WHERE c.name ILIKE %s OR c.phone ILIKE %s OR ip.device_name ILIKE %s
+               OR CAST(ip.id AS TEXT) = %s
+               ORDER BY ip.created_at DESC LIMIT 10""",
+            (search_term, search_term, search_term, q)
+        ).fetchall()
+        results['plans'] = [dict(r) for r in rows]
+    if has_permission('view_inventory'):
+        rows = conn.execute(
+            """SELECT id, brand, model, imei, condition, selling_price, status, color, storage
+               FROM inventory
+               WHERE brand ILIKE %s OR model ILIKE %s OR imei ILIKE %s
+               OR color ILIKE %s OR CAST(id AS TEXT) = %s
+               ORDER BY created_at DESC LIMIT 10""",
+            (search_term, search_term, search_term, search_term, q)
+        ).fetchall()
+        results['inventory'] = [dict(r) for r in rows]
+        rows = conn.execute(
+            """SELECT r.id, r.customer_name, r.customer_phone, r.customer_email,
+               r.status, r.deposit_amount, r.created_at, i.brand, i.model
+               FROM reservations r JOIN inventory i ON i.id=r.item_id
+               WHERE r.customer_name ILIKE %s OR r.customer_phone ILIKE %s
+               OR r.customer_email ILIKE %s OR i.brand ILIKE %s OR i.model ILIKE %s
+               OR CAST(r.id AS TEXT) = %s
+               ORDER BY r.created_at DESC LIMIT 10""",
+            (search_term, search_term, search_term, search_term, search_term, q)
+        ).fetchall()
+        results['reservations'] = [dict(r) for r in rows]
+    if has_permission('manage_staff'):
+        rows = conn.execute(
+            """SELECT id, name, email, phone, role, is_active FROM staff
+               WHERE name ILIKE %s OR email ILIKE %s OR phone ILIKE %s
+               ORDER BY name LIMIT 5""",
+            (search_term, search_term, search_term)
+        ).fetchall()
+        results['staff'] = [dict(r) for r in rows]
+        try:
+            rows = conn.execute(
+                """SELECT id, customer_name, customer_phone, device_type, message, status, created_at
+                   FROM device_enquiries
+                   WHERE customer_name ILIKE %s OR customer_phone ILIKE %s OR device_type ILIKE %s
+                   ORDER BY created_at DESC LIMIT 5""",
+                (search_term, search_term, search_term)
+            ).fetchall()
+            results['enquiries'] = [dict(r) for r in rows]
+        except Exception:
+            results['enquiries'] = []
+    conn.close()
+    total_results = sum(len(v) for v in results.values())
+    return render_template('admin_search.html',
+        query=q, results=results, total_results=total_results, error=None)
+
+
+@app.route('/admin/search/json')
+@admin_required
+def admin_search_json():
+    q = request.args.get('q', '').strip()
+    if not q or len(q) < 2:
+        return jsonify({'results': []})
+    search_term = f'%{q}%'
+    conn = get_db()
+    suggestions = []
+    if has_permission('view_members'):
+        rows = conn.execute(
+            """SELECT id, name, phone, email FROM customers
+               WHERE name ILIKE %s OR phone ILIKE %s OR email ILIKE %s LIMIT 3""",
+            (search_term, search_term, search_term)
+        ).fetchall()
+        for c in rows:
+            suggestions.append({
+                'type': 'customer', 'icon': '👤',
+                'title': c['name'],
+                'subtitle': f"{c['phone']} · {c['email']}",
+                'url': f"/admin/members/{c['id']}"
+            })
+    if has_permission('view_bookings'):
+        rows = conn.execute(
+            """SELECT id, name, device, service, status FROM bookings
+               WHERE name ILIKE %s OR device ILIKE %s OR CAST(id AS TEXT) = %s LIMIT 2""",
+            (search_term, search_term, q)
+        ).fetchall()
+        for b in rows:
+            suggestions.append({
+                'type': 'booking', 'icon': '📋',
+                'title': f"Booking #{b['id']} — {b['name']}",
+                'subtitle': f"{b['device']} · {b['service']} · {b['status']}",
+                'url': '/admin/bookings'
+            })
+    if has_permission('view_inventory'):
+        rows = conn.execute(
+            """SELECT id, brand, model, status, selling_price FROM inventory
+               WHERE brand ILIKE %s OR model ILIKE %s OR imei ILIKE %s LIMIT 2""",
+            (search_term, search_term, search_term)
+        ).fetchall()
+        for i in rows:
+            suggestions.append({
+                'type': 'inventory', 'icon': '📱',
+                'title': f"{i['brand']} {i['model']}",
+                'subtitle': f"GH₵{i['selling_price']:,.2f} · {i['status']}",
+                'url': f"/shop/{i['id']}"
+            })
+    if has_permission('view_installments'):
+        rows = conn.execute(
+            """SELECT ip.id, ip.device_name, ip.status, c.name AS customer_name
+               FROM installment_plans ip JOIN customers c ON c.id=ip.customer_id
+               WHERE c.name ILIKE %s OR ip.device_name ILIKE %s OR CAST(ip.id AS TEXT) = %s
+               LIMIT 1""",
+            (search_term, search_term, q)
+        ).fetchall()
+        for p in rows:
+            suggestions.append({
+                'type': 'plan', 'icon': '💳',
+                'title': f"Plan #{p['id']} — {p['customer_name']}",
+                'subtitle': f"{p['device_name']} · {p['status']}",
+                'url': '/admin/installments'
+            })
+    conn.close()
+    return jsonify({'results': suggestions[:8]})
 
 
 # ─── ERROR HANDLERS ───────────────────────────────────────────────────────────

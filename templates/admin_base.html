@@ -151,6 +151,34 @@
     .amn-icon{font-size:16px;line-height:1}
     @media(max-width:900px){ .sidebar{display:none} .content{padding:20px} .stats-row{grid-template-columns:1fr 1fr} .topbar{padding:0 20px} table{display:block;overflow-x:auto} .admin-mobile-nav{display:block} }
     @media(max-width:600px){ .stats-row{grid-template-columns:1fr} .topbar-subtitle{display:none} }
+
+    /* ── GLOBAL SEARCH ── */
+    .global-search{position:relative;flex:1;max-width:420px;margin:0 16px}
+    @media(max-width:900px){.global-search{max-width:none;margin:0 8px}}
+    @media(max-width:600px){.global-search{display:none}}
+    .gs-input-wrap{position:relative;display:flex;align-items:center}
+    .gs-icon{position:absolute;left:11px;font-size:13px;pointer-events:none;opacity:.45}
+    .gs-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text-soft);padding:7px 36px 7px 32px;font-size:13px;font-family:'DM Sans',sans-serif;transition:all .2s;outline:none}
+    .gs-input:focus{border-color:var(--green);background:var(--surface);box-shadow:0 0 0 3px rgba(0,196,106,.08);color:#fff}
+    .gs-input::placeholder{color:var(--text-muted);font-size:12px}
+    .gs-shortcut{position:absolute;right:9px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);pointer-events:none}
+    .gs-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.55);z-index:9999;max-height:400px;overflow-y:auto}
+    .gs-dropdown.open{display:block}
+    .gs-loading{padding:14px;text-align:center;font-size:13px;color:var(--text-muted)}
+    .gs-result-item{display:flex;align-items:center;gap:11px;padding:10px 14px;text-decoration:none;color:var(--text-soft);transition:background .12s;border-bottom:1px solid var(--border);cursor:pointer}
+    .gs-result-item:last-child{border-bottom:none}
+    .gs-result-item:hover,.gs-result-item.gs-highlighted{background:var(--surface2)}
+    .gs-result-icon{font-size:18px;width:34px;height:34px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .gs-result-title{font-size:13px;font-weight:600;color:#fff;margin-bottom:1px}
+    .gs-result-subtitle{font-size:11px;color:var(--text-muted)}
+    .gs-result-type{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border-radius:4px;margin-left:auto;flex-shrink:0}
+    .type-customer{background:rgba(0,196,106,.15);color:var(--green)}
+    .type-booking{background:rgba(59,158,232,.15);color:#3B9EE8}
+    .type-inventory{background:rgba(139,92,246,.15);color:#8B5CF6}
+    .type-plan{background:rgba(245,200,66,.15);color:var(--gold)}
+    .gs-empty{padding:22px 14px;text-align:center;color:var(--text-muted);font-size:13px}
+    .gs-footer{padding:7px 14px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--text-muted)}
+    .gs-highlight{background:rgba(0,196,106,.2);color:var(--green);border-radius:2px;padding:0 1px}
   </style>
   {% block head_extra %}{% endblock %}
 </head>
@@ -231,6 +259,26 @@
           <div class="topbar-subtitle">{% block topbar_subtitle %}{% endblock %}</div>
         </div>
       </div>
+
+      <!-- Global Search -->
+      <div class="global-search" id="globalSearch">
+        <div class="gs-input-wrap">
+          <span class="gs-icon">🔍</span>
+          <input type="text" id="gsInput" class="gs-input"
+                 placeholder="Search customers, bookings, devices…"
+                 autocomplete="off"
+                 value="{{ request.args.get('q', '') }}"
+                 onkeyup="handleSearchInput(event)"
+                 onfocus="showSearchDropdown()"/>
+          <kbd class="gs-shortcut">/</kbd>
+        </div>
+        <div class="gs-dropdown" id="gsDropdown">
+          <div class="gs-loading" id="gsLoading" style="display:none">Searching…</div>
+          <div class="gs-results" id="gsResults"></div>
+          <div class="gs-footer" id="gsFooter" style="display:none">Press Enter for full results</div>
+        </div>
+      </div>
+
       <div class="topbar-right">
         {% block topbar_right %}{% endblock %}
         <div class="topbar-time" id="live-time"></div>
@@ -288,6 +336,113 @@
       var msg = e.target.dataset.confirm;
       if (msg && !confirm(msg)) e.preventDefault();
     }, true);
+
+    // ── GLOBAL SEARCH ──
+    var _gsTimer = null;
+    var _gsIdx   = -1;
+
+    function handleSearchInput(e) {
+      var input = document.getElementById('gsInput');
+      var q = input.value.trim();
+      if (e.key === 'Enter') {
+        if (_gsIdx >= 0) {
+          var items = document.querySelectorAll('.gs-result-item');
+          if (items[_gsIdx]) { items[_gsIdx].click(); return; }
+        }
+        if (q.length >= 2) { window.location.href = '/admin/search?q=' + encodeURIComponent(q); }
+        return;
+      }
+      if (e.key === 'Escape') { hideSearchDropdown(); input.blur(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); navigateResults(1); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); navigateResults(-1); return; }
+      clearTimeout(_gsTimer);
+      if (q.length < 2) { hideSearchDropdown(); return; }
+      _gsTimer = setTimeout(function(){ fetchSearchResults(q); }, 260);
+    }
+
+    async function fetchSearchResults(q) {
+      var dropdown = document.getElementById('gsDropdown');
+      var loading  = document.getElementById('gsLoading');
+      var resultsEl= document.getElementById('gsResults');
+      var footer   = document.getElementById('gsFooter');
+      dropdown.classList.add('open');
+      loading.style.display = 'block';
+      resultsEl.innerHTML = '';
+      footer.style.display = 'none';
+      _gsIdx = -1;
+      try {
+        var resp = await fetch('/admin/search/json?q=' + encodeURIComponent(q));
+        var data = await resp.json();
+        loading.style.display = 'none';
+        if (!data.results || !data.results.length) {
+          resultsEl.innerHTML = '<div class="gs-empty">No results for "' + escapeHtml(q) + '"</div>';
+          return;
+        }
+        var html = '';
+        data.results.forEach(function(item, idx) {
+          html += '<a href="' + item.url + '" class="gs-result-item" data-index="' + idx + '">' +
+            '<span class="gs-result-icon">' + item.icon + '</span>' +
+            '<div style="flex:1;min-width:0">' +
+              '<div class="gs-result-title">' + highlightMatch(item.title, q) + '</div>' +
+              '<div class="gs-result-subtitle">' + escapeHtml(item.subtitle) + '</div>' +
+            '</div>' +
+            '<span class="gs-result-type type-' + item.type + '">' + item.type + '</span>' +
+            '</a>';
+        });
+        resultsEl.innerHTML = html;
+        footer.style.display = 'block';
+      } catch(err) {
+        loading.style.display = 'none';
+        resultsEl.innerHTML = '<div class="gs-empty">Search failed. Try again.</div>';
+      }
+    }
+
+    function showSearchDropdown() {
+      var q = document.getElementById('gsInput').value.trim();
+      if (q.length >= 2) document.getElementById('gsDropdown').classList.add('open');
+    }
+
+    function hideSearchDropdown() {
+      document.getElementById('gsDropdown').classList.remove('open');
+      _gsIdx = -1;
+    }
+
+    function navigateResults(dir) {
+      var items = document.querySelectorAll('.gs-result-item');
+      if (!items.length) return;
+      items.forEach(function(el){ el.classList.remove('gs-highlighted'); });
+      _gsIdx += dir;
+      if (_gsIdx < 0) _gsIdx = items.length - 1;
+      if (_gsIdx >= items.length) _gsIdx = 0;
+      items[_gsIdx].classList.add('gs-highlighted');
+      items[_gsIdx].scrollIntoView({ block: 'nearest' });
+    }
+
+    function escapeHtml(s) {
+      if (!s) return '';
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function highlightMatch(text, q) {
+      if (!text || !q) return escapeHtml(text);
+      var esc = escapeHtml(text);
+      var re  = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+      return esc.replace(re, '<span class="gs-highlight">$1</span>');
+    }
+
+    document.addEventListener('click', function(e) {
+      var gs = document.getElementById('globalSearch');
+      if (gs && !gs.contains(e.target)) hideSearchDropdown();
+    });
+
+    document.addEventListener('keydown', function(e) {
+      var tag = document.activeElement ? document.activeElement.tagName : '';
+      if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+        e.preventDefault();
+        var inp = document.getElementById('gsInput');
+        if (inp) inp.focus();
+      }
+    });
   </script>
   {% block scripts %}{% endblock %}
 </body>
