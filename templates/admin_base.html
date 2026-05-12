@@ -152,6 +152,37 @@
     @media(max-width:900px){ .sidebar{display:none} .content{padding:20px} .stats-row{grid-template-columns:1fr 1fr} .topbar{padding:0 20px} table{display:block;overflow-x:auto} .admin-mobile-nav{display:block} }
     @media(max-width:600px){ .stats-row{grid-template-columns:1fr} .topbar-subtitle{display:none} }
 
+    /* ── NOTIFICATION BELL ── */
+    .notif-wrap{position:relative;margin:0 4px}
+    .notif-bell{background:none;border:none;font-size:20px;cursor:pointer;position:relative;width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background .2s;-webkit-tap-highlight-color:transparent;color:var(--text-soft)}
+    .notif-bell:hover{background:var(--surface2)}
+    .notif-badge{position:absolute;top:4px;right:2px;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;font-family:'DM Mono',monospace;line-height:1;border:2px solid #0E1210}
+    .notif-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;width:min(400px,90vw);background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.5);z-index:500;max-height:480px;overflow:hidden;flex-direction:column}
+    .notif-dropdown.open{display:flex}
+    .nd-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .nd-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff}
+    .nd-viewall{font-size:12px;color:var(--green);text-decoration:none;font-weight:600}
+    .nd-viewall:hover{text-decoration:underline}
+    .nd-body{overflow-y:auto;max-height:400px;flex:1}
+    .nd-loading{padding:24px;text-align:center;color:var(--text-muted);font-size:13px}
+    .nd-empty{padding:40px 20px;text-align:center;color:var(--text-muted)}
+    .nd-empty-icon{font-size:32px;margin-bottom:8px}
+    .nd-empty-text{font-size:14px}
+    .nd-item{display:flex;align-items:flex-start;gap:12px;padding:12px 18px;text-decoration:none;color:inherit;border-bottom:1px solid var(--border);transition:background .15s;cursor:pointer}
+    .nd-item:last-child{border-bottom:none}
+    .nd-item:hover{background:var(--surface2)}
+    .nd-icon{font-size:18px;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .nd-icon-critical{background:rgba(232,64,64,.15)}
+    .nd-icon-warning{background:rgba(245,158,11,.15)}
+    .nd-icon-info{background:rgba(59,158,232,.15)}
+    .nd-content{flex:1;min-width:0}
+    .nd-item-title{font-size:13px;font-weight:600;color:#fff;margin-bottom:3px;line-height:1.3}
+    .nd-item-desc{font-size:12px;color:var(--text-muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .nd-count{font-family:'DM Mono',monospace;font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;flex-shrink:0;align-self:center}
+    .nd-count-critical{background:rgba(232,64,64,.15);color:var(--red)}
+    .nd-count-warning{background:rgba(245,158,11,.15);color:var(--amber)}
+    .nd-count-info{background:rgba(59,158,232,.15);color:#3B9EE8}
+
     /* ── GLOBAL SEARCH ── */
     .global-search{position:relative;flex:1;max-width:420px;margin:0 16px}
     @media(max-width:900px){.global-search{max-width:none;margin:0 8px}}
@@ -239,6 +270,12 @@
       <span class="nav-icon">📜</span>Activity Log
     </a>
     {% endif %}
+    <a href="/admin/notifications" class="nav-item{% if request.endpoint in ('admin_notifications','admin_notifications_json') %} active{% endif %}">
+      <span class="nav-icon">🔔</span>Alerts
+      {% if alert_badge_count > 0 %}
+      <span style="background:var(--red);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:auto;font-weight:700;line-height:1.4">{{ alert_badge_count }}</span>
+      {% endif %}
+    </a>
 
     <div class="nav-section">Quick Links</div>
     <a href="{{ url_for('home') }}" class="nav-item" target="_blank"><span class="nav-icon">🌐</span>View Site</a>
@@ -292,6 +329,26 @@
 
       <div class="topbar-right">
         {% block topbar_right %}{% endblock %}
+
+        <!-- Notification Bell -->
+        <div class="notif-wrap" id="notifWrap">
+          <button class="notif-bell" id="notifBell" onclick="toggleNotifDropdown()" aria-label="Notifications">
+            🔔
+            {% if alert_badge_count > 0 %}
+            <span class="notif-badge" id="notifBadge">{{ alert_badge_count if alert_badge_count < 100 else '99+' }}</span>
+            {% endif %}
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="nd-header">
+              <span class="nd-title">Notifications</span>
+              <a href="/admin/notifications" class="nd-viewall">View All →</a>
+            </div>
+            <div class="nd-body" id="ndBody">
+              <div class="nd-loading">Loading…</div>
+            </div>
+          </div>
+        </div>
+
         <div class="topbar-time" id="live-time"></div>
         <div class="status-pill"><span class="status-dot"></span>Live</div>
         <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);font-size:12px;color:var(--text-soft);">
@@ -455,6 +512,85 @@
         if (inp) inp.focus();
       }
     });
+
+    // ── NOTIFICATION BELL ──
+    var _notifOpen = false;
+
+    function toggleNotifDropdown() {
+      var dd = document.getElementById('notifDropdown');
+      if (!dd) return;
+      _notifOpen = !_notifOpen;
+      dd.classList.toggle('open', _notifOpen);
+      if (_notifOpen) fetchNotifications();
+    }
+
+    function closeNotifDropdown() {
+      var dd = document.getElementById('notifDropdown');
+      if (dd) dd.classList.remove('open');
+      _notifOpen = false;
+    }
+
+    async function fetchNotifications() {
+      var body = document.getElementById('ndBody');
+      if (!body) return;
+      body.innerHTML = '<div class="nd-loading">Loading…</div>';
+      try {
+        var resp = await fetch('/admin/notifications/json');
+        var data = await resp.json();
+        if (!data.alerts || !data.alerts.length) {
+          body.innerHTML = '<div class="nd-empty"><div class="nd-empty-icon">✅</div><div class="nd-empty-text">All clear — no alerts right now</div></div>';
+          return;
+        }
+        var html = '';
+        data.alerts.forEach(function(a) {
+          html += '<a href="' + a.url + '" class="nd-item" onclick="closeNotifDropdown()">' +
+            '<div class="nd-icon nd-icon-' + a.severity + '">' + a.icon + '</div>' +
+            '<div class="nd-content">' +
+              '<div class="nd-item-title">' + _escN(a.title) + '</div>' +
+              '<div class="nd-item-desc">'  + _escN(a.description) + '</div>' +
+            '</div>' +
+            '<span class="nd-count nd-count-' + a.severity + '">' + a.count + '</span>' +
+            '</a>';
+        });
+        body.innerHTML = html;
+      } catch(err) {
+        body.innerHTML = '<div class="nd-loading">Could not load notifications.</div>';
+      }
+    }
+
+    function _escN(s) {
+      if (!s) return '';
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    document.addEventListener('click', function(e) {
+      var wrap = document.getElementById('notifWrap');
+      var gs   = document.getElementById('globalSearch');
+      if (wrap && !wrap.contains(e.target)) closeNotifDropdown();
+      if (gs && !gs.contains(e.target)) hideSearchDropdown();
+    });
+
+    setInterval(async function() {
+      try {
+        var resp = await fetch('/admin/notifications/json');
+        var data = await resp.json();
+        var total = (data.critical_count || 0) + (data.warning_count || 0);
+        var badge = document.getElementById('notifBadge');
+        var bell  = document.getElementById('notifBell');
+        if (!bell) return;
+        if (total > 0) {
+          if (badge) { badge.textContent = total < 100 ? total : '99+'; badge.style.display = 'flex'; }
+          else {
+            var nb = document.createElement('span');
+            nb.className = 'notif-badge'; nb.id = 'notifBadge';
+            nb.textContent = total < 100 ? total : '99+';
+            bell.appendChild(nb);
+          }
+        } else {
+          if (badge) badge.style.display = 'none';
+        }
+      } catch(e) {}
+    }, 300000);
   </script>
   {% block scripts %}{% endblock %}
 </body>

@@ -933,6 +933,182 @@ def set_security_headers(response):
     return response
 
 
+def _alert_badge_count():
+    if not session.get('admin_logged_in'):
+        return 0
+    try:
+        conn  = get_db()
+        today = datetime.today().strftime('%Y-%m-%d')
+        count = 0
+        count += conn.execute(
+            "SELECT COUNT(*) AS cnt FROM installment_plans WHERE status='Active' AND next_due_date < %s",
+            (today,)
+        ).fetchone()['cnt']
+        try:
+            count += conn.execute("SELECT COUNT(*) AS cnt FROM pending_payments WHERE status='Pending'").fetchone()['cnt']
+        except Exception:
+            pass
+        try:
+            count += conn.execute("SELECT COUNT(*) AS cnt FROM pending_deposits WHERE status='Pending'").fetchone()['cnt']
+        except Exception:
+            pass
+        try:
+            count += conn.execute("SELECT COUNT(*) AS cnt FROM bookings WHERE status='Pending' AND assigned_to IS NULL").fetchone()['cnt']
+        except Exception:
+            count += conn.execute("SELECT COUNT(*) AS cnt FROM bookings WHERE status='Pending'").fetchone()['cnt']
+        try:
+            count += conn.execute("SELECT COUNT(*) AS cnt FROM device_enquiries WHERE status='New'").fetchone()['cnt']
+        except Exception:
+            pass
+        count += conn.execute(
+            "SELECT COUNT(*) AS cnt FROM customers WHERE membership_expiry::date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'"
+        ).fetchone()['cnt']
+        conn.close()
+        return int(count)
+    except Exception:
+        return 0
+
+
+def generate_admin_alerts():
+    alerts = []
+    today  = datetime.today().strftime('%Y-%m-%d')
+    try:
+        conn = get_db()
+
+        # ── CRITICAL ──────────────────────────────────────────────────────────
+        overdue = conn.execute(
+            "SELECT COUNT(*) AS cnt, COALESCE(SUM(monthly_amount),0) AS total_due FROM installment_plans WHERE status='Active' AND next_due_date < %s",
+            (today,)
+        ).fetchone()
+        if overdue['cnt'] > 0:
+            alerts.append({'id':'overdue_payments','type':'installment','severity':'critical','icon':'🔴',
+                'title':f'{overdue["cnt"]} overdue installment payment(s)',
+                'description':f'{fmt_ghs(float(overdue["total_due"]))} total past due. Send reminders or contact customers immediately.',
+                'url':'/admin/installments?status=Active','count':overdue['cnt']})
+
+        _pp = _pd = 0
+        try:
+            _pp = conn.execute("SELECT COUNT(*) AS cnt FROM pending_payments WHERE status='Pending'").fetchone()['cnt']
+        except Exception:
+            pass
+        try:
+            _pd = conn.execute("SELECT COUNT(*) AS cnt FROM pending_deposits WHERE status='Pending'").fetchone()['cnt']
+        except Exception:
+            pass
+        if _pp + _pd > 0:
+            alerts.append({'id':'pending_verifications','type':'payment','severity':'critical','icon':'⏳',
+                'title':f'{_pp + _pd} payment(s) awaiting verification',
+                'description':f'{_pp} installment payment(s) and {_pd} deposit(s) need admin review.',
+                'url':'/admin/payments','count':_pp + _pd})
+
+        try:
+            expired_res = conn.execute("SELECT COUNT(*) AS cnt FROM reservations WHERE status='Pending' AND expires_at < NOW()").fetchone()['cnt']
+            if expired_res > 0:
+                alerts.append({'id':'expired_reservations','type':'shop','severity':'critical','icon':'⏰',
+                    'title':f'{expired_res} expired reservation(s)',
+                    'description':'These reservations have passed their 48-hour hold. Devices should be returned to stock.',
+                    'url':'/admin/shop','count':expired_res})
+        except Exception:
+            pass
+
+        # ── WARNING ───────────────────────────────────────────────────────────
+        try:
+            unassigned = conn.execute("SELECT COUNT(*) AS cnt FROM bookings WHERE status='Pending' AND assigned_to IS NULL").fetchone()['cnt']
+        except Exception:
+            unassigned = conn.execute("SELECT COUNT(*) AS cnt FROM bookings WHERE status='Pending'").fetchone()['cnt']
+        if unassigned > 0:
+            alerts.append({'id':'unassigned_bookings','type':'booking','severity':'warning','icon':'📋',
+                'title':f'{unassigned} unassigned pending booking(s)',
+                'description':'These bookings need to be assigned to a technician.',
+                'url':'/admin/bookings','count':unassigned})
+
+        expiring = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM customers WHERE membership_expiry::date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'"
+        ).fetchone()['cnt']
+        if expiring > 0:
+            alerts.append({'id':'expiring_memberships','type':'member','severity':'warning','icon':'⚠️',
+                'title':f'{expiring} membership(s) expiring this week',
+                'description':'Contact these members about renewal before they expire.',
+                'url':'/admin/members','count':expiring})
+
+        try:
+            pending_res = conn.execute("SELECT COUNT(*) AS cnt FROM reservations WHERE status='Pending' AND expires_at >= NOW()").fetchone()['cnt']
+            if pending_res > 0:
+                alerts.append({'id':'pending_reservations','type':'shop','severity':'warning','icon':'🛍️',
+                    'title':f'{pending_res} pending reservation(s)',
+                    'description':'Customers have reserved devices but deposits are not yet confirmed.',
+                    'url':'/admin/shop','count':pending_res})
+        except Exception:
+            pass
+
+        try:
+            new_enquiries = conn.execute("SELECT COUNT(*) AS cnt FROM device_enquiries WHERE status='New'").fetchone()['cnt']
+            if new_enquiries > 0:
+                alerts.append({'id':'new_enquiries','type':'shop','severity':'warning','icon':'💬',
+                    'title':f'{new_enquiries} new device enquiry/enquiries',
+                    'description':'Customers are looking for phones. Respond within 24 hours.',
+                    'url':'/admin/shop','count':new_enquiries})
+        except Exception:
+            pass
+
+        stock_count = conn.execute("SELECT COUNT(*) AS cnt FROM inventory WHERE status='In Stock'").fetchone()['cnt']
+        if stock_count < 3:
+            alerts.append({'id':'low_inventory','type':'inventory','severity':'warning','icon':'📦',
+                'title':f'Low inventory — only {stock_count} device(s) in stock',
+                'description':'Consider adding more devices to the inventory.',
+                'url':'/admin/inventory','count':stock_count})
+
+        defaulted = conn.execute("SELECT COUNT(*) AS cnt FROM installment_plans WHERE status='Defaulted'").fetchone()['cnt']
+        if defaulted > 0:
+            alerts.append({'id':'defaulted_plans','type':'installment','severity':'warning','icon':'🚫',
+                'title':f'{defaulted} defaulted installment plan(s)',
+                'description':'These plans need debt recovery action.',
+                'url':'/admin/installments?status=Defaulted','count':defaulted})
+
+        # ── INFO ──────────────────────────────────────────────────────────────
+        new_members = conn.execute("SELECT COUNT(*) AS cnt FROM customers WHERE DATE(created_at)=CURRENT_DATE").fetchone()['cnt']
+        if new_members > 0:
+            alerts.append({'id':'new_members_today','type':'member','severity':'info','icon':'🎉',
+                'title':f'{new_members} new member(s) today',
+                'description':'New customers signed up for DonnyPhonehub Gh.',
+                'url':'/admin/members','count':new_members})
+
+        bookings_today = conn.execute("SELECT COUNT(*) AS cnt FROM bookings WHERE date=%s", (today,)).fetchone()['cnt']
+        if bookings_today > 0:
+            alerts.append({'id':'bookings_today','type':'booking','severity':'info','icon':'📅',
+                'title':f'{bookings_today} booking(s) scheduled today',
+                'description':'Repairs booked for today. Check the bookings page.',
+                'url':'/admin/bookings','count':bookings_today})
+
+        pt = conn.execute("SELECT COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS total FROM payments WHERE paid_on=%s", (today,)).fetchone()
+        if pt['cnt'] > 0:
+            alerts.append({'id':'payments_today','type':'payment','severity':'info','icon':'💰',
+                'title':f'{pt["cnt"]} payment(s) received today',
+                'description':f'Total: {fmt_ghs(float(pt["total"]))} collected today.',
+                'url':'/admin/installments','count':pt['cnt']})
+
+        almost_done = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM installment_plans WHERE status='Active' AND payments_made >= plan_months - 1"
+        ).fetchone()['cnt']
+        if almost_done > 0:
+            alerts.append({'id':'plans_almost_done','type':'installment','severity':'info','icon':'🏁',
+                'title':f'{almost_done} plan(s) nearly complete',
+                'description':'These plans have one payment left. Prepare completion receipts.',
+                'url':'/admin/installments','count':almost_done})
+
+        conn.close()
+    except Exception as exc:
+        logger.error('generate_admin_alerts failed: %s', exc)
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    severity_order = {'critical': 0, 'warning': 1, 'info': 2}
+    alerts.sort(key=lambda a: severity_order.get(a['severity'], 3))
+    return alerts
+
+
 def _pending_payment_count():
     try:
         conn = get_db()
@@ -951,16 +1127,22 @@ def _pending_payment_count():
 @app.context_processor
 def inject_helpers():
     pending_count = 0
+    alert_count   = 0
     if session.get('admin_logged_in'):
         try:
             pending_count = _pending_payment_count()
+        except Exception:
+            pass
+        try:
+            alert_count = _alert_badge_count()
         except Exception:
             pass
     return dict(membership_status=membership_status,
                 fmt_ghs=fmt_ghs, PLAN_CONFIG=PLAN_CONFIG,
                 has_permission=has_permission,
                 csp_nonce=getattr(g, 'csp_nonce', ''),
-                pending_payment_count=pending_count)
+                pending_payment_count=pending_count,
+                alert_badge_count=alert_count)
 
 
 # ─── AUTH DECORATORS ──────────────────────────────────────────────────────────
@@ -4540,6 +4722,37 @@ def reject_pending_deposit(pd_id):
     conn.close()
     flash('Deposit rejected. Customer has been notified.', 'warning')
     return redirect(url_for('admin_payments'))
+
+
+# ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+
+@app.route('/admin/notifications')
+@admin_required
+def admin_notifications():
+    alerts       = generate_admin_alerts()
+    critical     = [a for a in alerts if a['severity'] == 'critical']
+    warnings     = [a for a in alerts if a['severity'] == 'warning']
+    info         = [a for a in alerts if a['severity'] == 'info']
+    return render_template('admin_notifications.html',
+                           alerts=alerts, critical=critical,
+                           warnings=warnings, info=info,
+                           total=len(alerts),
+                           critical_count=len(critical),
+                           warning_count=len(warnings),
+                           info_count=len(info))
+
+
+@app.route('/admin/notifications/json')
+@admin_required
+def admin_notifications_json():
+    alerts  = generate_admin_alerts()
+    urgent  = [a for a in alerts if a['severity'] in ('critical', 'warning')]
+    return jsonify({
+        'alerts':         urgent[:10],
+        'total':          len(alerts),
+        'critical_count': sum(1 for a in alerts if a['severity'] == 'critical'),
+        'warning_count':  sum(1 for a in alerts if a['severity'] == 'warning'),
+    })
 
 
 # ─── GLOBAL SEARCH ────────────────────────────────────────────────────────────

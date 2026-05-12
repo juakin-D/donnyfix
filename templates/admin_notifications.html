@@ -1,0 +1,131 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Alerts — Admin{% endblock %}
+{% block topbar_title %}Notifications & Alerts{% endblock %}
+{% block topbar_subtitle %}{{ total }} active alert{{ 's' if total != 1 else '' }}{% endblock %}
+
+{% block head_extra %}
+<style>
+:root{--blue:#3B9EE8}
+
+/* ── SUMMARY ROW ── */
+.notif-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+@media(max-width:700px){.notif-summary{grid-template-columns:1fr}}
+
+/* ── ALERT SECTIONS ── */
+.alert-section{margin-bottom:24px}
+.as-header{font-family:'DM Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;padding:10px 18px;border-radius:10px 10px 0 0;font-weight:600}
+.as-critical{background:rgba(232,64,64,.1);color:var(--red);border:1px solid rgba(232,64,64,.2);border-bottom:none}
+.as-warning{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2);border-bottom:none}
+.as-info{background:rgba(59,158,232,.1);color:var(--blue);border:1px solid rgba(59,158,232,.2);border-bottom:none}
+
+/* ── ALERT CARDS ── */
+.alert-card{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-top:none;text-decoration:none;color:inherit;transition:all .2s}
+.alert-card:last-child{border-radius:0 0 10px 10px}
+.alert-card:only-child{border-radius:0 0 10px 10px}
+.alert-card:hover{background:var(--surface2)}
+.ac-critical:hover{border-color:rgba(232,64,64,.3)}
+.ac-warning:hover{border-color:rgba(245,158,11,.3)}
+.ac-info:hover{border-color:rgba(59,158,232,.3)}
+.ac-icon{font-size:24px;flex-shrink:0;width:44px;text-align:center}
+.ac-content{flex:1;min-width:0}
+.ac-title{font-size:15px;font-weight:600;color:#fff;margin-bottom:4px}
+.ac-desc{font-size:13px;color:var(--text-muted);line-height:1.4}
+.ac-count{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;padding:6px 14px;border-radius:8px;flex-shrink:0;text-align:center;min-width:48px}
+.ac-count-critical{background:rgba(232,64,64,.15);color:var(--red)}
+.ac-count-warning{background:rgba(245,158,11,.15);color:var(--amber)}
+.ac-count-info{background:rgba(59,158,232,.15);color:var(--blue)}
+.ac-arrow{color:var(--text-muted);font-size:18px;flex-shrink:0;transition:transform .2s}
+.alert-card:hover .ac-arrow{transform:translateX(4px);color:var(--green)}
+
+/* ── ALL CLEAR ── */
+.all-clear{text-align:center;padding:80px 20px}
+.all-clear-icon{font-size:56px;margin-bottom:16px}
+.all-clear-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:8px}
+.all-clear-sub{font-size:14px;color:var(--text-muted);max-width:400px;margin:0 auto;line-height:1.5}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Summary -->
+<div class="notif-summary">
+  <div class="stat-card red">
+    <div class="stat-label">Critical</div>
+    <div class="stat-value">{{ critical_count }}</div>
+    <div class="stat-sub">Requires immediate action</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-label">Warnings</div>
+    <div class="stat-value">{{ warning_count }}</div>
+    <div class="stat-sub">Needs attention soon</div>
+  </div>
+  <div class="stat-card blue" style="--blue:#3B9EE8">
+    <div class="stat-label">Info</div>
+    <div class="stat-value" style="color:#3B9EE8">{{ info_count }}</div>
+    <div class="stat-sub">Today's activity</div>
+  </div>
+</div>
+
+{% if not alerts %}
+<div class="all-clear">
+  <div class="all-clear-icon">✅</div>
+  <div class="all-clear-title">All Clear</div>
+  <div class="all-clear-sub">No alerts right now. The business is running smoothly. Check back later.</div>
+</div>
+
+{% else %}
+
+{% if critical %}
+<div class="alert-section">
+  <div class="as-header as-critical">🔴 Critical — Immediate Action Required</div>
+  {% for a in critical %}
+  <a href="{{ a.url }}" class="alert-card ac-critical">
+    <div class="ac-icon">{{ a.icon }}</div>
+    <div class="ac-content">
+      <div class="ac-title">{{ a.title }}</div>
+      <div class="ac-desc">{{ a.description }}</div>
+    </div>
+    <div class="ac-count ac-count-critical">{{ a.count }}</div>
+    <span class="ac-arrow">→</span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if warnings %}
+<div class="alert-section">
+  <div class="as-header as-warning">⚠️ Warnings — Needs Attention</div>
+  {% for a in warnings %}
+  <a href="{{ a.url }}" class="alert-card ac-warning">
+    <div class="ac-icon">{{ a.icon }}</div>
+    <div class="ac-content">
+      <div class="ac-title">{{ a.title }}</div>
+      <div class="ac-desc">{{ a.description }}</div>
+    </div>
+    <div class="ac-count ac-count-warning">{{ a.count }}</div>
+    <span class="ac-arrow">→</span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if info %}
+<div class="alert-section">
+  <div class="as-header as-info">ℹ️ Information — Today's Activity</div>
+  {% for a in info %}
+  <a href="{{ a.url }}" class="alert-card ac-info">
+    <div class="ac-icon">{{ a.icon }}</div>
+    <div class="ac-content">
+      <div class="ac-title">{{ a.title }}</div>
+      <div class="ac-desc">{{ a.description }}</div>
+    </div>
+    <div class="ac-count ac-count-info">{{ a.count }}</div>
+    <span class="ac-arrow">→</span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
