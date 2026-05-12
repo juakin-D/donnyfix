@@ -1,0 +1,225 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Payment Queue — Admin{% endblock %}
+{% block topbar_title %}Payment Queue{% endblock %}
+{% block topbar_subtitle %}
+  {{ (stats.pp_count or 0) + (stats.pd_count or 0) }} pending verification{{ 's' if ((stats.pp_count or 0) + (stats.pd_count or 0)) != 1 else '' }}
+{% endblock %}
+
+{% block head_extra %}
+<style>
+/* ── STATS ── */
+.pq-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+@media(max-width:900px){.pq-stats{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.pq-stats{grid-template-columns:1fr}}
+
+/* ── PAYMENT CARDS ── */
+.pq-section-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.pq-section-title span{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);font-weight:400;text-transform:uppercase;letter-spacing:1px}
+.pp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden;transition:border-color .2s}
+.pp-card:hover{border-color:var(--border2)}
+.pp-card-header{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border);background:var(--surface2);gap:12px}
+.pp-card-id{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)}
+.pp-card-name{font-size:14px;font-weight:600;color:#fff}
+.pp-card-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+.pp-card-amount{font-family:'DM Mono',monospace;font-size:20px;font-weight:700;color:var(--green);flex-shrink:0}
+.pp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0;border-bottom:1px solid var(--border)}
+.pp-cell{padding:12px 18px;border-right:1px solid var(--border)}
+.pp-cell:last-child{border-right:none}
+.pp-cell-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.pp-cell-val{font-size:13px;font-weight:500;color:var(--text)}
+.pp-screenshot{padding:12px 18px;border-bottom:1px solid var(--border)}
+.pp-screenshot a{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--green);text-decoration:none}
+.pp-screenshot a:hover{text-decoration:underline}
+.pp-notes{padding:10px 18px;font-size:13px;color:var(--text-soft);font-style:italic;border-bottom:1px solid var(--border);background:rgba(245,200,66,.03)}
+.pp-actions{display:flex;align-items:stretch;gap:0;border-top:1px solid var(--border)}
+.pp-action-form{flex:1;display:flex;flex-direction:column}
+.pp-action-form:first-child{border-right:1px solid var(--border)}
+.pp-action-notes{width:100%;padding:9px 14px;background:var(--surface2);border:none;border-bottom:1px solid var(--border);color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;resize:none}
+.pp-action-notes::placeholder{color:var(--text-muted)}
+.pp-btn{width:100%;padding:11px 14px;border:none;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;letter-spacing:.3px}
+.pp-btn-green{background:var(--green);color:#0E1210}
+.pp-btn-green:hover{opacity:.85}
+.pp-btn-red{background:var(--red-dim);color:var(--red);border-top:1px solid rgba(232,64,64,.2)}
+.pp-btn-red:hover{background:rgba(232,64,64,.2)}
+.pq-empty{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px 24px;text-align:center;margin-bottom:14px}
+.pq-empty-icon{font-size:32px;margin-bottom:10px;opacity:.4}
+.pq-empty-text{font-size:14px;color:var(--text-muted)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="pq-stats">
+  <div class="stat-card amber">
+    <div class="stat-label">Pending Payments</div>
+    <div class="stat-value">{{ stats.pp_count or 0 }}</div>
+    <div class="stat-sub">Installment notifications</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-label">Pending Deposits</div>
+    <div class="stat-value">{{ stats.pd_count or 0 }}</div>
+    <div class="stat-sub">Reservation deposits</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-label">Pending Total</div>
+    <div class="stat-value" style="font-size:22px;padding-top:4px">{{ fmt_ghs((stats.pp_total or 0) + (stats.pd_total or 0)) }}</div>
+    <div class="stat-sub">Unverified amount</div>
+  </div>
+  <div class="stat-card gold">
+    <div class="stat-label">Reviewed Today</div>
+    <div class="stat-value">{{ stats.reviewed_today or 0 }}</div>
+    <div class="stat-sub">Approved + rejected</div>
+  </div>
+</div>
+
+<!-- ── INSTALLMENT PAYMENTS ── -->
+<div class="pq-section-title">
+  💳 Installment Payments <span>{{ pending_pp|length }} pending</span>
+</div>
+
+{% if pending_pp %}
+  {% for pp in pending_pp %}
+  <div class="pp-card">
+    <div class="pp-card-header">
+      <div>
+        <div class="pp-card-id">#PP-{{ '%04d' % pp.id }} · {{ pp.created_at.strftime('%d %b %Y %H:%M') if pp.created_at else '' }}</div>
+        <div class="pp-card-name">{{ pp.customer_name }}</div>
+        <div class="pp-card-sub">{{ pp.customer_phone }} · Plan #{{ pp.plan_id }} — {{ pp.device_name }}</div>
+      </div>
+      <div class="pp-card-amount">{{ fmt_ghs(pp.amount) }}</div>
+    </div>
+    <div class="pp-grid">
+      <div class="pp-cell">
+        <div class="pp-cell-label">Method</div>
+        <div class="pp-cell-val">{{ pp.payment_method }}</div>
+      </div>
+      {% if pp.reference %}
+      <div class="pp-cell">
+        <div class="pp-cell-label">Reference</div>
+        <div class="pp-cell-val" style="font-family:'DM Mono',monospace;font-size:12px">{{ pp.reference }}</div>
+      </div>
+      {% endif %}
+      {% if pp.momo_network %}
+      <div class="pp-cell">
+        <div class="pp-cell-label">MoMo</div>
+        <div class="pp-cell-val">{{ pp.momo_network }} · {{ pp.momo_number }}</div>
+      </div>
+      {% endif %}
+      <div class="pp-cell">
+        <div class="pp-cell-label">Plan Balance</div>
+        <div class="pp-cell-val" style="color:var(--amber)">{{ fmt_ghs(pp.balance_remaining) }}</div>
+      </div>
+      <div class="pp-cell">
+        <div class="pp-cell-label">Monthly Due</div>
+        <div class="pp-cell-val">{{ fmt_ghs(pp.monthly_amount) }}</div>
+      </div>
+    </div>
+    {% if pp.screenshot_url %}
+    <div class="pp-screenshot">
+      <a href="{{ pp.screenshot_url }}" target="_blank" rel="noopener">🖼️ View Payment Screenshot</a>
+    </div>
+    {% endif %}
+    {% if pp.notes %}
+    <div class="pp-notes">"{{ pp.notes }}"</div>
+    {% endif %}
+    <div class="pp-actions">
+      <form class="pp-action-form" method="POST"
+            action="/admin/payments/{{ pp.id }}/approve"
+            data-confirm="Approve this payment of {{ fmt_ghs(pp.amount) }}? It will be applied to plan #{{ pp.plan_id }}.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="pp-btn pp-btn-green" type="submit">✓ Approve &amp; Apply Payment</button>
+      </form>
+      <form class="pp-action-form" method="POST"
+            action="/admin/payments/{{ pp.id }}/reject">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <textarea class="pp-action-notes" name="review_notes" rows="1"
+                  placeholder="Rejection reason (optional, sent to customer)…"></textarea>
+        <button class="pp-btn pp-btn-red" type="submit">✕ Reject</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="pq-empty">
+    <div class="pq-empty-icon">✅</div>
+    <div class="pq-empty-text">No pending installment payment notifications</div>
+  </div>
+{% endif %}
+
+<!-- ── RESERVATION DEPOSITS ── -->
+<div class="pq-section-title" style="margin-top:20px">
+  🛍️ Reservation Deposits <span>{{ pending_pd|length }} pending</span>
+</div>
+
+{% if pending_pd %}
+  {% for pd in pending_pd %}
+  <div class="pp-card">
+    <div class="pp-card-header">
+      <div>
+        <div class="pp-card-id">#PD-{{ '%04d' % pd.id }} · {{ pd.created_at.strftime('%d %b %Y %H:%M') if pd.created_at else '' }}</div>
+        <div class="pp-card-name">{{ pd.customer_name }}</div>
+        <div class="pp-card-sub">{{ pd.customer_phone }} · Reservation #{{ pd.reservation_id }}</div>
+      </div>
+      <div class="pp-card-amount">{{ fmt_ghs(pd.amount) }}</div>
+    </div>
+    <div class="pp-grid">
+      <div class="pp-cell">
+        <div class="pp-cell-label">Device</div>
+        <div class="pp-cell-val">{{ pd.brand }} {{ pd.model }}</div>
+      </div>
+      <div class="pp-cell">
+        <div class="pp-cell-label">Selling Price</div>
+        <div class="pp-cell-val">{{ fmt_ghs(pd.selling_price) }}</div>
+      </div>
+      <div class="pp-cell">
+        <div class="pp-cell-label">Method</div>
+        <div class="pp-cell-val">{{ pd.payment_method }}</div>
+      </div>
+      {% if pd.reference %}
+      <div class="pp-cell">
+        <div class="pp-cell-label">Reference</div>
+        <div class="pp-cell-val" style="font-family:'DM Mono',monospace;font-size:12px">{{ pd.reference }}</div>
+      </div>
+      {% endif %}
+      {% if pd.momo_network %}
+      <div class="pp-cell">
+        <div class="pp-cell-label">MoMo</div>
+        <div class="pp-cell-val">{{ pd.momo_network }} · {{ pd.momo_number }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% if pd.screenshot_url %}
+    <div class="pp-screenshot">
+      <a href="{{ pd.screenshot_url }}" target="_blank" rel="noopener">🖼️ View Deposit Screenshot</a>
+    </div>
+    {% endif %}
+    {% if pd.notes %}
+    <div class="pp-notes">"{{ pd.notes }}"</div>
+    {% endif %}
+    <div class="pp-actions">
+      <form class="pp-action-form" method="POST"
+            action="/admin/deposits/{{ pd.id }}/approve"
+            data-confirm="Confirm this deposit of {{ fmt_ghs(pd.amount) }}? The reservation will be marked Confirmed.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="pp-btn pp-btn-green" type="submit">✓ Confirm Deposit</button>
+      </form>
+      <form class="pp-action-form" method="POST"
+            action="/admin/deposits/{{ pd.id }}/reject">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <textarea class="pp-action-notes" name="review_notes" rows="1"
+                  placeholder="Rejection reason (optional, sent to customer)…"></textarea>
+        <button class="pp-btn pp-btn-red" type="submit">✕ Reject</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="pq-empty">
+    <div class="pq-empty-icon">✅</div>
+    <div class="pq-empty-text">No pending reservation deposit notifications</div>
+  </div>
+{% endif %}
+
+{% endblock %}

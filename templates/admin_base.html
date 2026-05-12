@@ -211,6 +211,14 @@
     <a href="/admin/installments" class="nav-item{% if request.endpoint in ('admin_installments','record_payment','update_plan_status','send_payment_reminders') %} active{% endif %}">
       <span class="nav-icon">💳</span>Installments
     </a>
+    {% if has_permission('record_payment') %}
+    <a href="/admin/payments" class="nav-item{% if request.endpoint in ('admin_payments','approve_pending_payment','reject_pending_payment','approve_pending_deposit','reject_pending_deposit') %} active{% endif %}">
+      <span class="nav-icon">✅</span>Payments
+      {% if pending_payment_count > 0 %}
+      <span style="background:var(--red);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:auto;font-weight:700;line-height:1.4">{{ pending_payment_count }}</span>
+      {% endif %}
+    </a>
+    {% endif %}
     <a href="/admin/inventory" class="nav-item{% if request.endpoint in ('admin_inventory','admin_inventory_add','admin_inventory_edit','admin_inventory_sell','admin_inventory_reserve','admin_inventory_delete','admin_inventory_export') %} active{% endif %}">
       <span class="nav-icon">📦</span>Inventory
     </a>

@@ -459,6 +459,54 @@ CREATE TABLE IF NOT EXISTS activity_log (
 )
 """)
 
+    conn.execute("""
+CREATE TABLE IF NOT EXISTS pending_payments (
+    id                   SERIAL PRIMARY KEY,
+    plan_id              INTEGER NOT NULL,
+    customer_id          INTEGER NOT NULL,
+    amount               REAL NOT NULL,
+    payment_method       TEXT NOT NULL,
+    reference            TEXT,
+    momo_number          TEXT,
+    momo_network         TEXT,
+    screenshot_url       TEXT,
+    screenshot_public_id TEXT,
+    notes                TEXT,
+    status               TEXT DEFAULT 'Pending',
+    reviewed_by          TEXT,
+    review_notes         TEXT,
+    created_at           TIMESTAMP DEFAULT NOW(),
+    reviewed_at          TIMESTAMP,
+    FOREIGN KEY (plan_id)     REFERENCES installment_plans(id),
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+)
+""")
+
+    conn.execute("""
+CREATE TABLE IF NOT EXISTS pending_deposits (
+    id                   SERIAL PRIMARY KEY,
+    reservation_id       INTEGER NOT NULL,
+    customer_id          INTEGER,
+    customer_name        TEXT NOT NULL,
+    customer_phone       TEXT NOT NULL,
+    amount               REAL NOT NULL,
+    payment_method       TEXT NOT NULL,
+    reference            TEXT,
+    momo_number          TEXT,
+    momo_network         TEXT,
+    screenshot_url       TEXT,
+    screenshot_public_id TEXT,
+    notes                TEXT,
+    status               TEXT DEFAULT 'Pending',
+    reviewed_by          TEXT,
+    review_notes         TEXT,
+    created_at           TIMESTAMP DEFAULT NOW(),
+    reviewed_at          TIMESTAMP,
+    FOREIGN KEY (reservation_id) REFERENCES reservations(id),
+    FOREIGN KEY (customer_id)    REFERENCES customers(id)
+)
+""")
+
     conn.commit()
     conn.close()
 
@@ -872,12 +920,34 @@ def set_security_headers(response):
     return response
 
 
+def _pending_payment_count():
+    try:
+        conn = get_db()
+        count = conn.execute(
+            """SELECT
+               (SELECT COUNT(*) FROM pending_payments  WHERE status='Pending') +
+               (SELECT COUNT(*) FROM pending_deposits  WHERE status='Pending')
+               AS total"""
+        ).fetchone()['total']
+        conn.close()
+        return int(count or 0)
+    except Exception:
+        return 0
+
+
 @app.context_processor
 def inject_helpers():
+    pending_count = 0
+    if session.get('admin_logged_in'):
+        try:
+            pending_count = _pending_payment_count()
+        except Exception:
+            pass
     return dict(membership_status=membership_status,
                 fmt_ghs=fmt_ghs, PLAN_CONFIG=PLAN_CONFIG,
                 has_permission=has_permission,
-                csp_nonce=getattr(g, 'csp_nonce', ''))
+                csp_nonce=getattr(g, 'csp_nonce', ''),
+                pending_payment_count=pending_count)
 
 
 # ─── AUTH DECORATORS ──────────────────────────────────────────────────────────
@@ -3534,6 +3604,149 @@ def shop_reservation_cancel(res_id):
     return redirect(url_for('shop_reservations'))
 
 
+@app.route('/installment/<int:plan_id>/notify-payment', methods=['POST'])
+@customer_required
+def notify_payment(plan_id):
+    conn = get_db()
+    plan = conn.execute(
+        'SELECT * FROM installment_plans WHERE id=%s AND customer_id=%s',
+        (plan_id, session['customer_id'])
+    ).fetchone()
+    if not plan:
+        conn.close()
+        flash('Plan not found.', 'error')
+        return redirect(url_for('dashboard'))
+    if plan['status'] != 'Active':
+        conn.close()
+        flash('This plan is not active.', 'error')
+        return redirect(url_for('installment_detail', plan_id=plan_id))
+    try:
+        amount = float(request.form.get('amount', 0))
+    except (ValueError, TypeError):
+        conn.close()
+        flash('Invalid payment amount.', 'error')
+        return redirect(url_for('installment_detail', plan_id=plan_id))
+    method       = request.form.get('payment_method', '').strip()
+    reference    = request.form.get('reference', '').strip()
+    momo_number  = request.form.get('momo_number', '').strip()
+    momo_network = request.form.get('momo_network', '').strip()
+    notes        = request.form.get('notes', '').strip()
+    errors = []
+    if amount <= 0:
+        errors.append('Payment amount must be greater than zero.')
+    if amount > plan['balance_remaining'] + 0.01:
+        errors.append(f'Amount exceeds remaining balance of {fmt_ghs(plan["balance_remaining"])}.')
+    if method not in ('MTN MoMo', 'Vodafone Cash', 'AirtelTigo Money', 'Bank Transfer', 'Bank Deposit'):
+        errors.append('Invalid payment method.')
+    if any(w in method for w in ('MoMo', 'Cash', 'Money')) and not momo_number:
+        errors.append('MoMo number is required.')
+    if not reference:
+        errors.append('Transaction reference is required for verification.')
+    if errors:
+        conn.close()
+        for e in errors:
+            flash(e, 'error')
+        return redirect(url_for('installment_detail', plan_id=plan_id))
+    duplicate = conn.execute(
+        """SELECT id FROM pending_payments
+           WHERE plan_id=%s AND amount=%s AND status='Pending'
+           AND created_at >= NOW() - INTERVAL '1 hour'""",
+        (plan_id, amount)
+    ).fetchone()
+    if duplicate:
+        conn.close()
+        flash('You already submitted a payment notification for this amount. Please wait for admin to verify.', 'error')
+        return redirect(url_for('installment_detail', plan_id=plan_id))
+    screenshot_url = screenshot_public_id = None
+    screenshot_file = request.files.get('screenshot')
+    if screenshot_file and screenshot_file.filename:
+        try:
+            result = upload_image_to_cloudinary(screenshot_file, f'payment-{plan_id}', 1)
+            if result:
+                screenshot_url       = result['url']
+                screenshot_public_id = result['public_id']
+        except Exception as exc:
+            logger.error('Screenshot upload failed: %s', exc)
+    conn.execute(
+        """INSERT INTO pending_payments
+           (plan_id, customer_id, amount, payment_method, reference,
+            momo_number, momo_network, screenshot_url, screenshot_public_id, notes)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (plan_id, session['customer_id'], amount, method,
+         reference or None, momo_number or None, momo_network or None,
+         screenshot_url, screenshot_public_id, notes or None)
+    )
+    conn.commit()
+    conn.close()
+    try:
+        customer_name = session.get('customer_name', 'Customer')
+        send_sms('0541057500',
+                 f'New payment notification: {customer_name} claims {fmt_ghs(amount)} paid for '
+                 f'plan #{plan_id} via {method}. Ref: {reference}. Verify in admin panel. -DonnyPhonehub Gh')
+    except Exception:
+        pass
+    flash('Payment notification submitted! We will verify and confirm within 24 hours.', 'success')
+    return redirect(url_for('installment_detail', plan_id=plan_id))
+
+
+@app.route('/shop/reservations/<int:res_id>/notify-deposit', methods=['POST'])
+@customer_required
+def notify_deposit(res_id):
+    conn = get_db()
+    res = conn.execute(
+        """SELECT r.*, i.selling_price, i.brand, i.model
+           FROM reservations r JOIN inventory i ON i.id=r.item_id
+           WHERE r.id=%s AND r.customer_id=%s AND r.status='Pending'""",
+        (res_id, session['customer_id'])
+    ).fetchone()
+    if not res:
+        conn.close()
+        flash('Reservation not found.', 'error')
+        return redirect(url_for('shop_reservations'))
+    method       = request.form.get('payment_method', '').strip()
+    reference    = request.form.get('reference', '').strip()
+    momo_number  = request.form.get('momo_number', '').strip()
+    momo_network = request.form.get('momo_network', '').strip()
+    notes        = request.form.get('notes', '').strip()
+    if not method or not reference:
+        conn.close()
+        flash('Payment method and reference are required.', 'error')
+        return redirect(url_for('shop_reservations'))
+    dup = conn.execute(
+        "SELECT id FROM pending_deposits WHERE reservation_id=%s AND status='Pending'",
+        (res_id,)
+    ).fetchone()
+    if dup:
+        conn.close()
+        flash('You already submitted a deposit notification. Please wait for verification.', 'error')
+        return redirect(url_for('shop_reservations'))
+    screenshot_url = screenshot_public_id = None
+    screenshot_file = request.files.get('screenshot')
+    if screenshot_file and screenshot_file.filename:
+        try:
+            result = upload_image_to_cloudinary(screenshot_file, f'deposit-{res_id}', 1)
+            if result:
+                screenshot_url       = result['url']
+                screenshot_public_id = result['public_id']
+        except Exception:
+            pass
+    conn.execute(
+        """INSERT INTO pending_deposits
+           (reservation_id, customer_id, customer_name, customer_phone,
+            amount, payment_method, reference, momo_number, momo_network,
+            screenshot_url, screenshot_public_id, notes)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (res_id, session['customer_id'], res['customer_name'], res['customer_phone'],
+         res['deposit_amount'], method, reference or None,
+         momo_number or None, momo_network or None,
+         screenshot_url, screenshot_public_id, notes or None)
+    )
+    conn.commit()
+    conn.close()
+    flash('Deposit notification submitted! We will verify within 24 hours.', 'success')
+    return redirect(url_for('shop_reservations'))
+
+
 @app.route('/shop/enquire', methods=['POST'])
 def shop_enquire():
     name        = request.form.get('name', '').strip()
@@ -3906,6 +4119,232 @@ def admin_activity_export():
     resp.headers['Content-Type']        = 'text/csv'
     resp.headers['Content-Disposition'] = f'attachment; filename=phonehub-activity-log-{today_str}.csv'
     return resp
+
+
+# ─── ADMIN PAYMENT VERIFICATION QUEUE ────────────────────────────────────────
+
+@app.route('/admin/payments')
+@admin_required
+def admin_payments():
+    conn = get_db()
+    pending_pp = conn.execute(
+        """SELECT pp.*, c.name AS customer_name, c.phone AS customer_phone,
+                  ip.device_name, ip.monthly_amount, ip.balance_remaining
+           FROM pending_payments pp
+           JOIN customers c ON c.id = pp.customer_id
+           JOIN installment_plans ip ON ip.id = pp.plan_id
+           WHERE pp.status = 'Pending'
+           ORDER BY pp.created_at DESC"""
+    ).fetchall()
+    pending_pd = conn.execute(
+        """SELECT pd.*, i.brand, i.model, i.selling_price
+           FROM pending_deposits pd
+           JOIN reservations r ON r.id = pd.reservation_id
+           JOIN inventory i ON i.id = r.inventory_id
+           WHERE pd.status = 'Pending'
+           ORDER BY pd.created_at DESC"""
+    ).fetchall()
+    stats = conn.execute(
+        """SELECT
+           (SELECT COUNT(*) FROM pending_payments WHERE status='Pending') AS pp_count,
+           (SELECT COUNT(*) FROM pending_deposits WHERE status='Pending') AS pd_count,
+           (SELECT COALESCE(SUM(amount),0) FROM pending_payments WHERE status='Pending') AS pp_total,
+           (SELECT COALESCE(SUM(amount),0) FROM pending_deposits WHERE status='Pending') AS pd_total,
+           (SELECT COUNT(*) FROM pending_payments
+            WHERE status != 'Pending' AND DATE(reviewed_at) = CURRENT_DATE) +
+           (SELECT COUNT(*) FROM pending_deposits
+            WHERE status != 'Pending' AND DATE(reviewed_at) = CURRENT_DATE) AS reviewed_today"""
+    ).fetchone()
+    conn.close()
+    return render_template('admin_payments.html',
+                           pending_pp=pending_pp, pending_pd=pending_pd, stats=stats)
+
+
+@app.route('/admin/payments/<int:pp_id>/approve', methods=['POST'])
+@admin_required
+def approve_pending_payment(pp_id):
+    if not has_permission('record_payment'):
+        flash('Permission denied.', 'error')
+        return redirect(url_for('admin_payments'))
+    conn = get_db()
+    pp = conn.execute(
+        'SELECT * FROM pending_payments WHERE id=%s AND status=%s', (pp_id, 'Pending')
+    ).fetchone()
+    if not pp:
+        flash('Payment record not found or already reviewed.', 'error')
+        conn.close()
+        return redirect(url_for('admin_payments'))
+    plan = conn.execute(
+        'SELECT ip.*, c.name AS customer_name, c.phone AS customer_phone '
+        'FROM installment_plans ip JOIN customers c ON c.id=ip.customer_id WHERE ip.id=%s',
+        (pp['plan_id'],)
+    ).fetchone()
+    if not plan:
+        flash('Installment plan not found.', 'error')
+        conn.close()
+        return redirect(url_for('admin_payments'))
+    amount = _d(pp['amount'])
+    new_balance = float(max(_d(plan['balance_remaining']) - amount, Decimal('0')))
+    new_payments_made = plan['payments_made'] + 1
+    new_next_due = add_one_month(plan['next_due_date'])
+    new_status = 'Completed' if new_balance <= 0.01 else plan['status']
+    today_str = datetime.today().strftime('%Y-%m-%d')
+    try:
+        cur = conn.execute(
+            'INSERT INTO payments (plan_id,amount,paid_on,payment_method,reference,recorded_by,notes) '
+            'VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id',
+            (pp['plan_id'], float(amount), today_str,
+             pp['payment_method'], pp['reference'] or None,
+             session.get('admin_username','admin'),
+             f'Via payment notification #{pp_id}')
+        )
+        payment_id = cur.fetchone()['id']
+        conn.execute(
+            'UPDATE installment_plans SET balance_remaining=%s,payments_made=%s,next_due_date=%s,status=%s WHERE id=%s',
+            (new_balance, new_payments_made, new_next_due, new_status, pp['plan_id'])
+        )
+        conn.execute(
+            "UPDATE pending_payments SET status='Approved',reviewed_by=%s,reviewed_at=NOW() WHERE id=%s",
+            (session.get('admin_username','Admin'), pp_id)
+        )
+        conn.commit()
+    except Exception as exc:
+        conn.rollback()
+        conn.close()
+        logger.error('approve_pending_payment #%d failed: %s', pp_id, exc)
+        flash('Could not approve payment — please try again.', 'error')
+        return redirect(url_for('admin_payments'))
+    log_activity('Approved payment notification', 'installment',
+                 target_type='installment_plan', target_id=pp['plan_id'],
+                 details=f'Payment #{pp_id}: {fmt_ghs(float(amount))} for plan #{pp["plan_id"]}')
+    send_sms(plan['customer_phone'],
+             f"Hi {plan['customer_name'].split()[0]}, your payment of {fmt_ghs(float(amount))} "
+             f"has been confirmed! Balance: {fmt_ghs(new_balance)}. "
+             f"{'Plan fully paid!' if new_status == 'Completed' else 'Next due: ' + new_next_due} "
+             f"— DonnyPhonehub Gh")
+    conn.close()
+    flash(f'Payment approved and applied to plan #{pp["plan_id"]}. Balance: {fmt_ghs(new_balance)}.', 'success')
+    return redirect(url_for('admin_payments'))
+
+
+@app.route('/admin/payments/<int:pp_id>/reject', methods=['POST'])
+@admin_required
+def reject_pending_payment(pp_id):
+    if not has_permission('record_payment'):
+        flash('Permission denied.', 'error')
+        return redirect(url_for('admin_payments'))
+    conn = get_db()
+    pp = conn.execute(
+        'SELECT pp.*, c.name AS customer_name, c.phone AS customer_phone '
+        'FROM pending_payments pp JOIN customers c ON c.id=pp.customer_id '
+        'WHERE pp.id=%s AND pp.status=%s', (pp_id, 'Pending')
+    ).fetchone()
+    if not pp:
+        flash('Payment record not found or already reviewed.', 'error')
+        conn.close()
+        return redirect(url_for('admin_payments'))
+    review_notes = request.form.get('review_notes', '').strip()
+    conn.execute(
+        "UPDATE pending_payments SET status='Rejected',reviewed_by=%s,review_notes=%s,reviewed_at=NOW() WHERE id=%s",
+        (session.get('admin_username','Admin'), review_notes or None, pp_id)
+    )
+    conn.commit()
+    reason_txt = f' Reason: {review_notes}' if review_notes else ''
+    send_sms(pp['customer_phone'],
+             f"Hi {pp['customer_name'].split()[0]}, your payment of {fmt_ghs(pp['amount'])} "
+             f"could not be verified.{reason_txt} Please call 0541057500. — DonnyPhonehub Gh")
+    log_activity('Rejected payment notification', 'installment',
+                 target_type='installment_plan', target_id=pp['plan_id'],
+                 details=f'Payment #{pp_id} rejected. Notes: {review_notes}')
+    conn.close()
+    flash('Payment rejected. Customer has been notified via SMS.', 'warning')
+    return redirect(url_for('admin_payments'))
+
+
+@app.route('/admin/deposits/<int:pd_id>/approve', methods=['POST'])
+@admin_required
+def approve_pending_deposit(pd_id):
+    if not has_permission('record_payment'):
+        flash('Permission denied.', 'error')
+        return redirect(url_for('admin_payments'))
+    conn = get_db()
+    pd_row = conn.execute(
+        'SELECT * FROM pending_deposits WHERE id=%s AND status=%s', (pd_id, 'Pending')
+    ).fetchone()
+    if not pd_row:
+        flash('Deposit record not found or already reviewed.', 'error')
+        conn.close()
+        return redirect(url_for('admin_payments'))
+    conn.execute(
+        "UPDATE reservations SET status='Confirmed',deposit_amount=%s WHERE id=%s",
+        (float(_d(pd_row['amount'])), pd_row['reservation_id'])
+    )
+    conn.execute(
+        "UPDATE pending_deposits SET status='Approved',reviewed_by=%s,reviewed_at=NOW() WHERE id=%s",
+        (session.get('admin_username','Admin'), pd_id)
+    )
+    conn.commit()
+    if pd_row['customer_id']:
+        cust = conn.execute(
+            'SELECT name, phone FROM customers WHERE id=%s', (pd_row['customer_id'],)
+        ).fetchone()
+        if cust:
+            send_sms(cust['phone'],
+                     f"Hi {cust['name'].split()[0]}, your deposit of {fmt_ghs(pd_row['amount'])} "
+                     f"has been confirmed! Your reservation is now Confirmed. "
+                     f"Contact us to arrange pickup. — DonnyPhonehub Gh")
+    elif pd_row['customer_phone']:
+        send_sms(pd_row['customer_phone'],
+                 f"Hi {pd_row['customer_name'].split()[0]}, your deposit of {fmt_ghs(pd_row['amount'])} "
+                 f"has been confirmed! Contact us to arrange pickup. — DonnyPhonehub Gh")
+    log_activity('Approved deposit notification', 'shop',
+                 target_type='reservation', target_id=pd_row['reservation_id'],
+                 details=f'Deposit #{pd_id}: {fmt_ghs(pd_row["amount"])} for reservation #{pd_row["reservation_id"]}')
+    conn.close()
+    flash('Deposit confirmed. Reservation is now Confirmed.', 'success')
+    return redirect(url_for('admin_payments'))
+
+
+@app.route('/admin/deposits/<int:pd_id>/reject', methods=['POST'])
+@admin_required
+def reject_pending_deposit(pd_id):
+    if not has_permission('record_payment'):
+        flash('Permission denied.', 'error')
+        return redirect(url_for('admin_payments'))
+    conn = get_db()
+    pd_row = conn.execute(
+        'SELECT * FROM pending_deposits WHERE id=%s AND status=%s', (pd_id, 'Pending')
+    ).fetchone()
+    if not pd_row:
+        flash('Deposit record not found or already reviewed.', 'error')
+        conn.close()
+        return redirect(url_for('admin_payments'))
+    review_notes = request.form.get('review_notes', '').strip()
+    conn.execute(
+        "UPDATE pending_deposits SET status='Rejected',reviewed_by=%s,review_notes=%s,reviewed_at=NOW() WHERE id=%s",
+        (session.get('admin_username','Admin'), review_notes or None, pd_id)
+    )
+    conn.commit()
+    reason_txt = f' Reason: {review_notes}' if review_notes else ''
+    phone = pd_row['customer_phone']
+    name  = pd_row['customer_name']
+    if pd_row['customer_id']:
+        cust = conn.execute(
+            'SELECT name, phone FROM customers WHERE id=%s', (pd_row['customer_id'],)
+        ).fetchone()
+        if cust:
+            phone = cust['phone']
+            name  = cust['name']
+    if phone:
+        send_sms(phone,
+                 f"Hi {name.split()[0]}, your deposit of {fmt_ghs(pd_row['amount'])} "
+                 f"could not be verified.{reason_txt} Please call 0541057500. — DonnyPhonehub Gh")
+    log_activity('Rejected deposit notification', 'shop',
+                 target_type='reservation', target_id=pd_row['reservation_id'],
+                 details=f'Deposit #{pd_id} rejected. Notes: {review_notes}')
+    conn.close()
+    flash('Deposit rejected. Customer has been notified.', 'warning')
+    return redirect(url_for('admin_payments'))
 
 
 # ─── GLOBAL SEARCH ────────────────────────────────────────────────────────────

@@ -113,6 +113,29 @@
     .flash.success{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
     .flash.error{background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5}
 
+    /* ── NOTIFY PAYMENT FORM ── */
+    .notify-card{background:white;border:1px solid var(--warm-gray);border-radius:14px;overflow:hidden;margin-bottom:20px}
+    .notify-header{background:var(--green-deep);padding:16px 20px;display:flex;align-items:center;gap:10px}
+    .notify-header h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:white;margin:0}
+    .notify-header p{font-size:12px;color:rgba(255,255,255,.55);margin:3px 0 0}
+    .notify-body{padding:20px}
+    .nf-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+    @media(max-width:500px){.nf-row{grid-template-columns:1fr}}
+    .nf-field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+    .nf-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--mid-gray)}
+    .nf-input,.nf-select,.nf-textarea{width:100%;padding:10px 13px;background:var(--off-white);border:1px solid var(--warm-gray);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color .2s}
+    .nf-input:focus,.nf-select:focus,.nf-textarea:focus{border-color:var(--green)}
+    .nf-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238C8880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
+    .nf-textarea{resize:vertical;min-height:70px}
+    .nf-upload-label{display:flex;align-items:center;gap:8px;padding:10px 13px;background:var(--off-white);border:1px dashed var(--warm-gray);border-radius:8px;cursor:pointer;font-size:13px;color:var(--mid-gray);transition:border-color .2s}
+    .nf-upload-label:hover{border-color:var(--green)}
+    .nf-upload-label input{display:none}
+    .nf-momo-fields{display:none;margin-top:12px}
+    .nf-momo-fields.show{display:block}
+    .nf-submit{width:100%;padding:12px;background:var(--green);border:none;border-radius:9px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:white;cursor:pointer;transition:opacity .2s;margin-top:4px}
+    .nf-submit:hover{opacity:.88}
+    .nf-hint{font-size:11px;color:var(--mid-gray);margin-top:6px;line-height:1.5}
+
     /* ── TABLE OVERFLOW ── */
     .history-card .table-wrap{overflow-x:auto}
     table{min-width:420px}
@@ -314,12 +337,83 @@
 
     <!-- ACTION -->
     {% if plan['status'] == 'Active' %}
-    <div class="action-card">
+    <div class="action-card" style="margin-bottom:20px">
       <div class="ac-text">
         <strong>Next payment: {{ fmt_ghs(plan['monthly_amount']) }} due {{ plan['next_due_date'] }}</strong>
-        <span>Pay via {{ plan['payment_method'] }} and contact us with your reference to confirm.</span>
+        <span>Pay via {{ plan['payment_method'] }} then notify us below to confirm.</span>
       </div>
-      <a href="tel:+233541057500" class="ac-btn">📞 Call to Confirm Payment</a>
+      <a href="tel:+233541057500" class="ac-btn">📞 Call Us</a>
+    </div>
+
+    <!-- Notify Payment Form -->
+    <div class="notify-card">
+      <div class="notify-header">
+        <div>
+          <h3>📤 Notify Us of Your Payment</h3>
+          <p>Made a payment? Let us know and we'll verify and apply it within minutes.</p>
+        </div>
+      </div>
+      <div class="notify-body">
+        <form method="POST" action="/installment/{{ plan['id'] }}/notify-payment"
+              enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="nf-row">
+            <div class="nf-field">
+              <label class="nf-label">Amount Paid (GH₵)</label>
+              <input type="number" name="amount" class="nf-input" step="0.01" min="1"
+                     placeholder="e.g. {{ '%.2f'|format(plan['monthly_amount']) }}" required>
+            </div>
+            <div class="nf-field">
+              <label class="nf-label">Payment Method</label>
+              <select name="payment_method" class="nf-select" id="npMethod" onchange="toggleMomoFields(this.value)" required>
+                <option value="">— select —</option>
+                <option value="MTN MoMo">MTN MoMo</option>
+                <option value="Vodafone Cash">Vodafone Cash</option>
+                <option value="AirtelTigo Money">AirtelTigo Money</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Bank Deposit">Bank Deposit</option>
+                <option value="Cash">Cash (in-store)</option>
+              </select>
+            </div>
+          </div>
+          <div class="nf-momo-fields" id="npMomoFields">
+            <div class="nf-row">
+              <div class="nf-field">
+                <label class="nf-label">MoMo Number</label>
+                <input type="tel" name="momo_number" class="nf-input" placeholder="e.g. 0551234567">
+              </div>
+              <div class="nf-field">
+                <label class="nf-label">Network</label>
+                <select name="momo_network" class="nf-select">
+                  <option value="">— select —</option>
+                  <option>MTN</option>
+                  <option>Vodafone</option>
+                  <option>AirtelTigo</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="nf-field">
+            <label class="nf-label">Transaction Reference (optional)</label>
+            <input type="text" name="reference" class="nf-input" placeholder="e.g. 1234567890">
+          </div>
+          <div class="nf-field">
+            <label class="nf-label">Payment Screenshot (optional)</label>
+            <label class="nf-upload-label">
+              <span>📎</span>
+              <span id="npFileLabel">Tap to attach screenshot…</span>
+              <input type="file" name="screenshot" accept="image/*"
+                     onchange="document.getElementById('npFileLabel').textContent=this.files[0]?this.files[0].name:'Tap to attach screenshot…'">
+            </label>
+          </div>
+          <div class="nf-field">
+            <label class="nf-label">Notes (optional)</label>
+            <textarea name="notes" class="nf-textarea" placeholder="Any extra info for our team…"></textarea>
+          </div>
+          <button type="submit" class="nf-submit">Send Payment Notification</button>
+          <p class="nf-hint">Our team will verify and confirm your payment within minutes. You'll receive an SMS once approved.</p>
+        </form>
+      </div>
     </div>
     {% elif plan['status'] == 'Completed' %}
     <div class="action-card" style="background:rgba(0,107,63,.08);border:1px solid rgba(0,107,63,.15)">
@@ -332,4 +426,15 @@
     {% endif %}
 
   </div>
+{% endblock %}
+
+{% block page_scripts %}
+<script nonce="{{ csp_nonce }}">
+function toggleMomoFields(val) {
+  var momo = document.getElementById('npMomoFields');
+  if (!momo) return;
+  var isMomo = val === 'MTN MoMo' || val === 'Vodafone Cash' || val === 'AirtelTigo Money';
+  momo.classList.toggle('show', isMomo);
+}
+</script>
 {% endblock %}
