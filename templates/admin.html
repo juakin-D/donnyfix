@@ -19,6 +19,15 @@ th:last-child,td:last-child{white-space:nowrap}
 /* ── ACTION BUTTONS ── */
 .act-btn.view-notes-btn,.act-btn.delete{width:30px;height:30px;padding:0;font-size:14px}
 
+/* ── EXPORT BUTTONS ── */
+.export-btns{display:flex;gap:8px;flex-wrap:wrap}
+.export-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text-soft);font-size:12px;font-weight:500;text-decoration:none;font-family:'DM Sans',sans-serif;transition:all .2s}
+.export-btn:hover{border-color:var(--green);color:var(--green);background:rgba(0,196,106,.05)}
+
+/* ── FILTER DATE INPUT ── */
+.filter-input{padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s;cursor:pointer}
+.filter-input:focus{border-color:var(--green)}
+
 /* ── STATUS SELECT COLOURS ── */
 .status-select{transition:background .15s,color .15s,border-color .15s}
 .status-pending    {background:var(--amber-dim)!important;border-color:rgba(245,158,11,.4)!important;color:var(--amber)!important}
@@ -90,8 +99,17 @@ th:last-child,td:last-child{white-space:nowrap}
             <option value="Full Diagnostics"      {% if service == 'Full Diagnostics' %}selected{% endif %}>Diagnostics</option>
             <option value="Camera / Speaker Repair"{% if service == 'Camera / Speaker Repair' %}selected{% endif %}>Camera / Speaker</option>
           </select>
+          <select name="status" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="Pending"     {% if status == 'Pending'     %}selected{% endif %}>Pending</option>
+            <option value="In Progress" {% if status == 'In Progress' %}selected{% endif %}>In Progress</option>
+            <option value="Complete"    {% if status == 'Complete'    %}selected{% endif %}>Complete</option>
+            <option value="Cancelled"   {% if status == 'Cancelled'   %}selected{% endif %}>Cancelled</option>
+          </select>
+          <input type="date" name="date_from" value="{{ date_from or '' }}" class="filter-input" title="From date"/>
+          <input type="date" name="date_to"   value="{{ date_to or '' }}"   class="filter-input" title="To date"/>
           <button type="submit" class="filter-btn filter-btn-primary">Filter</button>
-          {% if search or service %}
+          {% if search or service or status or date_from or date_to %}
             <a href="/admin/bookings" class="filter-btn filter-btn-ghost" style="text-decoration:none;">Clear</a>
           {% endif %}
         </div>
@@ -100,7 +118,7 @@ th:last-child,td:last-child{white-space:nowrap}
       <!-- TABLE -->
       <div class="section-header">
         <div class="section-title">
-          {% if search or service %}
+          {% if search or service or status or date_from or date_to %}
             Filtered results
             <span style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text-muted); font-weight:400; margin-left:8px;">{{ total }} found</span>
           {% else %}
@@ -108,10 +126,16 @@ th:last-child,td:last-child{white-space:nowrap}
             <span style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text-muted); font-weight:400; margin-left:8px;">{{ total }} total</span>
           {% endif %}
         </div>
-        <a href="/booking" target="_blank"
-          style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--green-glow);border:1px solid rgba(0,196,106,0.25);border-radius:8px;color:var(--green);font-size:13px;font-weight:500;text-decoration:none;transition:all 0.15s;">
-          + New Booking
-        </a>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="export-btns">
+            <a href="/admin/bookings/export?{{ request.query_string.decode() }}" class="export-btn">📥 Export CSV</a>
+            <a href="/admin/bookings/export/summary" class="export-btn">📊 Summary Report</a>
+          </div>
+          <a href="/booking" target="_blank"
+            style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--green-glow);border:1px solid rgba(0,196,106,0.25);border-radius:8px;color:var(--green);font-size:13px;font-weight:500;text-decoration:none;transition:all 0.15s;">
+            + New Booking
+          </a>
+        </div>
       </div>
 
       <div class="table-wrap">

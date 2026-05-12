@@ -1502,10 +1502,15 @@ def admin():
 @app.route('/admin/bookings')
 @admin_required
 def admin_bookings():
-    search  = request.args.get('search', '').strip()
-    service = request.args.get('service', '').strip()
+    search    = request.args.get('search', '').strip()
+    service   = request.args.get('service', '').strip()
+    status    = request.args.get('status', '').strip()
+    date_from = request.args.get('date_from', '').strip()
+    date_to   = request.args.get('date_to', '').strip()
     if service not in BOOKING_SERVICES:
         service = ''
+    if status not in ('Pending', 'In Progress', 'Complete', 'Cancelled'):
+        status = ''
     try:
         page = max(1, int(request.args.get('page', 1)))
     except ValueError:
@@ -1514,17 +1519,131 @@ def admin_bookings():
     q = 'SELECT * FROM bookings WHERE 1=1'
     params = []
     if search:
-        q += ' AND (name LIKE %s OR email LIKE %s OR phone LIKE %s)'
+        q += ' AND (name ILIKE %s OR email ILIKE %s OR phone ILIKE %s)'
         params += [f'%{search}%'] * 3
     if service:
         q += ' AND service=%s'; params.append(service)
+    if status:
+        q += ' AND status=%s'; params.append(status)
+    if date_from:
+        q += ' AND date >= %s'; params.append(date_from)
+    if date_to:
+        q += ' AND date <= %s'; params.append(date_to)
     total    = conn.execute(q.replace('SELECT *', 'SELECT COUNT(*) AS cnt'), params).fetchone()['cnt']
     q       += ' ORDER BY date DESC LIMIT %s OFFSET %s'
     bookings = conn.execute(q, params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
     conn.close()
     total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
     return render_template('admin.html', bookings=bookings, search=search, service=service,
+                           status=status, date_from=date_from, date_to=date_to,
                            page=page, total_pages=total_pages, total=total)
+
+
+@app.route('/admin/bookings/export')
+@admin_required
+def admin_bookings_export():
+    import csv, io
+    if not has_permission('view_bookings'):
+        flash('You do not have permission.', 'error')
+        return redirect(url_for('admin'))
+    search    = request.args.get('search', '').strip()
+    service   = request.args.get('service', '').strip()
+    status    = request.args.get('status', '').strip()
+    date_from = request.args.get('date_from', '').strip()
+    date_to   = request.args.get('date_to', '').strip()
+    conn = get_db()
+    q = ('SELECT id, name, phone, email, device, service, date, '
+         'notes, status, customer_id FROM bookings WHERE 1=1')
+    params = []
+    if search:
+        q += ' AND (name ILIKE %s OR email ILIKE %s OR phone ILIKE %s)'
+        params += [f'%{search}%'] * 3
+    if service:
+        q += ' AND service=%s'; params.append(service)
+    if status:
+        q += ' AND status=%s'; params.append(status)
+    if date_from:
+        q += ' AND date >= %s'; params.append(date_from)
+    if date_to:
+        q += ' AND date <= %s'; params.append(date_to)
+    q += ' ORDER BY date DESC'
+    bookings = conn.execute(q, params).fetchall()
+    conn.close()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['Booking ID', 'Customer Name', 'Phone', 'Email',
+                     'Device', 'Service', 'Date', 'Status', 'Notes', 'Member ID'])
+    for b in bookings:
+        writer.writerow([
+            b['id'], b['name'], b['phone'], b['email'],
+            b['device'], b['service'], b['date'],
+            b['status'], b['notes'] or '',
+            b['customer_id'] or 'Guest',
+        ])
+    log_activity('Exported bookings CSV', 'booking',
+                 details=f'{len(bookings)} bookings exported'
+                         f'{" (filtered)" if any([search, service, status, date_from, date_to]) else ""}')
+    today = datetime.today().strftime('%Y-%m-%d')
+    resp = make_response(buf.getvalue())
+    resp.headers['Content-Type'] = 'text/csv'
+    resp.headers['Content-Disposition'] = f'attachment; filename=donnyphonehub-bookings-{today}.csv'
+    return resp
+
+
+@app.route('/admin/bookings/export/summary')
+@admin_required
+def admin_bookings_export_summary():
+    import csv, io
+    if not has_permission('view_bookings'):
+        flash('No permission.', 'error')
+        return redirect(url_for('admin'))
+    conn = get_db()
+    monthly = conn.execute("""
+        SELECT TO_CHAR(DATE_TRUNC('month', date::date), 'Mon YYYY') AS month,
+               COUNT(*) AS total,
+               COUNT(*) FILTER (WHERE status='Complete')    AS completed,
+               COUNT(*) FILTER (WHERE status='Pending')     AS pending,
+               COUNT(*) FILTER (WHERE status='In Progress') AS in_progress,
+               COUNT(*) FILTER (WHERE status='Cancelled')   AS cancelled
+        FROM bookings
+        WHERE date::date >= CURRENT_DATE - INTERVAL '12 months'
+        GROUP BY DATE_TRUNC('month', date::date)
+        ORDER BY DATE_TRUNC('month', date::date)
+    """).fetchall()
+    services = conn.execute("""
+        SELECT service, COUNT(*) AS count FROM bookings
+        GROUP BY service ORDER BY count DESC
+    """).fetchall()
+    top_customers = conn.execute("""
+        SELECT c.name, c.phone, COUNT(*) AS bookings,
+               COUNT(*) FILTER (WHERE b.status='Complete') AS completed
+        FROM bookings b JOIN customers c ON c.id=b.customer_id
+        WHERE b.customer_id IS NOT NULL
+        GROUP BY c.name, c.phone ORDER BY bookings DESC LIMIT 20
+    """).fetchall()
+    conn.close()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['=== MONTHLY BOOKING SUMMARY (Last 12 Months) ==='])
+    writer.writerow(['Month', 'Total', 'Completed', 'Pending', 'In Progress', 'Cancelled'])
+    for m in monthly:
+        writer.writerow([m['month'], m['total'], m['completed'],
+                         m['pending'], m['in_progress'], m['cancelled']])
+    writer.writerow([])
+    writer.writerow(['=== SERVICE POPULARITY ==='])
+    writer.writerow(['Service', 'Total Bookings'])
+    for s in services:
+        writer.writerow([s['service'], s['count']])
+    writer.writerow([])
+    writer.writerow(['=== TOP CUSTOMERS BY BOOKINGS ==='])
+    writer.writerow(['Customer', 'Phone', 'Total Bookings', 'Completed'])
+    for t in top_customers:
+        writer.writerow([t['name'], t['phone'], t['bookings'], t['completed']])
+    today = datetime.today().strftime('%Y-%m-%d')
+    resp = make_response(buf.getvalue())
+    resp.headers['Content-Type'] = 'text/csv'
+    resp.headers['Content-Disposition'] = f'attachment; filename=donnyphonehub-bookings-summary-{today}.csv'
+    return resp
 
 
 @app.route('/admin/delete/<int:booking_id>', methods=['POST'])
@@ -1623,9 +1742,111 @@ def admin_members():
         'created_at': c['created_at'].strftime('%Y-%m-%d') if c['created_at'] else None,
         **plans_map.get(c['id'], {'plan_id': None, 'plan_status': None, 'plan_device': None}),
     } for c in customers]
+    status_filter = request.args.get('status', '').strip()
+    if status_filter:
+        members = [m for m in members if m['status'] == status_filter]
+        total = len(members)
     total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
     return render_template('admin_members.html', members=members, search=search, tier=tier,
-                           page=page, total_pages=total_pages, total=total)
+                           status_filter=status_filter, page=page, total_pages=total_pages, total=total)
+
+
+@app.route('/admin/members/export')
+@admin_required
+def admin_members_export():
+    import csv, io
+    if not has_permission('view_members'):
+        flash('You do not have permission.', 'error')
+        return redirect(url_for('admin'))
+    search        = request.args.get('search', '').strip()
+    tier          = request.args.get('tier', '').strip()
+    status_filter = request.args.get('status', '').strip()
+    conn = get_db()
+    q = ('SELECT id, name, phone, email, device_brand, device_model, '
+         'membership_tier, membership_start, membership_expiry, '
+         'email_verified, created_at FROM customers WHERE 1=1')
+    params = []
+    if search:
+        q += ' AND (name ILIKE %s OR email ILIKE %s OR phone ILIKE %s)'
+        params += [f'%{search}%'] * 3
+    if tier:
+        q += ' AND membership_tier=%s'; params.append(tier)
+    q += ' ORDER BY created_at DESC'
+    customers = conn.execute(q, params).fetchall()
+    plan_map = {}
+    try:
+        plans = conn.execute(
+            """SELECT customer_id, COUNT(*) AS plan_count,
+               SUM(CASE WHEN status='Active' THEN 1 ELSE 0 END) AS active_plans,
+               COALESCE(SUM(total_payable), 0) AS total_value,
+               COALESCE(SUM(balance_remaining), 0) AS total_balance
+               FROM installment_plans GROUP BY customer_id"""
+        ).fetchall()
+        for p in plans:
+            plan_map[p['customer_id']] = p
+    except Exception:
+        pass
+    payment_map = {}
+    try:
+        payments = conn.execute(
+            """SELECT ip.customer_id, COALESCE(SUM(p.amount), 0) AS total_paid
+               FROM payments p JOIN installment_plans ip ON ip.id=p.plan_id
+               GROUP BY ip.customer_id"""
+        ).fetchall()
+        for p in payments:
+            payment_map[p['customer_id']] = float(p['total_paid'])
+    except Exception:
+        pass
+    booking_map = {}
+    try:
+        bcounts = conn.execute(
+            """SELECT customer_id, COUNT(*) AS cnt FROM bookings
+               WHERE customer_id IS NOT NULL GROUP BY customer_id"""
+        ).fetchall()
+        for b in bcounts:
+            booking_map[b['customer_id']] = b['cnt']
+    except Exception:
+        pass
+    conn.close()
+    filtered = []
+    for c in customers:
+        c_status = membership_status(c['membership_expiry'])
+        if status_filter and c_status != status_filter:
+            continue
+        filtered.append((c, c_status))
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['Member ID', 'Name', 'Phone', 'Email',
+                     'Device Brand', 'Device Model', 'Membership Tier',
+                     'Membership Status', 'Start Date', 'Expiry Date',
+                     'Email Verified', 'Registered', 'Total Bookings',
+                     'Installment Plans', 'Active Plans',
+                     'Total Plan Value', 'Total Paid', 'Outstanding Balance'])
+    for c, c_status in filtered:
+        cid   = c['id']
+        pinfo = plan_map.get(cid, {})
+        writer.writerow([
+            c['id'], c['name'], c['phone'], c['email'],
+            c['device_brand'] or '', c['device_model'] or '',
+            c['membership_tier'], c_status,
+            c['membership_start'] or '', c['membership_expiry'] or '',
+            'Yes' if c['email_verified'] else 'No',
+            str(c['created_at'])[:10] if c['created_at'] else '',
+            booking_map.get(cid, 0),
+            pinfo.get('plan_count', 0),
+            pinfo.get('active_plans', 0),
+            round(float(pinfo.get('total_value', 0)), 2),
+            round(payment_map.get(cid, 0), 2),
+            round(float(pinfo.get('total_balance', 0)), 2),
+        ])
+    log_activity('Exported members CSV', 'member',
+                 details=f'{len(filtered)} members exported'
+                         f'{" (filtered)" if any([search, tier, status_filter]) else ""}')
+    today = datetime.today().strftime('%Y-%m-%d')
+    resp = make_response(buf.getvalue())
+    resp.headers['Content-Type'] = 'text/csv'
+    resp.headers['Content-Disposition'] = f'attachment; filename=donnyphonehub-members-{today}.csv'
+    return resp
 
 
 @app.route('/admin/members/<int:customer_id>')
