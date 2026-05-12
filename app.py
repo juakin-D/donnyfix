@@ -3831,7 +3831,7 @@ def notify_payment(plan_id):
         errors.append('Payment amount must be greater than zero.')
     if amount > plan['balance_remaining'] + 0.01:
         errors.append(f'Amount exceeds remaining balance of {fmt_ghs(plan["balance_remaining"])}.')
-    if method not in ('MTN MoMo', 'Vodafone Cash', 'AirtelTigo Money', 'Bank Transfer', 'Bank Deposit'):
+    if method not in ('MTN MoMo', 'Vodafone Cash', 'AirtelTigo Money', 'Bank Transfer', 'Bank Deposit', 'Cash'):
         errors.append('Invalid payment method.')
     if any(w in method for w in ('MoMo', 'Cash', 'Money')) and not momo_number:
         errors.append('MoMo number is required.')
@@ -4335,7 +4335,7 @@ def admin_payments():
         """SELECT pd.*, i.brand, i.model, i.selling_price
            FROM pending_deposits pd
            JOIN reservations r ON r.id = pd.reservation_id
-           JOIN inventory i ON i.id = r.inventory_id
+           JOIN inventory i ON i.id = r.item_id
            WHERE pd.status = 'Pending'
            ORDER BY pd.created_at DESC"""
     ).fetchall()
