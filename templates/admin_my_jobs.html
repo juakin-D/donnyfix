@@ -1,0 +1,160 @@
+{% extends "admin_base.html" %}
+
+{% block title %}My Jobs — Admin{% endblock %}
+{% block topbar_title %}My Jobs{% endblock %}
+{% block topbar_subtitle %}
+  {% if is_master %}All assigned repairs{% else %}{{ session.get('admin_username') }}'s assigned repairs{% endif %}
+{% endblock %}
+
+{% block head_extra %}
+<style>
+:root{--blue:#3B9EE8}
+
+/* ── STATS ── */
+.mj-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+@media(max-width:900px){.mj-stats{grid-template-columns:1fr 1fr}}
+@media(max-width:500px){.mj-stats{grid-template-columns:1fr 1fr}}
+
+/* ── JOB CARDS ── */
+.job-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px;transition:border-color .2s}
+.job-card:hover{border-color:rgba(0,196,106,.3)}
+.job-urgent{border-left:4px solid var(--red)}
+.job-priority-bar{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:4px 12px;border-radius:6px;margin-bottom:12px;display:inline-block}
+.urgent-bar{background:rgba(232,64,64,.15);color:var(--red)}
+.low-bar{background:var(--surface2);color:var(--text-muted)}
+.job-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.job-id{font-family:'DM Mono',monospace;font-size:13px;color:var(--text-muted)}
+.job-device{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#fff;margin-bottom:4px}
+.job-service{font-size:14px;color:var(--green);font-weight:600;margin-bottom:14px}
+.job-customer{background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:12px}
+.jc-name{font-size:15px;font-weight:600;color:#fff;margin-bottom:8px}
+.jc-actions{display:flex;gap:8px;flex-wrap:wrap}
+.jc-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text-soft);text-decoration:none;font-size:13px;transition:all .2s}
+.jc-btn:hover{border-color:var(--green);color:var(--green)}
+.job-meta{display:flex;gap:16px;font-size:13px;color:var(--text-muted);margin-bottom:10px;flex-wrap:wrap}
+.job-notes{font-size:13px;color:var(--text-muted);background:var(--surface2);padding:10px 12px;border-radius:8px;margin-bottom:8px;line-height:1.4}
+.job-internal{border-left:3px solid var(--amber)}
+.jn-label{font-weight:600;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;color:var(--text-muted)}
+.job-actions{display:flex;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.ja-btn{flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.ja-start{background:rgba(59,158,232,.15);color:var(--blue)}
+.ja-start:hover{background:rgba(59,158,232,.25)}
+.ja-done{background:rgba(0,196,106,.15);color:var(--green)}
+.ja-done:hover{background:rgba(0,196,106,.25)}
+
+/* ── STATUS BADGE ── */
+.job-status{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.status-pending{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.status-in-progress,.status-in-progress{background:rgba(59,158,232,.15);color:var(--blue);border:1px solid rgba(59,158,232,.2)}
+.status-complete{background:var(--green-glow);color:var(--green);border:1px solid rgba(0,196,106,.2)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="mj-stats">
+  <div class="stat-card green">
+    <div class="stat-label">Assigned</div>
+    <div class="stat-value">{{ total_assigned }}</div>
+    <div class="stat-sub">Active jobs</div>
+  </div>
+  <div class="stat-card {% if urgent_count > 0 %}red{% else %}amber{% endif %}">
+    <div class="stat-label">Urgent</div>
+    <div class="stat-value">{{ urgent_count }}</div>
+    <div class="stat-sub">High priority</div>
+  </div>
+  <div class="stat-card blue" style="--blue:#3B9EE8">
+    <div class="stat-label">Today</div>
+    <div class="stat-value" style="color:#3B9EE8">{{ today_jobs }}</div>
+    <div class="stat-sub">Scheduled today</div>
+  </div>
+  <div class="stat-card gold">
+    <div class="stat-label">Completed Today</div>
+    <div class="stat-value">{{ completed_today }}</div>
+    <div class="stat-sub">Done today</div>
+  </div>
+</div>
+
+{% if bookings %}
+  {% for b in bookings %}
+  <div class="job-card {% if (b.priority or 'Normal') == 'Urgent' %}job-urgent{% endif %}">
+    {% if (b.priority or 'Normal') == 'Urgent' %}
+    <div class="job-priority-bar urgent-bar">🔴 URGENT</div>
+    {% elif (b.priority or 'Normal') == 'Low' %}
+    <div class="job-priority-bar low-bar">LOW PRIORITY</div>
+    {% endif %}
+
+    <div class="job-header">
+      <span class="job-id">#{{ b.id }}</span>
+      <span class="job-status status-{{ (b.status or 'Pending')|lower|replace(' ','-') }}">{{ b.status or 'Pending' }}</span>
+    </div>
+
+    <div class="job-device">{{ b.device }}</div>
+    <div class="job-service">{{ b.service }}</div>
+
+    <div class="job-customer">
+      <div class="jc-name">{{ b.name }}</div>
+      <div class="jc-actions">
+        <a href="tel:{{ b.phone }}" class="jc-btn">📞 {{ b.phone }}</a>
+        <a href="https://wa.me/233{{ b.phone[1:] }}" target="_blank" rel="noopener" class="jc-btn">💬 WhatsApp</a>
+      </div>
+    </div>
+
+    <div class="job-meta">
+      <span>📅 {{ b.date }}</span>
+      {% if b.estimated_duration %}<span>⏱ {{ b.estimated_duration }}</span>{% endif %}
+      {% if is_master and b.technician_name %}<span>🔧 {{ b.technician_name }}</span>{% endif %}
+    </div>
+
+    {% if b.notes %}
+    <div class="job-notes">
+      <span class="jn-label">Customer Notes:</span>{{ b.notes }}
+    </div>
+    {% endif %}
+    {% if b.internal_notes %}
+    <div class="job-notes job-internal">
+      <span class="jn-label">Internal:</span>{{ b.internal_notes }}
+    </div>
+    {% endif %}
+
+    {% if has_permission('edit_bookings') %}
+    <div class="job-actions">
+      {% if (b.status or 'Pending') == 'Pending' %}
+      <form method="POST" action="/admin/bookings/{{ b.id }}/status" style="flex:1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="status" value="In Progress">
+        <button type="submit" class="ja-btn ja-start">▶ Start Repair</button>
+      </form>
+      {% elif b.status == 'In Progress' %}
+      <form method="POST" action="/admin/bookings/{{ b.id }}/status" style="flex:1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="status" value="Complete">
+        <button type="submit" class="ja-btn ja-done">✅ Mark Complete</button>
+      </form>
+      {% endif %}
+      {% if is_master %}
+      <button class="ja-btn" style="background:var(--surface2);color:var(--text-soft);flex:0;padding:10px 16px"
+        onclick="this.closest('form') && this.closest('form').submit()"
+        onclick="document.getElementById('reassign-{{ b.id }}').submit()">
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+{% else %}
+<div style="text-align:center;padding:64px 20px">
+  <div style="font-size:48px;margin-bottom:12px">🎉</div>
+  <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:8px">No jobs assigned</div>
+  <div style="font-size:14px;color:var(--text-muted)">All caught up — check back later.</div>
+  {% if is_master %}
+  <a href="/admin/bookings" style="display:inline-block;margin-top:20px;padding:10px 24px;background:var(--green-glow);border:1px solid rgba(0,196,106,.25);border-radius:8px;color:var(--green);font-size:13px;font-weight:600;text-decoration:none">
+    Go to Bookings →
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

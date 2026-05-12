@@ -18,6 +18,7 @@ th:last-child,td:last-child{white-space:nowrap}
 
 /* ── ACTION BUTTONS ── */
 .act-btn.view-notes-btn,.act-btn.delete{width:30px;height:30px;padding:0;font-size:14px}
+.act-btn.assign-btn{padding:4px 10px;width:auto;font-size:11px;font-weight:600;border-radius:6px}
 
 /* ── EXPORT BUTTONS ── */
 .export-btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -35,6 +36,24 @@ th:last-child,td:last-child{white-space:nowrap}
 .status-complete   {background:var(--green-glow)!important;border-color:rgba(0,196,106,.4)!important;color:var(--green)!important}
 .status-cancelled  {background:var(--red-dim)!important;border-color:rgba(232,64,64,.4)!important;color:var(--red)!important}
 
+/* ── ASSIGNMENT BADGES ── */
+.tech-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:rgba(0,196,106,.12);color:var(--green);border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap}
+.priority-urgent{display:inline-block;padding:2px 6px;background:rgba(232,64,64,.15);color:var(--red);border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-left:6px}
+.priority-low{display:inline-block;padding:2px 6px;background:var(--surface2);color:var(--text-muted);border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:6px}
+.assign-btn-assigned{color:var(--green)}
+.assign-btn-unassigned{color:var(--amber)}
+
+/* ── BULK BAR ── */
+.bulk-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:2px solid var(--green);padding:12px 24px;z-index:100;box-shadow:0 -8px 24px rgba(0,0,0,.4)}
+.bulk-bar form{display:flex;align-items:center;gap:12px;max-width:900px;margin:0 auto;flex-wrap:wrap}
+.bulk-count{font-family:'DM Mono',monospace;font-size:13px;color:var(--green);font-weight:600;white-space:nowrap}
+.bulk-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:#fff;padding:8px 12px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+.bulk-select:focus{border-color:var(--green)}
+.bulk-btn{background:var(--green);color:#0E1210;border:none;border-radius:6px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Syne',sans-serif}
+.bulk-btn:hover{opacity:.88}
+.bulk-cancel-btn{background:transparent;border:1px solid var(--border2);border-radius:6px;padding:8px 16px;font-size:13px;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif}
+.bulk-cancel-btn:hover{color:var(--text)}
+
 /* ── NOTES MODAL ── */
 .notes-modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .notes-modal.open{display:flex}
@@ -47,218 +66,345 @@ th:last-child,td:last-child{white-space:nowrap}
 .notes-modal-body{font-size:14px;color:var(--text-soft);line-height:1.7;white-space:pre-wrap}
 .notes-modal-btn{margin-top:20px;width:100%;padding:10px;background:var(--green-glow);border:1px solid rgba(0,196,106,.2);border-radius:8px;color:var(--green);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:background .15s}
 .notes-modal-btn:hover{background:rgba(0,196,106,.2)}
+
+/* ── ASSIGN MODAL ── */
+.assign-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.75);align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.assign-modal.open{display:flex}
+.assign-modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;max-width:460px;width:92%;animation:modalPop .18s ease;max-height:90vh;overflow-y:auto}
+.am-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.am-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)}
+.am-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px;line-height:1;padding:4px 8px;border-radius:6px;transition:background .15s}
+.am-close:hover{background:var(--surface2);color:var(--text)}
+.am-info{background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:16px}
+.am-field{margin-bottom:14px}
+.am-label{display:block;font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.am-select,.am-textarea{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s}
+.am-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234A5E58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.am-select:focus,.am-textarea:focus{border-color:rgba(0,196,106,.4)}
+.am-textarea{resize:vertical;min-height:64px}
+.am-actions{display:flex;gap:10px;margin-top:20px}
+.am-submit{flex:1;padding:10px;background:var(--green);border:none;border-radius:8px;color:#0E1210;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.am-submit:hover{opacity:.88}
+.am-cancel{padding:10px 16px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text-soft);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s}
+.am-cancel:hover{color:var(--text)}
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- STATS ROW -->
-      <div class="stats-row">
-        <div class="stat-card green">
-          <div class="stat-label">Total Bookings</div>
-          <div class="stat-value">{{ total }}</div>
-          <div class="stat-sub">All time</div>
-        </div>
-        <div class="stat-card amber">
-          <div class="stat-label">Pending</div>
-          <div class="stat-value">{{ bookings|selectattr('status', 'equalto', 'Pending')|list|length }}</div>
-          <div class="stat-sub">This page</div>
-        </div>
-        <div class="stat-card gold">
-          <div class="stat-label">Today</div>
-          <div class="stat-value" id="today-count">—</div>
-          <div class="stat-sub">Scheduled today</div>
-        </div>
-        <div class="stat-card red">
-          <div class="stat-label">This Week</div>
-          <div class="stat-value" id="week-count">—</div>
-          <div class="stat-sub">Last 7 days</div>
-        </div>
-      </div>
+<div class="stats-row">
+  <div class="stat-card green">
+    <div class="stat-label">Total Bookings</div>
+    <div class="stat-value">{{ total }}</div>
+    <div class="stat-sub">All time</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-label">Pending</div>
+    <div class="stat-value">{{ bookings|selectattr('status', 'equalto', 'Pending')|list|length }}</div>
+    <div class="stat-sub">This page</div>
+  </div>
+  <div class="stat-card gold">
+    <div class="stat-label">Today</div>
+    <div class="stat-value" id="today-count">—</div>
+    <div class="stat-sub">Scheduled today</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-label">This Week</div>
+    <div class="stat-value" id="week-count">—</div>
+    <div class="stat-sub">Last 7 days</div>
+  </div>
+</div>
 
-      <!-- FILTER BAR -->
-      <form method="GET" action="/admin/bookings">
-        <div class="filter-bar">
-          <div class="search-wrap">
-            <span class="search-icon">🔍</span>
-            <input
-              type="text" name="search"
-              class="search-input"
-              placeholder="Search name, email, phone..."
-              value="{{ search }}"
-              id="search-input"
-            />
-          </div>
-          <select name="service" class="filter-select">
-            <option value="">All Services</option>
-            <option value="Screen Replacement"    {% if service == 'Screen Replacement' %}selected{% endif %}>Screen Replacement</option>
-            <option value="Battery Replacement"   {% if service == 'Battery Replacement' %}selected{% endif %}>Battery Replacement</option>
-            <option value="Charging Port Repair"  {% if service == 'Charging Port Repair' %}selected{% endif %}>Charging Port</option>
-            <option value="Water Damage Treatment"{% if service == 'Water Damage Treatment' %}selected{% endif %}>Water Damage</option>
-            <option value="Software Restore"      {% if service == 'Software Restore' %}selected{% endif %}>Software Restore</option>
-            <option value="Data Backup & Transfer"{% if service == 'Data Backup & Transfer' %}selected{% endif %}>Data Transfer</option>
-            <option value="Full Diagnostics"      {% if service == 'Full Diagnostics' %}selected{% endif %}>Diagnostics</option>
-            <option value="Camera / Speaker Repair"{% if service == 'Camera / Speaker Repair' %}selected{% endif %}>Camera / Speaker</option>
-          </select>
-          <select name="status" class="filter-select">
-            <option value="">All Statuses</option>
-            <option value="Pending"     {% if status == 'Pending'     %}selected{% endif %}>Pending</option>
-            <option value="In Progress" {% if status == 'In Progress' %}selected{% endif %}>In Progress</option>
-            <option value="Complete"    {% if status == 'Complete'    %}selected{% endif %}>Complete</option>
-            <option value="Cancelled"   {% if status == 'Cancelled'   %}selected{% endif %}>Cancelled</option>
-          </select>
-          <input type="date" name="date_from" value="{{ date_from or '' }}" class="filter-input" title="From date"/>
-          <input type="date" name="date_to"   value="{{ date_to or '' }}"   class="filter-input" title="To date"/>
-          <button type="submit" class="filter-btn filter-btn-primary">Filter</button>
-          {% if search or service or status or date_from or date_to %}
-            <a href="/admin/bookings" class="filter-btn filter-btn-ghost" style="text-decoration:none;">Clear</a>
+<!-- FILTER BAR -->
+<form method="GET" action="/admin/bookings">
+  <div class="filter-bar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" name="search" class="search-input"
+             placeholder="Search name, email, phone..."
+             value="{{ search }}" id="search-input"/>
+    </div>
+    <select name="service" class="filter-select">
+      <option value="">All Services</option>
+      <option value="Screen Replacement"    {% if service == 'Screen Replacement'    %}selected{% endif %}>Screen Replacement</option>
+      <option value="Battery Replacement"   {% if service == 'Battery Replacement'   %}selected{% endif %}>Battery Replacement</option>
+      <option value="Charging Port Repair"  {% if service == 'Charging Port Repair'  %}selected{% endif %}>Charging Port</option>
+      <option value="Water Damage Treatment"{% if service == 'Water Damage Treatment'%}selected{% endif %}>Water Damage</option>
+      <option value="Software Restore"      {% if service == 'Software Restore'      %}selected{% endif %}>Software Restore</option>
+      <option value="Data Backup & Transfer"{% if service == 'Data Backup & Transfer'%}selected{% endif %}>Data Transfer</option>
+      <option value="Full Diagnostics"      {% if service == 'Full Diagnostics'      %}selected{% endif %}>Diagnostics</option>
+      <option value="Camera / Speaker Repair"{% if service == 'Camera / Speaker Repair'%}selected{% endif %}>Camera / Speaker</option>
+    </select>
+    <select name="status" class="filter-select">
+      <option value="">All Statuses</option>
+      <option value="Pending"     {% if status == 'Pending'     %}selected{% endif %}>Pending</option>
+      <option value="In Progress" {% if status == 'In Progress' %}selected{% endif %}>In Progress</option>
+      <option value="Complete"    {% if status == 'Complete'    %}selected{% endif %}>Complete</option>
+      <option value="Cancelled"   {% if status == 'Cancelled'   %}selected{% endif %}>Cancelled</option>
+    </select>
+    <select name="assigned" class="filter-select">
+      <option value="">All Assignments</option>
+      <option value="unassigned" {% if assigned_filter == 'unassigned' %}selected{% endif %}>Unassigned Only</option>
+      <option value="assigned"   {% if assigned_filter == 'assigned'   %}selected{% endif %}>Assigned Only</option>
+      {% for t in technicians %}
+      <option value="{{ t.id }}" {% if assigned_filter == t.id|string %}selected{% endif %}>{{ t.name }}</option>
+      {% endfor %}
+    </select>
+    <input type="date" name="date_from" value="{{ date_from or '' }}" class="filter-input" title="From date"/>
+    <input type="date" name="date_to"   value="{{ date_to   or '' }}" class="filter-input" title="To date"/>
+    <button type="submit" class="filter-btn filter-btn-primary">Filter</button>
+    {% if search or service or status or date_from or date_to or assigned_filter %}
+      <a href="/admin/bookings" class="filter-btn filter-btn-ghost" style="text-decoration:none;">Clear</a>
+    {% endif %}
+  </div>
+</form>
+
+<!-- TABLE -->
+<div class="section-header">
+  <div class="section-title">
+    {% if search or service or status or date_from or date_to or assigned_filter %}
+      Filtered results
+      <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px;">{{ total }} found</span>
+    {% else %}
+      All Bookings
+      <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);font-weight:400;margin-left:8px;">{{ total }} total</span>
+    {% endif %}
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="export-btns">
+      <a href="/admin/bookings/export?{{ request.query_string.decode() }}" class="export-btn">📥 Export CSV</a>
+      <a href="/admin/bookings/export/summary" class="export-btn">📊 Summary Report</a>
+    </div>
+    <a href="/booking" target="_blank"
+      style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--green-glow);border:1px solid rgba(0,196,106,0.25);border-radius:8px;color:var(--green);font-size:13px;font-weight:500;text-decoration:none;transition:all 0.15s;">
+      + New Booking
+    </a>
+  </div>
+</div>
+
+<div class="table-wrap">
+  {% if bookings %}
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40px">
+          <input type="checkbox" id="select-all" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer" title="Select all">
+        </th>
+        <th>#</th>
+        <th>Customer</th>
+        <th>Contact</th>
+        <th>Device</th>
+        <th>Service</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Assigned To</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="bookings-tbody">
+      {% for b in bookings %}
+      <tr data-date="{{ b['date'] }}" data-name="{{ b['name']|lower }}" data-email="{{ b['email']|lower }}" data-phone="{{ b['phone']|lower }}">
+        <td style="width:40px">
+          <input type="checkbox" class="bulk-check" value="{{ b['id'] }}"
+                 style="width:16px;height:16px;accent-color:var(--green);cursor:pointer">
+        </td>
+        <td><span class="td-mono">#{{ b['id'] }}</span></td>
+        <td>
+          <div class="td-name">{{ b['name'] }}</div>
+          <div class="td-mono" style="margin-top:2px">{{ b['email'] }}</div>
+        </td>
+        <td><div class="td-mono">{{ b['phone'] }}</div></td>
+        <td><span class="service-tag">{{ b['device'] }}</span></td>
+        <td><span class="service-tag">{{ b['service'] }}</span></td>
+        <td>
+          <div style="font-size:13px;color:var(--text)">{{ b['date'] }}</div>
+          {% if b['notes'] %}
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="{{ b['notes']|e }}">{{ b['notes'] }}</div>
           {% endif %}
-        </div>
-      </form>
-
-      <!-- TABLE -->
-      <div class="section-header">
-        <div class="section-title">
-          {% if search or service or status or date_from or date_to %}
-            Filtered results
-            <span style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text-muted); font-weight:400; margin-left:8px;">{{ total }} found</span>
+        </td>
+        <td>
+          {% if has_permission('edit_bookings') %}
+          <form method="POST" action="/admin/bookings/{{ b['id'] }}/status">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="status" class="status-select" title="Change status">
+              {% set s = b['status'] or 'Pending' %}
+              <option value="Pending"     {% if s == 'Pending'     %}selected{% endif %}>Pending</option>
+              <option value="In Progress" {% if s == 'In Progress' %}selected{% endif %}>In Progress</option>
+              <option value="Complete"    {% if s == 'Complete'    %}selected{% endif %}>Complete</option>
+              <option value="Cancelled"   {% if s == 'Cancelled'   %}selected{% endif %}>Cancelled</option>
+            </select>
+          </form>
           {% else %}
-            All Bookings
-            <span style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text-muted); font-weight:400; margin-left:8px;">{{ total }} total</span>
+          <span class="td-mono">{{ b['status'] or 'Pending' }}</span>
           {% endif %}
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <div class="export-btns">
-            <a href="/admin/bookings/export?{{ request.query_string.decode() }}" class="export-btn">📥 Export CSV</a>
-            <a href="/admin/bookings/export/summary" class="export-btn">📊 Summary Report</a>
-          </div>
-          <a href="/booking" target="_blank"
-            style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--green-glow);border:1px solid rgba(0,196,106,0.25);border-radius:8px;color:var(--green);font-size:13px;font-weight:500;text-decoration:none;transition:all 0.15s;">
-            + New Booking
-          </a>
-        </div>
-      </div>
-
-      <div class="table-wrap">
-        {% if bookings %}
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Customer</th>
-              <th>Contact</th>
-              <th>Device</th>
-              <th>Service</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="bookings-tbody">
-            {% for b in bookings %}
-            {% set today_str = '' %}
-            <tr class="" data-date="{{ b['date'] }}" data-name="{{ b['name']|lower }}" data-email="{{ b['email']|lower }}" data-phone="{{ b['phone']|lower }}">
-              <td>
-                <span class="td-mono">#{{ b['id'] }}</span>
-              </td>
-              <td>
-                <div class="td-name">{{ b['name'] }}</div>
-                <div class="td-mono" style="margin-top:2px;">{{ b['email'] }}</div>
-              </td>
-              <td>
-                <div class="td-mono">{{ b['phone'] }}</div>
-              </td>
-              <td>
-                <span class="service-tag">{{ b['device'] }}</span>
-              </td>
-              <td>
-                <span class="service-tag">{{ b['service'] }}</span>
-              </td>
-              <td>
-                <div style="font-size:13px; color:var(--text);">{{ b['date'] }}</div>
-                {% if b['notes'] %}
-                  <div style="font-size:11px; color:var(--text-muted); margin-top:2px; max-width:120px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ b['notes']|e }}">{{ b['notes'] }}</div>
-                {% endif %}
-              </td>
-              <td>
-                {% if has_permission('edit_bookings') %}
-                <form method="POST" action="/admin/bookings/{{ b['id'] }}/status">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <select name="status" class="status-select" title="Change status">
-                    {% set s = b['status'] or 'Pending' %}
-                    <option value="Pending"     {% if s == 'Pending'     %}selected{% endif %}>Pending</option>
-                    <option value="In Progress" {% if s == 'In Progress' %}selected{% endif %}>In Progress</option>
-                    <option value="Complete"    {% if s == 'Complete'    %}selected{% endif %}>Complete</option>
-                    <option value="Cancelled"   {% if s == 'Cancelled'   %}selected{% endif %}>Cancelled</option>
-                  </select>
-                </form>
-                {% else %}
-                <span class="td-mono">{{ b['status'] or 'Pending' }}</span>
-                {% endif %}
-              </td>
-              <td>
-                <div class="action-cell">
-                  <button class="act-btn view-notes-btn" title="View notes"
-                    data-id="{{ b['id'] }}"
-                    data-name="{{ b['name']|tojson }}"
-                    data-notes="{{ (b['notes'] if b['notes'] else 'No notes.')|tojson }}">
-                    👁
-                  </button>
-                  <a class="act-btn" href="/receipt/booking/{{ b['id'] }}" target="_blank" title="Download receipt">🧾</a>
-                  {% if has_permission('delete_bookings') %}
-                  <form method="POST" action="/admin/delete/{{ b['id'] }}"
-                        data-confirm="Delete booking #{{ b['id'] }} for {{ b['name']|e }}?"
-                        style="display:inline;">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="act-btn delete" title="Delete booking"
-                            data-id="{{ b['id'] }}" data-name="{{ b['name']|e }}">🗑</button>
-                  </form>
-                  {% endif %}
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-
-        <div class="pagination">
-          <span id="pagination-info">Showing {{ bookings|length }} of {{ total }} booking{{ 's' if total != 1 else '' }}</span>
-          <div class="page-btns">
-            {% if page > 1 %}
-              <a class="page-btn" href="?page={{ page - 1 }}&search={{ search }}&service={{ service }}">← Prev</a>
+        </td>
+        <td>
+          {% if b['technician_name'] %}
+            <span class="tech-badge">🔧 {{ b['technician_name'] }}</span>
+            {% if b['priority'] == 'Urgent' %}
+              <span class="priority-urgent">URGENT</span>
+            {% elif b['priority'] == 'Low' %}
+              <span class="priority-low">LOW</span>
             {% endif %}
-            <span class="page-btn active">{{ page }} / {{ total_pages }}</span>
-            {% if page < total_pages %}
-              <a class="page-btn" href="?page={{ page + 1 }}&search={{ search }}&service={{ service }}">Next →</a>
+          {% else %}
+            <span style="color:var(--text-muted);font-size:12px">Unassigned</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="action-cell">
+            {% if has_permission('edit_bookings') %}
+            <button class="act-btn assign-btn {% if b['assigned_to'] %}assign-btn-assigned{% else %}assign-btn-unassigned{% endif %}"
+              onclick="openAssignModal(
+                {{ b['id'] }},
+                {{ b['name']|tojson }},
+                {{ b['device']|tojson }},
+                {{ b['service']|tojson }},
+                {{ b['assigned_to'] or 'null' }},
+                {{ (b['priority'] or 'Normal')|tojson }},
+                {{ (b['estimated_duration'] or '')|tojson }},
+                {{ (b['internal_notes'] or '')|tojson }}
+              )" title="Assign booking">
+              {% if b['assigned_to'] %}✏️ Reassign{% else %}👤 Assign{% endif %}
+            </button>
+            {% endif %}
+            <button class="act-btn view-notes-btn" title="View notes"
+              data-id="{{ b['id'] }}"
+              data-name="{{ b['name']|tojson }}"
+              data-notes="{{ (b['notes'] if b['notes'] else 'No notes.')|tojson }}">
+              👁
+            </button>
+            <a class="act-btn" href="/receipt/booking/{{ b['id'] }}" target="_blank" title="Download receipt">🧾</a>
+            {% if has_permission('delete_bookings') %}
+            <form method="POST" action="/admin/delete/{{ b['id'] }}"
+                  data-confirm="Delete booking #{{ b['id'] }} for {{ b['name']|e }}?"
+                  style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="act-btn delete" title="Delete booking">🗑</button>
+            </form>
             {% endif %}
           </div>
-        </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
-        {% else %}
-        <div class="empty-state">
-          <div class="empty-icon">📋</div>
-          <div class="empty-title">No bookings found</div>
-          <div class="empty-sub">
-            {% if search or service %}
-              Try adjusting your filters
-            {% else %}
-              Bookings will appear here when customers submit the form
-            {% endif %}
-          </div>
-        </div>
-        {% endif %}
-      </div>
+  <div class="pagination">
+    <span id="pagination-info">Showing {{ bookings|length }} of {{ total }} booking{{ 's' if total != 1 else '' }}</span>
+    <div class="page-btns">
+      {% if page > 1 %}
+        <a class="page-btn" href="?page={{ page - 1 }}&search={{ search }}&service={{ service }}&status={{ status }}&assigned={{ assigned_filter }}">← Prev</a>
+      {% endif %}
+      <span class="page-btn active">{{ page }} / {{ total_pages }}</span>
+      {% if page < total_pages %}
+        <a class="page-btn" href="?page={{ page + 1 }}&search={{ search }}&service={{ service }}&status={{ status }}&assigned={{ assigned_filter }}">Next →</a>
+      {% endif %}
+    </div>
+  </div>
 
-      <!-- NOTES MODAL -->
-      <div id="notes-modal" class="notes-modal">
-        <div class="notes-modal-box">
-          <div class="notes-modal-head">
-            <div id="modal-title" class="notes-modal-title">Booking Notes</div>
-            <button id="notes-modal-close-x" class="notes-modal-close">×</button>
-          </div>
-          <div id="modal-body" class="notes-modal-body"></div>
-          <button id="notes-modal-close-btn" class="notes-modal-btn">Close</button>
-        </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <div class="empty-title">No bookings found</div>
+    <div class="empty-sub">
+      {% if search or service or status or assigned_filter %}
+        Try adjusting your filters
+      {% else %}
+        Bookings will appear here when customers submit the form
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- NOTES MODAL -->
+<div id="notes-modal" class="notes-modal">
+  <div class="notes-modal-box">
+    <div class="notes-modal-head">
+      <div id="modal-title" class="notes-modal-title">Booking Notes</div>
+      <button id="notes-modal-close-x" class="notes-modal-close">×</button>
+    </div>
+    <div id="modal-body" class="notes-modal-body"></div>
+    <button id="notes-modal-close-btn" class="notes-modal-btn">Close</button>
+  </div>
+</div>
+
+<!-- ASSIGN MODAL -->
+{% if has_permission('edit_bookings') %}
+<div id="assignModal" class="assign-modal">
+  <div class="assign-modal-box">
+    <div class="am-header">
+      <div class="am-title">Assign Booking</div>
+      <button class="am-close" onclick="closeAssignModal()">✕</button>
+    </div>
+    <div id="assignInfo" class="am-info"></div>
+    <form method="POST" id="assignForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="am-field">
+        <label class="am-label">Assign to Technician</label>
+        <select name="staff_id" id="assignStaff" class="am-select">
+          <option value="">— Unassign —</option>
+          {% for t in technicians %}
+          <option value="{{ t.id }}">{{ t.name }} ({{ t.role }})</option>
+          {% endfor %}
+        </select>
       </div>
+      <div class="am-field">
+        <label class="am-label">Priority</label>
+        <select name="priority" id="assignPriority" class="am-select">
+          <option value="Normal">Normal</option>
+          <option value="Urgent">🔴 Urgent</option>
+          <option value="Low">Low Priority</option>
+        </select>
+      </div>
+      <div class="am-field">
+        <label class="am-label">Estimated Duration</label>
+        <select name="estimated_duration" id="assignDuration" class="am-select">
+          <option value="">Not set</option>
+          <option value="15 min">15 minutes</option>
+          <option value="30 min">30 minutes</option>
+          <option value="1 hour">1 hour</option>
+          <option value="2 hours">2 hours</option>
+          <option value="3 hours">3 hours</option>
+          <option value="Half day">Half day</option>
+          <option value="Full day">Full day</option>
+        </select>
+      </div>
+      <div class="am-field">
+        <label class="am-label">Internal Notes (staff only)</label>
+        <textarea name="internal_notes" id="assignNotes" rows="2"
+                  class="am-textarea" placeholder="Notes for the technician…"></textarea>
+      </div>
+      <div class="am-actions">
+        <button type="button" class="am-cancel" onclick="closeAssignModal()">Cancel</button>
+        <button type="submit" class="am-submit">Assign</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- BULK BAR -->
+<div class="bulk-bar" id="bulkBar" style="display:none">
+  <form method="POST" action="/admin/bookings/bulk-assign" id="bulkForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div id="bulkIds"></div>
+    <span class="bulk-count" id="bulkCount">0 selected</span>
+    <select name="staff_id" required class="bulk-select">
+      <option value="">Assign to…</option>
+      {% for t in technicians %}
+      <option value="{{ t.id }}">{{ t.name }} ({{ t.role }})</option>
+      {% endfor %}
+    </select>
+    <select name="priority" class="bulk-select">
+      <option value="Normal">Normal</option>
+      <option value="Urgent">🔴 Urgent</option>
+      <option value="Low">Low</option>
+    </select>
+    <button type="submit" class="bulk-btn">Assign Selected</button>
+    <button type="button" class="bulk-cancel-btn" onclick="clearBulkSelection()">✕ Cancel</button>
+  </form>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -271,7 +417,7 @@ th:last-child,td:last-child{white-space:nowrap}
     if (d === todayStr) {
       todayCount++;
       row.classList.add('today-row');
-      const dateTd = row.querySelector('td:nth-child(6) div');
+      const dateTd = row.querySelector('td:nth-child(8) div');
       if (dateTd) dateTd.insertAdjacentHTML('afterend', '<span class="today-badge">Today</span>');
     }
     if (d >= sevenDaysAgo) weekCount++;
@@ -287,12 +433,7 @@ th:last-child,td:last-child{white-space:nowrap}
     });
   });
 
-  var statusClasses = {
-    'Pending':     'status-pending',
-    'In Progress': 'status-in-progress',
-    'Complete':    'status-complete',
-    'Cancelled':   'status-cancelled'
-  };
+  var statusClasses = {'Pending':'status-pending','In Progress':'status-in-progress','Complete':'status-complete','Cancelled':'status-cancelled'};
   function applyStatusColour(sel) {
     Object.values(statusClasses).forEach(function(c){ sel.classList.remove(c); });
     var cls = statusClasses[sel.value];
@@ -303,15 +444,13 @@ th:last-child,td:last-child{white-space:nowrap}
     sel.addEventListener('change', function() { applyStatusColour(this); this.form.submit(); });
   });
 
+  // Notes modal
   function showNotes(id, name, notes) {
     document.getElementById('modal-title').textContent = name + ' — Booking #' + id;
     document.getElementById('modal-body').textContent  = notes;
     document.getElementById('notes-modal').classList.add('open');
   }
-  function closeNotesModal() {
-    document.getElementById('notes-modal').classList.remove('open');
-  }
-
+  function closeNotesModal() { document.getElementById('notes-modal').classList.remove('open'); }
   document.querySelectorAll('.view-notes-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       showNotes(this.dataset.id, JSON.parse(this.dataset.name), JSON.parse(this.dataset.notes));
@@ -319,10 +458,71 @@ th:last-child,td:last-child{white-space:nowrap}
   });
   document.getElementById('notes-modal-close-x').addEventListener('click', closeNotesModal);
   document.getElementById('notes-modal-close-btn').addEventListener('click', closeNotesModal);
-  document.getElementById('notes-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeNotesModal();
-  });
+  document.getElementById('notes-modal').addEventListener('click', function(e) { if (e.target===this) closeNotesModal(); });
 
-  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeNotesModal(); });
+  // Assign modal
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function openAssignModal(bookingId, name, device, service, currentStaff, priority, duration, notes) {
+    var form = document.getElementById('assignForm');
+    if (!form) return;
+    form.action = '/admin/bookings/' + bookingId + '/assign';
+    document.getElementById('assignInfo').innerHTML =
+      '<div style="font-weight:600;color:#fff">#' + bookingId + ' — ' + escapeHtml(name) + '</div>' +
+      '<div style="font-size:13px;color:var(--text-muted);margin-top:4px">' + escapeHtml(device) + ' · ' + escapeHtml(service) + '</div>';
+    document.getElementById('assignStaff').value    = currentStaff || '';
+    document.getElementById('assignPriority').value = priority || 'Normal';
+    document.getElementById('assignDuration').value = duration || '';
+    document.getElementById('assignNotes').value    = notes || '';
+    document.getElementById('assignModal').classList.add('open');
+  }
+  function closeAssignModal() { document.getElementById('assignModal').classList.remove('open'); }
+  var assignModalEl = document.getElementById('assignModal');
+  if (assignModalEl) {
+    assignModalEl.addEventListener('click', function(e) { if (e.target===this) closeAssignModal(); });
+  }
+
+  // Bulk selection
+  function updateBulkBar() {
+    var checked = document.querySelectorAll('.bulk-check:checked');
+    var bar     = document.getElementById('bulkBar');
+    var count   = document.getElementById('bulkCount');
+    var idsDiv  = document.getElementById('bulkIds');
+    if (!bar) return;
+    if (checked.length > 0) {
+      bar.style.display = 'block';
+      count.textContent = checked.length + ' selected';
+      idsDiv.innerHTML  = '';
+      checked.forEach(function(cb) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'booking_ids'; inp.value = cb.value;
+        idsDiv.appendChild(inp);
+      });
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+  function clearBulkSelection() {
+    document.querySelectorAll('.bulk-check').forEach(function(cb){ cb.checked = false; });
+    var sa = document.getElementById('select-all');
+    if (sa) sa.checked = false;
+    updateBulkBar();
+  }
+  document.querySelectorAll('.bulk-check').forEach(function(cb) {
+    cb.addEventListener('change', updateBulkBar);
+  });
+  var selectAll = document.getElementById('select-all');
+  if (selectAll) {
+    selectAll.addEventListener('change', function() {
+      document.querySelectorAll('.bulk-check').forEach(function(cb){ cb.checked = selectAll.checked; });
+      updateBulkBar();
+    });
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closeNotesModal(); closeAssignModal(); }
+  });
 </script>
 {% endblock %}

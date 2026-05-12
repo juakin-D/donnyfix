@@ -309,6 +309,19 @@ def init_db():
         notes TEXT, customer_id INTEGER, status TEXT DEFAULT 'Pending',
         FOREIGN KEY (customer_id) REFERENCES customers(id))''')
 
+    for _col_sql in [
+        "ALTER TABLE bookings ADD COLUMN assigned_to INTEGER REFERENCES staff(id)",
+        "ALTER TABLE bookings ADD COLUMN assigned_at TIMESTAMP",
+        "ALTER TABLE bookings ADD COLUMN priority TEXT DEFAULT 'Normal'",
+        "ALTER TABLE bookings ADD COLUMN estimated_duration TEXT",
+        "ALTER TABLE bookings ADD COLUMN internal_notes TEXT",
+    ]:
+        try:
+            conn.execute(_col_sql)
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
     conn.execute('''CREATE TABLE IF NOT EXISTS installment_plans (
         id SERIAL PRIMARY KEY,
         customer_id INTEGER NOT NULL,
@@ -1435,6 +1448,8 @@ def admin_login():
             session['admin_last_activity'] = datetime.now(timezone.utc).isoformat()
             log_activity('Logged in', 'auth', details=f'Login as {session.get("admin_role")}')
             flash(f'Welcome, {staff["name"]}.', 'success')
+            if staff['role'] == 'technician':
+                return redirect(url_for('admin_my_jobs'))
             return redirect(url_for('admin'))
 
         flash('Invalid credentials.', 'error')
@@ -1585,28 +1600,208 @@ def admin_bookings():
         page = max(1, int(request.args.get('page', 1)))
     except ValueError:
         page = 1
+    assigned_filter = request.args.get('assigned', '').strip()
     conn    = get_db()
-    q = 'SELECT * FROM bookings WHERE 1=1'
-    params = []
+    conditions, params = [], []
     if search:
-        q += ' AND (name ILIKE %s OR email ILIKE %s OR phone ILIKE %s)'
+        conditions.append('(b.name ILIKE %s OR b.email ILIKE %s OR b.phone ILIKE %s)')
         params += [f'%{search}%'] * 3
     if service:
-        q += ' AND service=%s'; params.append(service)
+        conditions.append('b.service=%s'); params.append(service)
     if status:
-        q += ' AND status=%s'; params.append(status)
+        conditions.append('b.status=%s'); params.append(status)
     if date_from:
-        q += ' AND date >= %s'; params.append(date_from)
+        conditions.append('b.date >= %s'); params.append(date_from)
     if date_to:
-        q += ' AND date <= %s'; params.append(date_to)
-    total    = conn.execute(q.replace('SELECT *', 'SELECT COUNT(*) AS cnt'), params).fetchone()['cnt']
-    q       += ' ORDER BY date DESC LIMIT %s OFFSET %s'
-    bookings = conn.execute(q, params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]).fetchall()
+        conditions.append('b.date <= %s'); params.append(date_to)
+    if assigned_filter == 'unassigned':
+        conditions.append('b.assigned_to IS NULL')
+    elif assigned_filter == 'assigned':
+        conditions.append('b.assigned_to IS NOT NULL')
+    elif assigned_filter and assigned_filter.isdigit():
+        conditions.append('b.assigned_to=%s'); params.append(int(assigned_filter))
+    base_from = 'FROM bookings b LEFT JOIN staff s ON s.id = b.assigned_to'
+    where     = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
+    total    = conn.execute(f'SELECT COUNT(*) AS cnt {base_from} {where}', params).fetchone()['cnt']
+    bookings = conn.execute(
+        f'SELECT b.*, s.name AS technician_name {base_from} {where} ORDER BY b.date DESC LIMIT %s OFFSET %s',
+        params + [ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE]
+    ).fetchall()
+    technicians = conn.execute(
+        "SELECT id, name, role FROM staff WHERE is_active=1 AND role IN ('technician','manager','owner') ORDER BY name"
+    ).fetchall()
     conn.close()
     total_pages = max(1, -(-total // ADMIN_PAGE_SIZE))
     return render_template('admin.html', bookings=bookings, search=search, service=service,
                            status=status, date_from=date_from, date_to=date_to,
-                           page=page, total_pages=total_pages, total=total)
+                           page=page, total_pages=total_pages, total=total,
+                           technicians=technicians, assigned_filter=assigned_filter)
+
+
+@app.route('/admin/my-jobs')
+@admin_required
+def admin_my_jobs():
+    staff_id  = session.get('admin_staff_id')
+    is_master = session.get('admin_is_master')
+    conn = get_db()
+    order_clause = """ORDER BY
+        CASE b.priority WHEN 'Urgent' THEN 0 WHEN 'Normal' THEN 1 WHEN 'Low' THEN 2 ELSE 3 END,
+        b.date"""
+    if is_master:
+        bookings = conn.execute(
+            f"""SELECT b.*, s.name AS technician_name
+                FROM bookings b LEFT JOIN staff s ON s.id = b.assigned_to
+                WHERE b.assigned_to IS NOT NULL AND b.status IN ('Pending', 'In Progress')
+                {order_clause}"""
+        ).fetchall()
+        completed_today = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM bookings WHERE assigned_to IS NOT NULL AND status='Complete' AND date=CURRENT_DATE::text"
+        ).fetchone()['cnt']
+    elif staff_id:
+        bookings = conn.execute(
+            f"""SELECT b.*, s.name AS technician_name
+                FROM bookings b LEFT JOIN staff s ON s.id = b.assigned_to
+                WHERE b.assigned_to=%s AND b.status IN ('Pending', 'In Progress')
+                {order_clause}""",
+            (staff_id,)
+        ).fetchall()
+        completed_today = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM bookings WHERE assigned_to=%s AND status='Complete' AND date=CURRENT_DATE::text",
+            (staff_id,)
+        ).fetchone()['cnt']
+    else:
+        bookings = []
+        completed_today = 0
+    conn.close()
+    today_str       = datetime.today().strftime('%Y-%m-%d')
+    total_assigned  = len(bookings)
+    urgent_count    = sum(1 for b in bookings if (b.get('priority') or 'Normal') == 'Urgent')
+    today_jobs      = sum(1 for b in bookings if (b.get('date') or '') == today_str)
+    return render_template('admin_my_jobs.html',
+                           bookings=bookings,
+                           total_assigned=total_assigned,
+                           urgent_count=urgent_count,
+                           today_jobs=today_jobs,
+                           completed_today=completed_today,
+                           is_master=is_master)
+
+
+@app.route('/admin/bookings/<int:booking_id>/assign', methods=['POST'])
+@admin_required
+def assign_booking(booking_id):
+    if not has_permission('edit_bookings'):
+        flash('You do not have permission.', 'error')
+        return redirect(url_for('admin'))
+    staff_id_raw        = request.form.get('staff_id', '').strip()
+    priority            = request.form.get('priority', 'Normal').strip()
+    estimated_duration  = request.form.get('estimated_duration', '').strip()
+    internal_notes      = request.form.get('internal_notes', '').strip()
+    if priority not in ('Low', 'Normal', 'Urgent'):
+        priority = 'Normal'
+    conn = get_db()
+    booking = conn.execute('SELECT * FROM bookings WHERE id=%s', (booking_id,)).fetchone()
+    if not booking:
+        conn.close()
+        flash('Booking not found.', 'error')
+        return redirect(url_for('admin_bookings'))
+    assigned_staff = None
+    if staff_id_raw:
+        try:
+            staff_id = int(staff_id_raw)
+        except ValueError:
+            conn.close()
+            flash('Invalid staff member.', 'error')
+            return redirect(url_for('admin_bookings'))
+        assigned_staff = conn.execute(
+            'SELECT id, name, phone, role FROM staff WHERE id=%s AND is_active=1', (staff_id,)
+        ).fetchone()
+        if not assigned_staff:
+            conn.close()
+            flash('Staff member not found or inactive.', 'error')
+            return redirect(url_for('admin_bookings'))
+        conn.execute(
+            """UPDATE bookings SET assigned_to=%s, assigned_at=NOW(), priority=%s,
+               estimated_duration=%s, internal_notes=%s WHERE id=%s""",
+            (staff_id, priority, estimated_duration or None, internal_notes or None, booking_id)
+        )
+    else:
+        conn.execute(
+            """UPDATE bookings SET assigned_to=NULL, assigned_at=NULL, priority=%s,
+               estimated_duration=%s, internal_notes=%s WHERE id=%s""",
+            (priority, estimated_duration or None, internal_notes or None, booking_id)
+        )
+    conn.commit()
+    try:
+        if assigned_staff:
+            log_activity(f'Assigned booking to {assigned_staff["name"]}', 'booking',
+                         target_type='booking', target_id=booking_id,
+                         details=f'Booking #{booking_id} → {assigned_staff["name"]} ({assigned_staff["role"]}). Priority: {priority}')
+            if assigned_staff.get('phone'):
+                send_sms(assigned_staff['phone'],
+                         f'New job assigned: {booking["device"]} — {booking["service"]}. '
+                         f'Customer: {booking["name"]} ({booking["phone"]}). '
+                         f'Date: {booking["date"]}. Priority: {priority}. '
+                         f'Check your dashboard. -DonnyPhonehub Gh')
+        else:
+            log_activity('Unassigned booking', 'booking', target_type='booking', target_id=booking_id,
+                         details=f'Booking #{booking_id} unassigned')
+    except Exception:
+        pass
+    conn.close()
+    if assigned_staff:
+        flash(f'Booking #{booking_id} assigned to {assigned_staff["name"]}.', 'success')
+    else:
+        flash(f'Booking #{booking_id} unassigned.', 'success')
+    if request.form.get('next') == 'my_jobs':
+        return redirect(url_for('admin_my_jobs'))
+    return redirect(url_for('admin_bookings'))
+
+
+@app.route('/admin/bookings/bulk-assign', methods=['POST'])
+@admin_required
+def bulk_assign_bookings():
+    if not has_permission('edit_bookings'):
+        flash('No permission.', 'error')
+        return redirect(url_for('admin'))
+    staff_id_raw    = request.form.get('staff_id', '').strip()
+    booking_ids_raw = request.form.getlist('booking_ids')
+    priority        = request.form.get('priority', 'Normal').strip()
+    if not staff_id_raw or not booking_ids_raw:
+        flash('Select a technician and at least one booking.', 'error')
+        return redirect(url_for('admin_bookings'))
+    try:
+        staff_id    = int(staff_id_raw)
+        booking_ids = [int(b) for b in booking_ids_raw]
+    except ValueError:
+        flash('Invalid selection.', 'error')
+        return redirect(url_for('admin_bookings'))
+    conn = get_db()
+    staff_member = conn.execute(
+        'SELECT name FROM staff WHERE id=%s AND is_active=1', (staff_id,)
+    ).fetchone()
+    if not staff_member:
+        conn.close()
+        flash('Staff member not found.', 'error')
+        return redirect(url_for('admin_bookings'))
+    count = 0
+    for bid in booking_ids:
+        try:
+            conn.execute(
+                'UPDATE bookings SET assigned_to=%s, assigned_at=NOW(), priority=%s WHERE id=%s',
+                (staff_id, priority, bid)
+            )
+            count += 1
+        except Exception:
+            pass
+    conn.commit()
+    conn.close()
+    try:
+        log_activity(f'Bulk assigned {count} bookings', 'booking',
+                     details=f'{count} bookings → {staff_member["name"]}. Priority: {priority}')
+    except Exception:
+        pass
+    flash(f'{count} booking(s) assigned to {staff_member["name"]}.', 'success')
+    return redirect(url_for('admin_bookings'))
 
 
 @app.route('/admin/bookings/export')
