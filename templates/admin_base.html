@@ -315,9 +315,7 @@
           <input type="text" id="gsInput" class="gs-input"
                  placeholder="Search customers, bookings, devices…"
                  autocomplete="off"
-                 value="{{ request.args.get('q', '') }}"
-                 onkeyup="handleSearchInput(event)"
-                 onfocus="showSearchDropdown()"/>
+                 value="{{ request.args.get('q', '') }}"/>
           <kbd class="gs-shortcut">/</kbd>
         </div>
         <div class="gs-dropdown" id="gsDropdown">
@@ -332,7 +330,7 @@
 
         <!-- Notification Bell -->
         <div class="notif-wrap" id="notifWrap">
-          <button class="notif-bell" id="notifBell" onclick="toggleNotifDropdown()" aria-label="Notifications">
+          <button class="notif-bell" id="notifBell" aria-label="Notifications">
             🔔
             {% if alert_badge_count > 0 %}
             <span class="notif-badge" id="notifBadge">{{ alert_badge_count if alert_badge_count < 100 else '99+' }}</span>
@@ -538,7 +536,7 @@
         }
         var html = '';
         data.alerts.forEach(function(a) {
-          html += '<a href="' + a.url + '" class="nd-item" onclick="closeNotifDropdown()">' +
+          html += '<a href="' + a.url + '" class="nd-item">' +
             '<div class="nd-icon nd-icon-' + a.severity + '">' + a.icon + '</div>' +
             '<div class="nd-content">' +
               '<div class="nd-item-title">' + _escN(a.title) + '</div>' +
@@ -586,6 +584,27 @@
         }
       } catch(e) {}
     }, 300000);
+
+    // ── WIRE UP EVENT LISTENERS (no inline handlers — CSP blocks them) ──
+    (function() {
+      var gsInput = document.getElementById('gsInput');
+      if (gsInput) {
+        gsInput.addEventListener('keyup', handleSearchInput);
+        gsInput.addEventListener('focus', showSearchDropdown);
+      }
+      var notifBell = document.getElementById('notifBell');
+      if (notifBell) {
+        notifBell.addEventListener('click', toggleNotifDropdown);
+      }
+      // Event delegation for notification items (close dropdown on click)
+      var ndBody = document.getElementById('ndBody');
+      if (ndBody) {
+        ndBody.addEventListener('click', function(e) {
+          var item = e.target.closest('.nd-item');
+          if (item) closeNotifDropdown();
+        });
+      }
+    })();
   </script>
   {% block scripts %}{% endblock %}
 </body>
