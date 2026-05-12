@@ -499,11 +499,6 @@
       return esc.replace(re, '<span class="gs-highlight">$1</span>');
     }
 
-    document.addEventListener('click', function(e) {
-      var gs = document.getElementById('globalSearch');
-      if (gs && !gs.contains(e.target)) hideSearchDropdown();
-    });
-
     document.addEventListener('keydown', function(e) {
       var tag = document.activeElement ? document.activeElement.tagName : '';
       if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {

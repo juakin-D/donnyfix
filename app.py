@@ -4854,60 +4854,74 @@ def admin_search_json():
     search_term = f'%{q}%'
     conn = get_db()
     suggestions = []
-    if has_permission('view_members'):
-        rows = conn.execute(
-            """SELECT id, name, phone, email FROM customers
-               WHERE name ILIKE %s OR phone ILIKE %s OR email ILIKE %s LIMIT 3""",
-            (search_term, search_term, search_term)
-        ).fetchall()
-        for c in rows:
-            suggestions.append({
-                'type': 'customer', 'icon': '👤',
-                'title': c['name'],
-                'subtitle': f"{c['phone']} · {c['email']}",
-                'url': f"/admin/members/{c['id']}"
-            })
-    if has_permission('view_bookings'):
-        rows = conn.execute(
-            """SELECT id, name, device, service, status FROM bookings
-               WHERE name ILIKE %s OR device ILIKE %s OR CAST(id AS TEXT) = %s LIMIT 2""",
-            (search_term, search_term, q)
-        ).fetchall()
-        for b in rows:
-            suggestions.append({
-                'type': 'booking', 'icon': '📋',
-                'title': f"Booking #{b['id']} — {b['name']}",
-                'subtitle': f"{b['device']} · {b['service']} · {b['status']}",
-                'url': '/admin/bookings'
-            })
-    if has_permission('view_inventory'):
-        rows = conn.execute(
-            """SELECT id, brand, model, status, selling_price FROM inventory
-               WHERE brand ILIKE %s OR model ILIKE %s OR imei ILIKE %s LIMIT 2""",
-            (search_term, search_term, search_term)
-        ).fetchall()
-        for i in rows:
-            suggestions.append({
-                'type': 'inventory', 'icon': '📱',
-                'title': f"{i['brand']} {i['model']}",
-                'subtitle': f"GH₵{i['selling_price']:,.2f} · {i['status']}",
-                'url': f"/shop/{i['id']}"
-            })
-    if has_permission('view_installments'):
-        rows = conn.execute(
-            """SELECT ip.id, ip.device_name, ip.status, c.name AS customer_name
-               FROM installment_plans ip JOIN customers c ON c.id=ip.customer_id
-               WHERE c.name ILIKE %s OR ip.device_name ILIKE %s OR CAST(ip.id AS TEXT) = %s
-               LIMIT 1""",
-            (search_term, search_term, q)
-        ).fetchall()
-        for p in rows:
-            suggestions.append({
-                'type': 'plan', 'icon': '💳',
-                'title': f"Plan #{p['id']} — {p['customer_name']}",
-                'subtitle': f"{p['device_name']} · {p['status']}",
-                'url': '/admin/installments'
-            })
+    try:
+        if has_permission('view_members'):
+            rows = conn.execute(
+                """SELECT id, name, phone, email FROM customers
+                   WHERE name ILIKE %s OR phone ILIKE %s OR email ILIKE %s LIMIT 3""",
+                (search_term, search_term, search_term)
+            ).fetchall()
+            for c in rows:
+                suggestions.append({
+                    'type': 'customer', 'icon': '👤',
+                    'title': c['name'] or '',
+                    'subtitle': f"{c['phone'] or ''} · {c['email'] or ''}",
+                    'url': f"/admin/members/{c['id']}"
+                })
+    except Exception:
+        pass
+    try:
+        if has_permission('view_bookings'):
+            rows = conn.execute(
+                """SELECT id, name, device, service, status FROM bookings
+                   WHERE name ILIKE %s OR device ILIKE %s OR CAST(id AS TEXT) = %s LIMIT 2""",
+                (search_term, search_term, q)
+            ).fetchall()
+            for b in rows:
+                suggestions.append({
+                    'type': 'booking', 'icon': '📋',
+                    'title': f"Booking #{b['id']} — {b['name'] or ''}",
+                    'subtitle': f"{b['device'] or ''} · {b['service'] or ''} · {b['status'] or ''}",
+                    'url': '/admin/bookings'
+                })
+    except Exception:
+        pass
+    try:
+        if has_permission('view_inventory'):
+            rows = conn.execute(
+                """SELECT id, brand, model, status, selling_price FROM inventory
+                   WHERE brand ILIKE %s OR model ILIKE %s OR imei ILIKE %s LIMIT 2""",
+                (search_term, search_term, search_term)
+            ).fetchall()
+            for i in rows:
+                price = i['selling_price']
+                price_str = f"GH₵{price:,.2f}" if price is not None else "Price TBD"
+                suggestions.append({
+                    'type': 'inventory', 'icon': '📱',
+                    'title': f"{i['brand'] or ''} {i['model'] or ''}".strip(),
+                    'subtitle': f"{price_str} · {i['status'] or ''}",
+                    'url': f"/shop/{i['id']}"
+                })
+    except Exception:
+        pass
+    try:
+        if has_permission('view_installments'):
+            rows = conn.execute(
+                """SELECT ip.id, ip.device_name, ip.status, c.name AS customer_name
+                   FROM installment_plans ip JOIN customers c ON c.id=ip.customer_id
+                   WHERE c.name ILIKE %s OR ip.device_name ILIKE %s OR CAST(ip.id AS TEXT) = %s
+                   LIMIT 1""",
+                (search_term, search_term, q)
+            ).fetchall()
+            for p in rows:
+                suggestions.append({
+                    'type': 'plan', 'icon': '💳',
+                    'title': f"Plan #{p['id']} — {p['customer_name'] or ''}",
+                    'subtitle': f"{p['device_name'] or ''} · {p['status'] or ''}",
+                    'url': '/admin/installments'
+                })
+    except Exception:
+        pass
     conn.close()
     return jsonify({'results': suggestions[:8]})
 
