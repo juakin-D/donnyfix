@@ -389,7 +389,7 @@ th:last-child,td:last-child{white-space:nowrap}
       <div class="notes-modal-box" style="max-width:500px;width:92%;">
         <div class="notes-modal-head">
           <div id="reply-modal-title" class="notes-modal-title">✉ Reply to Enquiry</div>
-          <button class="notes-modal-close" onclick="closeReplyModal()">×</button>
+          <button class="notes-modal-close" id="replyModalClose">×</button>
         </div>
         <div class="reply-modal-enquiry">
           <div class="rme-label">Customer's Enquiry</div>
@@ -405,7 +405,7 @@ th:last-child,td:last-child{white-space:nowrap}
           <div class="reply-hint">📧 This will be emailed to the customer immediately.</div>
           <div class="reply-actions">
             <button type="submit" class="reply-send-btn">Send Reply</button>
-            <button type="button" class="reply-cancel-btn" onclick="closeReplyModal()">Cancel</button>
+            <button type="button" class="reply-cancel-btn" id="replyModalCancel">Cancel</button>
           </div>
         </form>
       </div>
@@ -452,6 +452,10 @@ document.querySelectorAll('.open-reply-modal').forEach(function(btn) {
 document.getElementById('reply-modal').addEventListener('click', function(e){
   if (e.target === this) closeReplyModal();
 });
+var rmc = document.getElementById('replyModalClose');
+if (rmc) rmc.addEventListener('click', closeReplyModal);
+var rmc2 = document.getElementById('replyModalCancel');
+if (rmc2) rmc2.addEventListener('click', closeReplyModal);
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeReplyModal(); });
 
 // Admin countdown timers

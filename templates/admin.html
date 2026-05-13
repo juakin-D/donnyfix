@@ -254,16 +254,15 @@ th:last-child,td:last-child{white-space:nowrap}
           <div class="action-cell">
             {% if has_permission('edit_bookings') %}
             <button class="act-btn assign-btn {% if b['assigned_to'] %}assign-btn-assigned{% else %}assign-btn-unassigned{% endif %}"
-              onclick="openAssignModal(
-                {{ b['id'] }},
-                {{ b['name']|tojson }},
-                {{ b['device']|tojson }},
-                {{ b['service']|tojson }},
-                {{ b['assigned_to'] or 'null' }},
-                {{ (b['priority'] or 'Normal')|tojson }},
-                {{ (b['estimated_duration'] or '')|tojson }},
-                {{ (b['internal_notes'] or '')|tojson }}
-              )" title="Assign booking">
+              data-booking-id="{{ b['id'] }}"
+              data-name="{{ b['name']|tojson }}"
+              data-device="{{ b['device']|tojson }}"
+              data-service="{{ b['service']|tojson }}"
+              data-assigned="{{ b['assigned_to'] or '' }}"
+              data-priority="{{ b['priority'] or 'Normal' }}"
+              data-duration="{{ b['estimated_duration'] or '' }}"
+              data-notes="{{ b['internal_notes'] or '' }}"
+              title="Assign booking">
               {% if b['assigned_to'] %}✏️ Reassign{% else %}👤 Assign{% endif %}
             </button>
             {% endif %}
@@ -335,7 +334,7 @@ th:last-child,td:last-child{white-space:nowrap}
   <div class="assign-modal-box">
     <div class="am-header">
       <div class="am-title">Assign Booking</div>
-      <button class="am-close" onclick="closeAssignModal()">✕</button>
+      <button class="am-close" id="assignModalClose">✕</button>
     </div>
     <div id="assignInfo" class="am-info"></div>
     <form method="POST" id="assignForm">
@@ -376,7 +375,7 @@ th:last-child,td:last-child{white-space:nowrap}
                   class="am-textarea" placeholder="Notes for the technician…"></textarea>
       </div>
       <div class="am-actions">
-        <button type="button" class="am-cancel" onclick="closeAssignModal()">Cancel</button>
+        <button type="button" class="am-cancel" id="assignModalCancel">Cancel</button>
         <button type="submit" class="am-submit">Assign</button>
       </div>
     </form>
@@ -401,7 +400,7 @@ th:last-child,td:last-child{white-space:nowrap}
       <option value="Low">Low</option>
     </select>
     <button type="submit" class="bulk-btn">Assign Selected</button>
-    <button type="button" class="bulk-cancel-btn" onclick="clearBulkSelection()">✕ Cancel</button>
+    <button type="button" class="bulk-cancel-btn" id="bulkCancelBtn">✕ Cancel</button>
   </form>
 </div>
 {% endif %}
@@ -524,5 +523,31 @@ th:last-child,td:last-child{white-space:nowrap}
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') { closeNotesModal(); closeAssignModal(); }
   });
+
+  // Assign button — event delegation (CSP blocks inline onclick)
+  var bookingsTbody = document.getElementById('bookings-tbody');
+  if (bookingsTbody) {
+    bookingsTbody.addEventListener('click', function(e) {
+      var btn = e.target.closest('.assign-btn');
+      if (!btn) return;
+      var assigned = btn.dataset.assigned;
+      openAssignModal(
+        btn.dataset.bookingId,
+        JSON.parse(btn.dataset.name),
+        JSON.parse(btn.dataset.device),
+        JSON.parse(btn.dataset.service),
+        assigned !== '' ? assigned : null,
+        btn.dataset.priority || 'Normal',
+        btn.dataset.duration || '',
+        btn.dataset.notes || ''
+      );
+    });
+  }
+  var amClose  = document.getElementById('assignModalClose');
+  var amCancel = document.getElementById('assignModalCancel');
+  var bulkCancel = document.getElementById('bulkCancelBtn');
+  if (amClose)  amClose.addEventListener('click', closeAssignModal);
+  if (amCancel) amCancel.addEventListener('click', closeAssignModal);
+  if (bulkCancel) bulkCancel.addEventListener('click', clearBulkSelection);
 </script>
 {% endblock %}

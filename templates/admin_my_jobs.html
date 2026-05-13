@@ -133,12 +133,6 @@
         <button type="submit" class="ja-btn ja-done">✅ Mark Complete</button>
       </form>
       {% endif %}
-      {% if is_master %}
-      <button class="ja-btn" style="background:var(--surface2);color:var(--text-soft);flex:0;padding:10px 16px"
-        onclick="this.closest('form') && this.closest('form').submit()"
-        onclick="document.getElementById('reassign-{{ b.id }}').submit()">
-      </button>
-      {% endif %}
     </div>
     {% endif %}
   </div>

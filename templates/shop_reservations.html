@@ -143,7 +143,7 @@ h1{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;margin-bottom:
         {% if r.status == 'Pending' %}
         <div class="notify-deposit">
           <button class="nd-toggle-btn" type="button"
-                  onclick="toggleNdForm({{ r.id }})">📤 Notify Us of Deposit Payment</button>
+                  data-target="nd-form-{{ r.id }}">📤 Notify Us of Deposit Payment</button>
           <div class="nd-form" id="nd-form-{{ r.id }}">
             <div class="nd-title">Send Deposit Notification — RES-{{ '%04d' % r.id }}</div>
             <form method="POST" action="/shop/reservations/{{ r.id }}/notify-deposit"
@@ -157,8 +157,8 @@ h1{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;margin-bottom:
                 </div>
                 <div class="nd-field">
                   <label class="nd-label">Payment Method</label>
-                  <select name="payment_method" class="nd-select"
-                          onchange="toggleNdMomo({{ r.id }}, this.value)" required>
+                  <select name="payment_method" class="nd-select nd-momo-select"
+                          data-momo-target="nd-momo-{{ r.id }}" required>
                     <option value="">— select —</option>
                     <option value="MTN MoMo">MTN MoMo</option>
                     <option value="Vodafone Cash">Vodafone Cash</option>
@@ -192,7 +192,7 @@ h1{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;margin-bottom:
                 <span>📎</span>
                 <span id="nd-file-label-{{ r.id }}">Attach screenshot (optional)</span>
                 <input type="file" name="screenshot" accept="image/*"
-                       onchange="document.getElementById('nd-file-label-{{ r.id }}').textContent=this.files[0]?this.files[0].name:'Attach screenshot (optional)'">
+                       class="nd-file-input" data-label="nd-file-label-{{ r.id }}">
               </label>
               <button type="submit" class="nd-submit">Send Deposit Notification</button>
               <p class="nd-hint">We'll verify your payment and confirm your reservation within minutes. You'll receive an SMS.</p>
@@ -243,16 +243,29 @@ h1{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;margin-bottom:
 
 {% block page_scripts %}
   <script nonce="{{ csp_nonce }}">
-function toggleNdForm(resId) {
-  var form = document.getElementById('nd-form-' + resId);
-  if (form) form.classList.toggle('open');
-}
-function toggleNdMomo(resId, val) {
-  var momo = document.getElementById('nd-momo-' + resId);
-  if (!momo) return;
-  var isMomo = val === 'MTN MoMo' || val === 'Vodafone Cash' || val === 'AirtelTigo Money';
-  momo.classList.toggle('show', isMomo);
-}
+// Toggle notify-deposit form
+document.querySelectorAll('.nd-toggle-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var form = document.getElementById(this.dataset.target);
+    if (form) form.classList.toggle('open');
+  });
+});
+// Toggle MoMo fields
+document.querySelectorAll('.nd-momo-select').forEach(function(sel) {
+  sel.addEventListener('change', function() {
+    var momo = document.getElementById(this.dataset.momoTarget);
+    if (!momo) return;
+    var isMomo = this.value === 'MTN MoMo' || this.value === 'Vodafone Cash' || this.value === 'AirtelTigo Money';
+    momo.classList.toggle('show', isMomo);
+  });
+});
+// File label update
+document.querySelectorAll('.nd-file-input').forEach(function(inp) {
+  inp.addEventListener('change', function() {
+    var lbl = document.getElementById(this.dataset.label);
+    if (lbl) lbl.textContent = this.files[0] ? this.files[0].name : 'Attach screenshot (optional)';
+  });
+});
 // Countdown timers
 document.querySelectorAll('.countdown[data-expires]').forEach(function(el){
   var iso = el.dataset.expires;

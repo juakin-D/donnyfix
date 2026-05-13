@@ -365,7 +365,7 @@
             </div>
             <div class="nf-field">
               <label class="nf-label">Payment Method</label>
-              <select name="payment_method" class="nf-select" id="npMethod" onchange="toggleMomoFields(this.value)" required>
+              <select name="payment_method" class="nf-select" id="npMethod" required>
                 <option value="">— select —</option>
                 <option value="MTN MoMo">MTN MoMo</option>
                 <option value="Vodafone Cash">Vodafone Cash</option>
@@ -402,8 +402,7 @@
             <label class="nf-upload-label">
               <span>📎</span>
               <span id="npFileLabel">Tap to attach screenshot…</span>
-              <input type="file" name="screenshot" accept="image/*"
-                     onchange="document.getElementById('npFileLabel').textContent=this.files[0]?this.files[0].name:'Tap to attach screenshot…'">
+              <input type="file" name="screenshot" accept="image/*" id="npFileInput">
             </label>
           </div>
           <div class="nf-field">
@@ -436,5 +435,12 @@ function toggleMomoFields(val) {
   var isMomo = val === 'MTN MoMo' || val === 'Vodafone Cash' || val === 'AirtelTigo Money';
   momo.classList.toggle('show', isMomo);
 }
+var npMethod = document.getElementById('npMethod');
+if (npMethod) npMethod.addEventListener('change', function() { toggleMomoFields(this.value); });
+var npFile = document.getElementById('npFileInput');
+if (npFile) npFile.addEventListener('change', function() {
+  var lbl = document.getElementById('npFileLabel');
+  if (lbl) lbl.textContent = this.files[0] ? this.files[0].name : 'Tap to attach screenshot…';
+});
 </script>
 {% endblock %}

@@ -403,6 +403,11 @@
       var msg = e.target.dataset.confirm;
       if (msg && !confirm(msg)) e.preventDefault();
     }, true);
+    // Global handler: any <a data-confirm="..."> link will prompt before navigating
+    document.addEventListener('click', function(e) {
+      var el = e.target.closest('a[data-confirm]');
+      if (el && !confirm(el.dataset.confirm)) e.preventDefault();
+    }, true);
 
     // ── GLOBAL SEARCH ──
     var _gsTimer = null;

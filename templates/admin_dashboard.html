@@ -354,7 +354,7 @@
       {% if has_permission('send_reminders') %}
       <a href="/admin/installments/send-reminders"
          class="qa-btn"
-         onclick="return confirm('Send SMS reminders to all overdue plan holders?')">
+         data-confirm="Send SMS reminders to all overdue plan holders?">
         📲 Send Reminders
       </a>
       {% endif %}

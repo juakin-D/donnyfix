@@ -190,16 +190,17 @@
 <!-- ── QUICK ACTIONS ── -->
 <div class="member-actions">
   {% if has_permission('edit_members') %}
-  <button onclick="openMembershipModal()" class="ma-btn ma-green">🎫 Update Membership</button>
+  <button id="openMembershipBtn" class="ma-btn ma-green">🎫 Update Membership</button>
   {% endif %}
   {% if has_permission('extend_membership') %}
-  <button onclick="openExtendModal()" class="ma-btn ma-green">📅 Extend Membership</button>
+  <button id="openExtendBtn" class="ma-btn ma-green">📅 Extend Membership</button>
   {% endif %}
   <a href="tel:{{ customer['phone'] }}" class="ma-btn ma-blue">📞 Call Customer</a>
   <a href="https://wa.me/233{{ customer['phone'][1:] }}" target="_blank" class="ma-btn ma-green">💬 WhatsApp</a>
   <a href="mailto:{{ customer['email'] }}" class="ma-btn ma-blue">✉ Send Email</a>
   {% if has_permission('delete_members') %}
-  <button onclick="if(confirm('Permanently delete {{ customer['name']|e }} and ALL their records?')) document.getElementById('deleteForm').submit();" class="ma-btn ma-red">🗑️ Delete Member</button>
+  <button id="deleteMemberBtn" class="ma-btn ma-red"
+    data-name="{{ customer['name']|e }}">🗑️ Delete Member</button>
   <form id="deleteForm" method="POST" action="/admin/members/delete/{{ customer['id'] }}" style="display:none">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
   </form>
@@ -208,13 +209,13 @@
 
 <!-- ── TABS ── -->
 <div class="detail-tabs">
-  <button class="tab-btn active" onclick="showTab('bookings', this)">📋 Bookings ({{ bookings|length }})</button>
-  <button class="tab-btn" onclick="showTab('plans', this)">💳 Plans ({{ plans|length }})</button>
-  <button class="tab-btn" onclick="showTab('payments', this)">💰 Payments ({{ payments|length }})</button>
-  <button class="tab-btn" onclick="showTab('reservations', this)">🛍️ Reservations ({{ reservations|length }})</button>
-  <button class="tab-btn" onclick="showTab('devices', this)">📱 Devices ({{ devices_owned|length }})</button>
+  <button class="tab-btn active" data-tab="bookings">📋 Bookings ({{ bookings|length }})</button>
+  <button class="tab-btn" data-tab="plans">💳 Plans ({{ plans|length }})</button>
+  <button class="tab-btn" data-tab="payments">💰 Payments ({{ payments|length }})</button>
+  <button class="tab-btn" data-tab="reservations">🛍️ Reservations ({{ reservations|length }})</button>
+  <button class="tab-btn" data-tab="devices">📱 Devices ({{ devices_owned|length }})</button>
   {% if activity %}
-  <button class="tab-btn" onclick="showTab('activity', this)">📜 History ({{ activity|length }})</button>
+  <button class="tab-btn" data-tab="activity">📜 History ({{ activity|length }})</button>
   {% endif %}
 </div>
 
@@ -251,7 +252,7 @@
             {% if has_permission('edit_bookings') %}
             <form method="POST" action="/admin/bookings/{{ b['id'] }}/status" style="display:inline">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <select name="status" class="status-select" onchange="this.form.submit()">
+              <select name="status" class="status-select">
                 {% set s = b['status'] or 'Pending' %}
                 <option value="Pending"     {% if s == 'Pending'     %}selected{% endif %}>Pending</option>
                 <option value="In Progress" {% if s == 'In Progress' %}selected{% endif %}>In Progress</option>
@@ -485,7 +486,7 @@
   <div class="modal-box">
     <div class="modal-header">
       <h3>Update Membership</h3>
-      <button onclick="closeMembershipModal()">✕</button>
+      <button id="closeMembershipBtn">✕</button>
     </div>
     <form method="POST" action="/admin/members/{{ customer['id'] }}/update-membership">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -503,7 +504,7 @@
         <input type="date" name="expiry" value="{{ customer['membership_expiry'] or '' }}" required/>
       </div>
       <div class="modal-actions">
-        <button type="button" onclick="closeMembershipModal()">Cancel</button>
+        <button type="button" id="cancelMembershipBtn">Cancel</button>
         <button type="submit" class="modal-submit">Update</button>
       </div>
     </form>
@@ -515,7 +516,7 @@
   <div class="modal-box">
     <div class="modal-header">
       <h3>Extend Membership</h3>
-      <button onclick="closeExtendModal()">✕</button>
+      <button id="closeExtendBtn">✕</button>
     </div>
     <form method="POST" action="/admin/members/{{ customer['id'] }}/extend">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -529,7 +530,7 @@
         </select>
       </div>
       <div class="modal-actions">
-        <button type="button" onclick="closeExtendModal()">Cancel</button>
+        <button type="button" id="cancelExtendBtn">Cancel</button>
         <button type="submit" class="modal-submit">Extend</button>
       </div>
     </form>
@@ -564,5 +565,39 @@
   document.getElementById('membershipModal').addEventListener('click', function(e) { if (e.target === this) closeMembershipModal(); });
   document.getElementById('extendModal').addEventListener('click', function(e) { if (e.target === this) closeExtendModal(); });
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeMembershipModal(); closeExtendModal(); } });
+
+  // Wire up buttons (CSP blocks inline onclick)
+  var ob = document.getElementById('openMembershipBtn');
+  if (ob) ob.addEventListener('click', openMembershipModal);
+  var oe = document.getElementById('openExtendBtn');
+  if (oe) oe.addEventListener('click', openExtendModal);
+  var cm = document.getElementById('closeMembershipBtn');
+  if (cm) cm.addEventListener('click', closeMembershipModal);
+  var xm = document.getElementById('cancelMembershipBtn');
+  if (xm) xm.addEventListener('click', closeMembershipModal);
+  var ce = document.getElementById('closeExtendBtn');
+  if (ce) ce.addEventListener('click', closeExtendModal);
+  var xe = document.getElementById('cancelExtendBtn');
+  if (xe) xe.addEventListener('click', closeExtendModal);
+
+  // Delete member button
+  var delBtn = document.getElementById('deleteMemberBtn');
+  if (delBtn) {
+    delBtn.addEventListener('click', function() {
+      if (confirm('Permanently delete ' + this.dataset.name + ' and ALL their records?')) {
+        document.getElementById('deleteForm').submit();
+      }
+    });
+  }
+
+  // Tab buttons
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(function(btn) {
+    btn.addEventListener('click', function() { showTab(this.dataset.tab, this); });
+  });
+
+  // Status selects auto-submit
+  document.querySelectorAll('.status-select').forEach(function(sel) {
+    sel.addEventListener('change', function() { this.form.submit(); });
+  });
 </script>
 {% endblock %}
