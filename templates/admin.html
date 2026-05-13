@@ -255,13 +255,13 @@ th:last-child,td:last-child{white-space:nowrap}
             {% if has_permission('edit_bookings') %}
             <button class="act-btn assign-btn {% if b['assigned_to'] %}assign-btn-assigned{% else %}assign-btn-unassigned{% endif %}"
               data-booking-id="{{ b['id'] }}"
-              data-name="{{ b['name']|tojson }}"
-              data-device="{{ b['device']|tojson }}"
-              data-service="{{ b['service']|tojson }}"
+              data-name="{{ b['name']|e }}"
+              data-device="{{ b['device']|e }}"
+              data-service="{{ b['service']|e }}"
               data-assigned="{{ b['assigned_to'] or '' }}"
               data-priority="{{ b['priority'] or 'Normal' }}"
               data-duration="{{ b['estimated_duration'] or '' }}"
-              data-notes="{{ b['internal_notes'] or '' }}"
+              data-notes="{{ (b['internal_notes'] or '')|e }}"
               title="Assign booking">
               {% if b['assigned_to'] %}✏️ Reassign{% else %}👤 Assign{% endif %}
             </button>
@@ -421,10 +421,11 @@ th:last-child,td:last-child{white-space:nowrap}
     }
     if (d >= sevenDaysAgo) weekCount++;
   });
-  document.getElementById('today-count').textContent = todayCount;
-  document.getElementById('week-count').textContent  = weekCount;
+  var tcEl = document.getElementById('today-count'); if (tcEl) tcEl.textContent = todayCount;
+  var wcEl = document.getElementById('week-count');  if (wcEl) wcEl.textContent  = weekCount;
 
-  document.getElementById('search-input').addEventListener('input', function() {
+  var searchInput = document.getElementById('search-input');
+  if (searchInput) searchInput.addEventListener('input', function() {
     const q = this.value.toLowerCase();
     document.querySelectorAll('#bookings-tbody tr').forEach(function(row) {
       const match = !q || (row.dataset.name||'').includes(q) || (row.dataset.email||'').includes(q) || (row.dataset.phone||'').includes(q);
@@ -455,9 +456,9 @@ th:last-child,td:last-child{white-space:nowrap}
       showNotes(this.dataset.id, JSON.parse(this.dataset.name), JSON.parse(this.dataset.notes));
     });
   });
-  document.getElementById('notes-modal-close-x').addEventListener('click', closeNotesModal);
-  document.getElementById('notes-modal-close-btn').addEventListener('click', closeNotesModal);
-  document.getElementById('notes-modal').addEventListener('click', function(e) { if (e.target===this) closeNotesModal(); });
+  var nmx = document.getElementById('notes-modal-close-x');   if (nmx) nmx.addEventListener('click', closeNotesModal);
+  var nmb = document.getElementById('notes-modal-close-btn'); if (nmb) nmb.addEventListener('click', closeNotesModal);
+  var nm  = document.getElementById('notes-modal'); if (nm) nm.addEventListener('click', function(e) { if (e.target===this) closeNotesModal(); });
 
   // Assign modal
   function escapeHtml(str) {
@@ -524,25 +525,22 @@ th:last-child,td:last-child{white-space:nowrap}
     if (e.key === 'Escape') { closeNotesModal(); closeAssignModal(); }
   });
 
-  // Assign button — event delegation (CSP blocks inline onclick)
-  var bookingsTbody = document.getElementById('bookings-tbody');
-  if (bookingsTbody) {
-    bookingsTbody.addEventListener('click', function(e) {
-      var btn = e.target.closest('.assign-btn');
-      if (!btn) return;
-      var assigned = btn.dataset.assigned;
+  // Assign buttons — direct binding
+  document.querySelectorAll('.assign-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var assigned = this.dataset.assigned;
       openAssignModal(
-        btn.dataset.bookingId,
-        JSON.parse(btn.dataset.name),
-        JSON.parse(btn.dataset.device),
-        JSON.parse(btn.dataset.service),
+        this.dataset.bookingId,
+        this.dataset.name,
+        this.dataset.device,
+        this.dataset.service,
         assigned !== '' ? assigned : null,
-        btn.dataset.priority || 'Normal',
-        btn.dataset.duration || '',
-        btn.dataset.notes || ''
+        this.dataset.priority || 'Normal',
+        this.dataset.duration || '',
+        this.dataset.notes || ''
       );
     });
-  }
+  });
   var amClose  = document.getElementById('assignModalClose');
   var amCancel = document.getElementById('assignModalCancel');
   var bulkCancel = document.getElementById('bulkCancelBtn');
