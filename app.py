@@ -14,6 +14,7 @@ import smtplib
 import os
 import re
 import secrets
+import hashlib
 import logging
 from decimal import Decimal, ROUND_HALF_UP
 import requests as http_req
@@ -45,12 +46,19 @@ app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB upload limit
 
 csrf    = CSRFProtect(app)
+_ratelimit_storage = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=[],
-    storage_uri=os.environ.get('RATELIMIT_STORAGE_URI', 'memory://'),
+    storage_uri=_ratelimit_storage,
 )
+if _ratelimit_storage == 'memory://':
+    logging.getLogger(__name__).warning(
+        'RATELIMIT_STORAGE_URI not set — using in-memory storage. '
+        'Rate limits are NOT shared across gunicorn workers. '
+        'Set RATELIMIT_STORAGE_URI=redis://... for production.'
+    )
 
 ADMIN_SESSION_TIMEOUT = timedelta(minutes=int(os.environ.get('ADMIN_TIMEOUT_MINUTES', 30)))
 ADMIN_PAGE_SIZE       = 50
@@ -540,6 +548,13 @@ def verify_password(stored, supplied):
     return check_password_hash(stored, supplied)
 
 
+def _hash_token(token):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+_TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{40,90}$')
+
+
 def validate_password(pw):
     """Return an error string or None if the password meets policy."""
     if len(pw) < 8:
@@ -932,11 +947,13 @@ def set_security_headers(response):
         f"base-uri 'self'; "
         f"upgrade-insecure-requests;"
     )
-    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
     response.headers['X-Content-Type-Options']    = 'nosniff'
     response.headers['X-Frame-Options']           = 'SAMEORIGIN'
     response.headers['Referrer-Policy']           = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy']        = 'geolocation=(), microphone=(), camera=()'
+    if session.get('customer_id') or session.get('admin_logged_in'):
+        response.headers['Cache-Control'] = 'no-store, private'
     return response
 
 
@@ -1171,7 +1188,7 @@ def admin_required(f):
                 return redirect(url_for('admin_login'))
         session['admin_last_activity'] = datetime.now(timezone.utc).isoformat()
         return f(*a, **kw)
-    return w
+    return limiter.limit('120 per minute', methods=['POST'])(w)
 
 
 CUSTOMER_SESSION_TIMEOUT = timedelta(minutes=int(os.environ.get('CUSTOMER_TIMEOUT_MINUTES', 60)))
@@ -1322,7 +1339,7 @@ def register():
         v_expiry = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
         conn.execute(
             'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (%s,%s,%s)',
-            (customer['id'], v_token, v_expiry))
+            (customer['id'], _hash_token(v_token), v_expiry))
         conn.commit()
         conn.close()
         session.clear()
@@ -2756,9 +2773,12 @@ def send_payment_reminders():
 
 @app.route('/verify-email/<token>')
 def verify_email(token):
+    if not _TOKEN_RE.match(token):
+        flash('Invalid verification link.', 'error')
+        return redirect(url_for('dashboard'))
     conn = get_db()
     row  = conn.execute(
-        'SELECT * FROM email_verification_tokens WHERE token=%s AND used=0', (token,)).fetchone()
+        'SELECT * FROM email_verification_tokens WHERE token=%s AND used=0', (_hash_token(token),)).fetchone()
     if not row:
         conn.close()
         flash('Verification link is invalid or already used.', 'error')
@@ -2794,7 +2814,7 @@ def resend_verification():
         v_expiry = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
         conn.execute(
             'INSERT INTO email_verification_tokens (customer_id,token,expires_at) VALUES (%s,%s,%s)',
-            (customer['id'], v_token, v_expiry))
+            (customer['id'], _hash_token(v_token), v_expiry))
         conn.commit()
     except Exception:
         if conn:
@@ -2846,7 +2866,7 @@ def forgot_password():
             expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
             conn.execute(
                 'INSERT INTO password_reset_tokens (email,token,expires_at) VALUES (%s,%s,%s)',
-                (email, token, expires))
+                (email, _hash_token(token), expires))
             conn.commit()
             reset_url = url_for('reset_password', token=token, _external=True)
             try:
@@ -2869,9 +2889,12 @@ def forgot_password():
 
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
+    if not _TOKEN_RE.match(token):
+        flash('Invalid reset link.', 'error')
+        return redirect(url_for('forgot_password'))
     conn = get_db()
     row  = conn.execute(
-        'SELECT * FROM password_reset_tokens WHERE token=%s AND used=0', (token,)).fetchone()
+        'SELECT * FROM password_reset_tokens WHERE token=%s AND used=0', (_hash_token(token),)).fetchone()
     if not row:
         conn.close()
         flash('Reset link is invalid or already used.', 'error')
@@ -4970,4 +4993,4 @@ def too_many_requests(_e):
 init_db()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=os.environ.get('FLASK_DEBUG', '0') == '1')
