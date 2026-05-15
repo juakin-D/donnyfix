@@ -227,10 +227,12 @@
 
     <div class="nav-section">Operations</div>
 
+    {% if session.get('admin_role') != 'technician' %}
     <a href="/admin" class="nav-item{% if request.endpoint == 'admin' %} active{% endif %}">
       <span class="nav-icon">🏠</span>
       Dashboard
     </a>
+    {% endif %}
     <a href="/admin/my-jobs" class="nav-item{% if request.endpoint == 'admin_my_jobs' %} active{% endif %}">
       <span class="nav-icon">🔧</span>My Jobs
     </a>
@@ -239,12 +241,16 @@
       Bookings
       {% if bookings is defined %}<span class="nav-badge">{{ bookings|length }}</span>{% endif %}
     </a>
+    {% if has_permission('view_members') %}
     <a href="/admin/members" class="nav-item{% if request.endpoint in ('admin_members','delete_member','update_membership','extend_membership') %} active{% endif %}">
       <span class="nav-icon">👤</span>Members
     </a>
+    {% endif %}
+    {% if has_permission('view_installments') %}
     <a href="/admin/installments" class="nav-item{% if request.endpoint in ('admin_installments','record_payment','update_plan_status','send_payment_reminders') %} active{% endif %}">
       <span class="nav-icon">💳</span>Installments
     </a>
+    {% endif %}
     {% if has_permission('record_payment') %}
     <a href="/admin/payments" class="nav-item{% if request.endpoint in ('admin_payments','approve_pending_payment','reject_pending_payment','approve_pending_deposit','reject_pending_deposit') %} active{% endif %}">
       <span class="nav-icon">✅</span>Payments
@@ -256,12 +262,16 @@
     <a href="/admin/inventory" class="nav-item{% if request.endpoint in ('admin_inventory','admin_inventory_add','admin_inventory_edit','admin_inventory_sell','admin_inventory_reserve','admin_inventory_delete','admin_inventory_export') %} active{% endif %}">
       <span class="nav-icon">📦</span>Inventory
     </a>
+    {% if has_permission('view_revenue') %}
     <a href="/admin/revenue" class="nav-item{% if request.endpoint in ('admin_revenue','admin_revenue_export') %} active{% endif %}">
       <span class="nav-icon">📊</span>Revenue
     </a>
+    {% endif %}
+    {% if session.get('admin_role') != 'technician' %}
     <a href="/admin/shop" class="nav-item{% if request.endpoint in ('admin_shop','admin_shop_confirm','admin_shop_cancel','admin_shop_complete','admin_shop_enquiry_delete') %} active{% endif %}">
       <span class="nav-icon">🛍️</span>Shop
     </a>
+    {% endif %}
     {% if has_permission('manage_staff') %}
     <a href="/admin/staff" class="nav-item{% if request.endpoint in ('admin_staff','admin_staff_add','admin_staff_edit','admin_staff_reset_password','admin_staff_deactivate','admin_staff_delete') %} active{% endif %}">
       <span class="nav-icon">👥</span>Staff
@@ -359,14 +369,24 @@
     <!-- Mobile Admin Nav -->
     <div class="admin-mobile-nav">
       <div class="amn-inner">
+        {% if session.get('admin_role') != 'technician' %}
         <a href="/admin" class="amn-link{% if request.endpoint == 'admin' %} active{% endif %}"><span class="amn-icon">🏠</span>Home</a>
+        {% endif %}
         <a href="/admin/my-jobs" class="amn-link{% if request.endpoint == 'admin_my_jobs' %} active{% endif %}"><span class="amn-icon">🔧</span>My Jobs</a>
         <a href="/admin/bookings" class="amn-link{% if request.endpoint in ('admin_bookings','delete_booking','update_booking_status','assign_booking','bulk_assign_bookings') %} active{% endif %}"><span class="amn-icon">📋</span>Bookings</a>
+        {% if has_permission('view_members') %}
         <a href="/admin/members" class="amn-link{% if request.endpoint in ('admin_members','delete_member','update_membership','extend_membership') %} active{% endif %}"><span class="amn-icon">👤</span>Members</a>
+        {% endif %}
+        {% if has_permission('view_installments') %}
         <a href="/admin/installments" class="amn-link{% if request.endpoint in ('admin_installments','record_payment','update_plan_status') %} active{% endif %}"><span class="amn-icon">💳</span>Plans</a>
+        {% endif %}
         <a href="/admin/inventory" class="amn-link{% if request.endpoint in ('admin_inventory','admin_inventory_add','admin_inventory_edit','admin_inventory_sell') %} active{% endif %}"><span class="amn-icon">📦</span>Inventory</a>
+        {% if has_permission('view_revenue') %}
         <a href="/admin/revenue" class="amn-link{% if request.endpoint in ('admin_revenue','admin_revenue_export') %} active{% endif %}"><span class="amn-icon">📊</span>Revenue</a>
+        {% endif %}
+        {% if session.get('admin_role') != 'technician' %}
         <a href="/admin/shop" class="amn-link{% if request.endpoint in ('admin_shop','admin_shop_confirm','admin_shop_cancel','admin_shop_complete') %} active{% endif %}"><span class="amn-icon">🛍️</span>Shop</a>
+        {% endif %}
         {% if has_permission('manage_staff') %}
         <a href="/admin/staff" class="amn-link{% if request.endpoint in ('admin_staff','admin_staff_add','admin_staff_edit') %} active{% endif %}"><span class="amn-icon">👥</span>Staff</a>
         {% endif %}

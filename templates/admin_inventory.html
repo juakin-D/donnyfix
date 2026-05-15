@@ -137,6 +137,7 @@ th:last-child,td:last-child{white-space:nowrap}
       </div>
 
       <!-- ADD DEVICE PANEL -->
+      {% if has_permission('edit_inventory') %}
       <div class="add-panel">
         <div class="add-panel-header" id="add-panel-header">
           <span class="add-panel-title">Add New Device</span>
@@ -230,6 +231,7 @@ th:last-child,td:last-child{white-space:nowrap}
           </form>
         </div>
       </div>
+      {% endif %}
 
       <!-- FILTER BAR -->
       <div class="toolbar">
@@ -333,6 +335,7 @@ th:last-child,td:last-child{white-space:nowrap}
                   {% if item.status == 'Sold' %}
                     <span style="font-size:12px;color:var(--text-muted)">{{ item.customer_name or '—' }}</span>
                   {% else %}
+                    {% if has_permission('edit_inventory') %}
                     <button class="act-btn"
                         data-id="{{ item.id }}"
                         data-brand="{{ item.brand }}"
@@ -358,12 +361,15 @@ th:last-child,td:last-child{white-space:nowrap}
                         data-id="{{ item.id }}"
                         title="Reserve for plan">📌 Reserve</button>
                     {% endif %}
+                    {% endif %}
+                    {% if has_permission('delete_inventory') %}
                     {% if item.status in ('In Stock', 'Returned') %}
                     <form method="POST" action="/admin/inventory/{{ item.id }}/delete"
                           data-confirm="Remove {{ item.brand|e }} {{ item.model|e }} from inventory?">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button class="act-btn red-btn" type="submit" title="Delete">🗑</button>
                     </form>
+                    {% endif %}
                     {% endif %}
                   {% endif %}
                 </div>
@@ -399,6 +405,7 @@ th:last-child,td:last-child{white-space:nowrap}
         <strong>{{ fmt_ghs(monthly_profit) }}</strong>
       </div>
 
+      {% if has_permission('edit_inventory') %}
       <!-- EDIT MODAL -->
       <div class="modal-overlay" id="edit-modal">
         <div class="modal">
@@ -501,6 +508,7 @@ th:last-child,td:last-child{white-space:nowrap}
           </form>
         </div>
       </div>
+      {% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -511,8 +519,8 @@ th:last-child,td:last-child{white-space:nowrap}
       body.classList.toggle('open');
       btn.textContent = body.classList.contains('open') ? '✕ Close' : '+ Add Device';
     }
-    document.getElementById('add-panel-header').addEventListener('click', toggleAddPanel);
-    document.getElementById('add-panel-cancel').addEventListener('click', toggleAddPanel);
+    document.getElementById('add-panel-header')?.addEventListener('click', toggleAddPanel);
+    document.getElementById('add-panel-cancel')?.addEventListener('click', toggleAddPanel);
 
     function openEditModal(btn) {
       const d = btn.dataset;
@@ -627,15 +635,15 @@ th:last-child,td:last-child{white-space:nowrap}
       }
     }
 
-    // Wire file inputs and clear buttons
-    document.getElementById('image1').addEventListener('change', function() { previewImage(this, 'preview1', 'slot1Label'); });
-    document.getElementById('image2').addEventListener('change', function() { previewImage(this, 'preview2', 'slot2Label'); });
-    document.getElementById('clear1').addEventListener('click', function() { clearImage('image1', 'preview1', 'clear1', 'slot1Label'); });
-    document.getElementById('clear2').addEventListener('click', function() { clearImage('image2', 'preview2', 'clear2', 'slot2Label'); });
-    document.getElementById('edit_image1').addEventListener('change', function() { previewImage(this, 'editPreview1', 'editSlot1Label'); });
-    document.getElementById('edit_image2').addEventListener('change', function() { previewImage(this, 'editPreview2', 'editSlot2Label'); });
-    document.getElementById('editClear1').addEventListener('click', function() { clearImage('edit_image1', 'editPreview1', 'editClear1', 'editSlot1Label'); });
-    document.getElementById('editClear2').addEventListener('click', function() { clearImage('edit_image2', 'editPreview2', 'editClear2', 'editSlot2Label'); });
+    // Wire file inputs and clear buttons (add-panel elements only present with edit_inventory permission)
+    document.getElementById('image1')?.addEventListener('change', function() { previewImage(this, 'preview1', 'slot1Label'); });
+    document.getElementById('image2')?.addEventListener('change', function() { previewImage(this, 'preview2', 'slot2Label'); });
+    document.getElementById('clear1')?.addEventListener('click', function() { clearImage('image1', 'preview1', 'clear1', 'slot1Label'); });
+    document.getElementById('clear2')?.addEventListener('click', function() { clearImage('image2', 'preview2', 'clear2', 'slot2Label'); });
+    document.getElementById('edit_image1')?.addEventListener('change', function() { previewImage(this, 'editPreview1', 'editSlot1Label'); });
+    document.getElementById('edit_image2')?.addEventListener('change', function() { previewImage(this, 'editPreview2', 'editSlot2Label'); });
+    document.getElementById('editClear1')?.addEventListener('click', function() { clearImage('edit_image1', 'editPreview1', 'editClear1', 'editSlot1Label'); });
+    document.getElementById('editClear2')?.addEventListener('click', function() { clearImage('edit_image2', 'editPreview2', 'editClear2', 'editSlot2Label'); });
 
     // Event delegation for table action buttons
     document.querySelectorAll('.act-btn[data-brand]').forEach(function(btn) {
@@ -648,14 +656,14 @@ th:last-child,td:last-child{white-space:nowrap}
       btn.addEventListener('click', function() { openReserveModal(this.dataset.id); });
     });
 
-    // Close buttons
-    document.getElementById('edit-modal-close').addEventListener('click', function() { closeModal('edit-modal'); });
-    document.getElementById('sell-modal-close').addEventListener('click', function() { closeModal('sell-modal'); });
-    document.getElementById('reserve-modal-close').addEventListener('click', function() { closeModal('reserve-modal'); });
+    // Close buttons and modal logic (only present with edit_inventory permission)
+    document.getElementById('edit-modal-close')?.addEventListener('click', function() { closeModal('edit-modal'); });
+    document.getElementById('sell-modal-close')?.addEventListener('click', function() { closeModal('sell-modal'); });
+    document.getElementById('reserve-modal-close')?.addEventListener('click', function() { closeModal('reserve-modal'); });
 
     // Backdrop and Escape
     ['edit-modal','sell-modal','reserve-modal'].forEach(function(id) {
-      document.getElementById(id).addEventListener('click', function(e) { if (e.target === this) closeModal(id); });
+      document.getElementById(id)?.addEventListener('click', function(e) { if (e.target === this) closeModal(id); });
     });
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') { ['edit-modal','sell-modal','reserve-modal'].forEach(closeModal); }

@@ -358,8 +358,12 @@
         📲 Send Reminders
       </a>
       {% endif %}
+      {% if has_permission('view_revenue') %}
       <a href="/admin/revenue" class="qa-btn">📊 Revenue Report</a>
+      {% endif %}
+      {% if has_permission('view_inventory') %}
       <a href="/admin/inventory/export" class="qa-btn">📥 Export Inventory</a>
+      {% endif %}
       {% if has_permission('manage_staff') %}
       <a href="/admin/activity" class="qa-btn">📜 Activity Log ({{ activity_today }} today)</a>
       {% endif %}

@@ -170,15 +170,15 @@ ROLE_PERMISSIONS = {
         'record_payment':     True,
     },
     'technician': {
-        'view_bookings':      True,   # only their own jobs (via admin_my_jobs)
-        'edit_bookings':      False,  # cannot assign/reassign bookings
+        'view_bookings':      True,
+        'edit_bookings':      True,   # update status on assigned jobs only
         'delete_bookings':    False,
         'view_members':       False,
         'edit_members':       False,
         'delete_members':     False,
         'view_installments':  False,
         'edit_installments':  False,
-        'view_inventory':     False,  # no access to shop admin page
+        'view_inventory':     True,   # view only — no add/edit/delete
         'edit_inventory':     False,
         'delete_inventory':   False,
         'view_revenue':       False,
@@ -1677,6 +1677,8 @@ def admin_logout():
 @app.route('/admin')
 @admin_required
 def admin():
+    if session.get('admin_role') == 'technician':
+        return redirect(url_for('admin_my_jobs'))
     today = datetime.today().strftime('%Y-%m-%d')
     now   = datetime.now()
     conn  = get_db()
@@ -1904,6 +1906,9 @@ def admin_my_jobs():
 @app.route('/admin/bookings/<int:booking_id>/assign', methods=['POST'])
 @admin_required
 def assign_booking(booking_id):
+    if session.get('admin_role') == 'technician':
+        flash('Technicians cannot assign bookings.', 'error')
+        return redirect(url_for('admin_my_jobs'))
     if not has_permission('edit_bookings'):
         flash('You do not have permission.', 'error')
         return redirect(url_for('admin'))
@@ -1975,6 +1980,9 @@ def assign_booking(booking_id):
 @app.route('/admin/bookings/bulk-assign', methods=['POST'])
 @admin_required
 def bulk_assign_bookings():
+    if session.get('admin_role') == 'technician':
+        flash('Technicians cannot bulk-assign bookings.', 'error')
+        return redirect(url_for('admin_my_jobs'))
     if not has_permission('edit_bookings'):
         flash('No permission.', 'error')
         return redirect(url_for('admin'))
@@ -4209,6 +4217,9 @@ def shop_enquire():
 @app.route('/admin/shop')
 @admin_required
 def admin_shop():
+    if session.get('admin_role') == 'technician':
+        flash('Technicians do not have access to the shop admin.', 'error')
+        return redirect(url_for('admin_my_jobs'))
     if not has_permission('view_inventory'):
         flash('You do not have permission to view the shop.', 'error')
         return redirect(url_for('admin'))
