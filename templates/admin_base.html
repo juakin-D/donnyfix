@@ -452,13 +452,13 @@
         }
         var html = '';
         data.results.forEach(function(item, idx) {
-          html += '<a href="' + item.url + '" class="gs-result-item" data-index="' + idx + '">' +
-            '<span class="gs-result-icon">' + item.icon + '</span>' +
+          html += '<a href="' + escapeHtml(item.url) + '" class="gs-result-item" data-index="' + idx + '">' +
+            '<span class="gs-result-icon">' + escapeHtml(item.icon) + '</span>' +
             '<div style="flex:1;min-width:0">' +
               '<div class="gs-result-title">' + highlightMatch(item.title, q) + '</div>' +
               '<div class="gs-result-subtitle">' + escapeHtml(item.subtitle) + '</div>' +
             '</div>' +
-            '<span class="gs-result-type type-' + item.type + '">' + item.type + '</span>' +
+            '<span class="gs-result-type type-' + escapeHtml(item.type) + '">' + escapeHtml(item.type) + '</span>' +
             '</a>';
         });
         resultsEl.innerHTML = html;
@@ -541,13 +541,13 @@
         }
         var html = '';
         data.alerts.forEach(function(a) {
-          html += '<a href="' + a.url + '" class="nd-item">' +
-            '<div class="nd-icon nd-icon-' + a.severity + '">' + a.icon + '</div>' +
+          html += '<a href="' + _escN(a.url) + '" class="nd-item">' +
+            '<div class="nd-icon nd-icon-' + _escN(a.severity) + '">' + _escN(a.icon) + '</div>' +
             '<div class="nd-content">' +
               '<div class="nd-item-title">' + _escN(a.title) + '</div>' +
               '<div class="nd-item-desc">'  + _escN(a.description) + '</div>' +
             '</div>' +
-            '<span class="nd-count nd-count-' + a.severity + '">' + a.count + '</span>' +
+            '<span class="nd-count nd-count-' + _escN(a.severity) + '">' + _escN(String(a.count)) + '</span>' +
             '</a>';
         });
         body.innerHTML = html;

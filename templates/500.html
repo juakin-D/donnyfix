@@ -45,7 +45,7 @@
       <a href="/" class="btn-primary">Back to Home</a>
       <a href="javascript:history.back()" class="btn-ghost">Go Back</a>
     </div>
-    <p class="note">Need help right now? Call us on <a href="tel:+233541057500">0541057500</a></p>
+    <p class="note">Need help right now? Call us on <a href="tel:+233{{ CONTACT_PHONE|replace('0','',1) }}">{{ CONTACT_PHONE }}</a></p>
   </div>
 </div>
 {% endblock %}

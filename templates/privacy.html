@@ -194,8 +194,8 @@
       </p>
       <p>
         If you have any questions about this policy, contact us at
-        <a href="mailto:hello@phonehubghana.com">hello@phonehubghana.com</a> or call
-        <a href="tel:+233541057500">0541057500</a>.
+        <a href="mailto:{{ CONTACT_EMAIL }}">{{ CONTACT_EMAIL }}</a> or call
+        <a href="tel:+233{{ CONTACT_PHONE|replace('0','',1) }}">{{ CONTACT_PHONE }}</a>.
       </p>
     </div>
 
@@ -372,9 +372,9 @@
       </div>
       <p>If you have any questions or concerns about this Privacy Policy or how we handle your data:</p>
       <ul>
-        <li><strong>Email:</strong> <a href="mailto:hello@phonehubghana.com">hello@phonehubghana.com</a></li>
-        <li><strong>Phone:</strong> <a href="tel:+233541057500">0541057500</a></li>
-        <li><strong>Address:</strong> <a href="https://maps.google.com/?q=DonnyPhonehub+Gh,+Tamale,+Ghana" target="_blank" rel="noopener">Tamale, Northern Region, Ghana</a></li>
+        <li><strong>Email:</strong> <a href="mailto:{{ CONTACT_EMAIL }}">{{ CONTACT_EMAIL }}</a></li>
+        <li><strong>Phone:</strong> <a href="tel:+233{{ CONTACT_PHONE|replace('0','',1) }}">{{ CONTACT_PHONE }}</a></li>
+        <li><strong>Address:</strong> <a href="https://maps.google.com/?q=DonnyPhonehub+Gh,+Tamale,+Ghana" target="_blank" rel="noopener">{{ CONTACT_ADDRESS }}</a></li>
       </ul>
     </div>
 

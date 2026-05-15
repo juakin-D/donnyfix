@@ -39,8 +39,10 @@ else:
 app.secret_key = _secret_key
 del _secret_key
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE']  = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
-app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1-hour token validity
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB upload limit
 
 csrf    = CSRFProtect(app)
 limiter = Limiter(
@@ -73,6 +75,10 @@ if not _admin_pw_raw:
 ADMIN_PASSWORD_HASH = generate_password_hash(_admin_pw_raw)
 del _admin_pw_raw
 
+CONTACT_PHONE = os.environ.get('CONTACT_PHONE', '0541057500')
+CONTACT_EMAIL = os.environ.get('CONTACT_EMAIL', 'hello@phonehubghana.com')
+CONTACT_ADDRESS = os.environ.get('CONTACT_ADDRESS', 'Tamale, Northern Region, Ghana')
+
 BANK_DETAILS = {
     'bank_name':    os.environ.get('BANK_NAME',    'GCB Bank Ghana'),
     'account_name': os.environ.get('BANK_ACCT_NAME','DonnyPhonehub Gh Ltd.'),
@@ -80,7 +86,7 @@ BANK_DETAILS = {
     'branch':       os.environ.get('BANK_BRANCH',  ''),
     'sort_code':    os.environ.get('BANK_SORT',    ''),
     'swift':        os.environ.get('BANK_SWIFT',   ''),
-    'momo_number':  os.environ.get('MOMO_NUMBER',  '0554509428'),
+    'momo_number':  os.environ.get('MOMO_NUMBER',  ''),
     'momo_name':    os.environ.get('MOMO_NAME',    'DonnyPhonehub Gh Ltd.'),
 }
 
@@ -621,7 +627,7 @@ def upload_image_to_cloudinary(file, item_id, slot_number):
     if not file or not file.filename:
         return None
     if not allowed_image(file.filename):
-        logger.warning('Rejected image upload — invalid extension: %s', file.filename)
+        logger.warning('Rejected image upload — invalid extension: %s', repr(file.filename))
         return None
     file.seek(0, 2)
     file_size = file.tell()
@@ -761,7 +767,7 @@ def _pdf_header(styles):
         Paragraph('DonnyPhonehub Gh',
                   ParagraphStyle('ph', parent=styles['Normal'], fontSize=20,
                                  fontName='Helvetica-Bold', textColor=_C_GREEN)),
-        Paragraph('Tamale, Northern Region, Ghana · 0541057500 · hello@phonehubghana.com',
+        Paragraph(f'{CONTACT_ADDRESS} · {CONTACT_PHONE} · {CONTACT_EMAIL}',
                   ParagraphStyle('phs', parent=styles['Normal'], fontSize=8, textColor=_C_GRAY)),
         Spacer(1, 3*mm),
         HRFlowable(width='100%', thickness=2, color=_C_GOLD, spaceAfter=8),
@@ -930,6 +936,7 @@ def set_security_headers(response):
     response.headers['X-Content-Type-Options']    = 'nosniff'
     response.headers['X-Frame-Options']           = 'SAMEORIGIN'
     response.headers['Referrer-Policy']           = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy']        = 'geolocation=(), microphone=(), camera=()'
     return response
 
 
@@ -1142,7 +1149,10 @@ def inject_helpers():
                 has_permission=has_permission,
                 csp_nonce=getattr(g, 'csp_nonce', ''),
                 pending_payment_count=pending_count,
-                alert_badge_count=alert_count)
+                alert_badge_count=alert_count,
+                CONTACT_PHONE=CONTACT_PHONE,
+                CONTACT_EMAIL=CONTACT_EMAIL,
+                CONTACT_ADDRESS=CONTACT_ADDRESS)
 
 
 # ─── AUTH DECORATORS ──────────────────────────────────────────────────────────
@@ -1205,6 +1215,7 @@ def privacy():
 
 
 @app.route('/booking', methods=['GET', 'POST'])
+@limiter.limit('10 per minute', methods=['POST'])
 def booking():
     if request.method == 'POST':
         name    = request.form.get('name', '').strip()
@@ -1259,7 +1270,7 @@ def booking():
           <li><b>Service:</b> {_he(service)}</li>
           <li><b>Date:</b> {_he(date)}</li>
         </ul>
-        <p>We'll see you at our Tamale, Northern Region location. Call us on 0541057500 with any questions.</p>
+        <p>We'll see you at our Tamale, Northern Region location. Call us on {CONTACT_PHONE} with any questions.</p>
         <p>— DonnyPhonehub Gh Team</p>
         """)
         except Exception as _email_exc:
@@ -1274,6 +1285,7 @@ def booking():
 # ─── CUSTOMER AUTH ────────────────────────────────────────────────────────────
 
 @app.route('/register', methods=['GET', 'POST'])
+@limiter.limit('5 per hour', methods=['POST'])
 def register():
     if session.get('customer_id'):
         return redirect(url_for('dashboard'))
@@ -1362,8 +1374,7 @@ def customer_login():
     return render_template('customer_login.html')
 
 
-@app.route('/logout', methods=['GET', 'POST'])
-@csrf.exempt
+@app.route('/logout', methods=['POST'])
 def customer_logout():
     try:
         session.clear()
@@ -1476,7 +1487,7 @@ def installment_apply():
     conn2.close()
     if blocking_plan:
         if blocking_plan['status'] == 'Defaulted':
-            flash('Your previous installment plan was defaulted. You are not eligible to apply for a new plan. Please contact us at 0541057500 to resolve this.', 'error')
+            flash(f'Your previous installment plan was defaulted. You are not eligible to apply for a new plan. Please contact us at {CONTACT_PHONE} to resolve this.', 'error')
             return redirect(url_for('installment_detail', plan_id=blocking_plan['id']))
         flash('You already have an active installment plan. Please complete your current plan before applying for a new one.', 'error')
         return redirect(url_for('installment_detail', plan_id=blocking_plan['id']))
@@ -2128,7 +2139,7 @@ def update_booking_status(booking_id):
             send_email(booking['email'], 'Your repair is ready — DonnyPhonehub Gh', f"""
         <p>Hi {_he(booking['name'])},</p>
         <p>Great news — your <b>{_he(booking['device'])}</b> ({_he(booking['service'])}) is complete and ready for collection.</p>
-        <p>Visit us at Tamale, Northern Region or call 0541057500 to arrange pickup.</p>
+        <p>Visit us at {CONTACT_ADDRESS} or call {CONTACT_PHONE} to arrange pickup.</p>
         <p>— DonnyPhonehub Gh Team</p>
         """)
         except Exception as _email_exc:
@@ -2579,7 +2590,7 @@ def record_payment(plan_id):
     if new_status == 'Completed':
         send_sms(customer_phone,
                  f"Hi {first}, your DonnyPhonehub Gh installment for {plan['device_name']} "
-                 f"is now FULLY PAID! Thank you. Call 0541057500 for your receipt.")
+                 f"is now FULLY PAID! Thank you. Call {CONTACT_PHONE} for your receipt.")
         flash(f'Plan #{plan_id} fully paid — marked Completed. Receipt: /receipt/payment/{payment_id}', 'success')
     else:
         send_sms(customer_phone,
@@ -2718,14 +2729,14 @@ def send_payment_reminders():
             msg = (f"Hi {first}, your DonnyPhonehub Gh installment of "
                    f"{fmt_ghs(p['monthly_amount'])} for {p['device_name']} "
                    f"was DUE {p['next_due_date']}. Please pay now via "
-                   f"{p['payment_method']} & call 0541057500. "
+                   f"{p['payment_method']} & call {CONTACT_PHONE}. "
                    f"Balance: {fmt_ghs(p['balance_remaining'])}.")
         else:
             msg = (f"Hi {first}, your DonnyPhonehub Gh installment of "
                    f"{fmt_ghs(p['monthly_amount'])} for {p['device_name']} "
                    f"is due {p['next_due_date']}. Pay via "
                    f"{p['payment_method']}. Balance: {fmt_ghs(p['balance_remaining'])}. "
-                   f"Questions? Call 0541057500.")
+                   f"Questions? Call {CONTACT_PHONE}.")
         if send_sms(p['customer_phone'], msg):
             sent += 1
         else:
@@ -4057,7 +4068,7 @@ def notify_payment(plan_id):
     conn.close()
     try:
         customer_name = session.get('customer_name', 'Customer')
-        send_sms('0541057500',
+        send_sms(CONTACT_PHONE,
                  f'New payment notification: {customer_name} claims {fmt_ghs(amount)} paid for '
                  f'plan #{plan_id} via {method}. Ref: {reference}. Verify in admin panel. -DonnyPhonehub Gh')
     except Exception:
@@ -4629,7 +4640,7 @@ def reject_pending_payment(pp_id):
     reason_txt = f' Reason: {review_notes}' if review_notes else ''
     send_sms(pp['customer_phone'],
              f"Hi {pp['customer_name'].split()[0]}, your payment of {fmt_ghs(pp['amount'])} "
-             f"could not be verified.{reason_txt} Please call 0541057500. — DonnyPhonehub Gh")
+             f"could not be verified.{reason_txt} Please call {CONTACT_PHONE}. — DonnyPhonehub Gh")
     log_activity('Rejected payment notification', 'installment',
                  target_type='installment_plan', target_id=pp['plan_id'],
                  details=f'Payment #{pp_id} rejected. Notes: {review_notes}')
@@ -4715,7 +4726,7 @@ def reject_pending_deposit(pd_id):
     if phone:
         send_sms(phone,
                  f"Hi {name.split()[0]}, your deposit of {fmt_ghs(pd_row['amount'])} "
-                 f"could not be verified.{reason_txt} Please call 0541057500. — DonnyPhonehub Gh")
+                 f"could not be verified.{reason_txt} Please call {CONTACT_PHONE}. — DonnyPhonehub Gh")
     log_activity('Rejected deposit notification', 'shop',
                  target_type='reservation', target_id=pd_row['reservation_id'],
                  details=f'Deposit #{pd_id} rejected. Notes: {review_notes}')

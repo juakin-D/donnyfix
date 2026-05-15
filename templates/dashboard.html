@@ -311,7 +311,7 @@
     <div class="ineligible-notice">
       ⚠️ <strong>Installment plans require an active membership.</strong>
       Your membership is <strong>{{ status }}</strong>. Please visit the store or contact us at
-      <a href="tel:+233541057500" style="color:#92400E;font-weight:700;">0541057500</a> to renew.
+      <a href="tel:+233{{ CONTACT_PHONE|replace('0','',1) }}" style="color:#92400E;font-weight:700;">{{ CONTACT_PHONE }}</a> to renew.
     </div>
     {% endif %}
 
