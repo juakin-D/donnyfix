@@ -170,15 +170,15 @@ ROLE_PERMISSIONS = {
         'record_payment':     True,
     },
     'technician': {
-        'view_bookings':      True,
-        'edit_bookings':      True,
+        'view_bookings':      True,   # only their own jobs (via admin_my_jobs)
+        'edit_bookings':      False,  # cannot assign/reassign bookings
         'delete_bookings':    False,
         'view_members':       False,
         'edit_members':       False,
         'delete_members':     False,
         'view_installments':  False,
         'edit_installments':  False,
-        'view_inventory':     True,
+        'view_inventory':     False,  # no access to shop admin page
         'edit_inventory':     False,
         'delete_inventory':   False,
         'view_revenue':       False,
@@ -1797,6 +1797,11 @@ def admin():
 @app.route('/admin/bookings')
 @admin_required
 def admin_bookings():
+    if session.get('admin_role') == 'technician':
+        return redirect(url_for('admin_my_jobs'))
+    if not has_permission('view_bookings'):
+        flash('You do not have permission to view bookings.', 'error')
+        return redirect(url_for('admin'))
     search    = request.args.get('search', '').strip()
     service   = request.args.get('service', '').strip()
     status    = request.args.get('status', '').strip()
@@ -2018,6 +2023,8 @@ def bulk_assign_bookings():
 @admin_required
 def admin_bookings_export():
     import csv, io
+    if session.get('admin_role') == 'technician':
+        return redirect(url_for('admin_my_jobs'))
     if not has_permission('view_bookings'):
         flash('You do not have permission.', 'error')
         return redirect(url_for('admin'))
@@ -2069,6 +2076,8 @@ def admin_bookings_export():
 @admin_required
 def admin_bookings_export_summary():
     import csv, io
+    if session.get('admin_role') == 'technician':
+        return redirect(url_for('admin_my_jobs'))
     if not has_permission('view_bookings'):
         flash('No permission.', 'error')
         return redirect(url_for('admin'))
@@ -2140,15 +2149,23 @@ def delete_booking(booking_id):
 @app.route('/admin/bookings/<int:booking_id>/status', methods=['POST'])
 @admin_required
 def update_booking_status(booking_id):
-    if not has_permission('edit_bookings'):
+    is_tech  = session.get('admin_role') == 'technician'
+    back_url = url_for('admin_my_jobs') if is_tech else url_for('admin_bookings')
+    if not has_permission('edit_bookings') and not is_tech:
         flash('You do not have permission to do that.', 'error')
-        return redirect(url_for('admin_bookings'))
+        return redirect(back_url)
     new_status = request.form.get('status', '')
     if new_status not in ('Pending', 'In Progress', 'Complete', 'Cancelled'):
         flash('Invalid status.', 'error')
-        return redirect(url_for('admin_bookings'))
+        return redirect(back_url)
     conn = get_db()
     booking = conn.execute('SELECT * FROM bookings WHERE id=%s', (booking_id,)).fetchone()
+    if is_tech:
+        staff_id = session.get('admin_staff_id')
+        if not booking or booking['assigned_to'] != staff_id:
+            conn.close()
+            flash('You can only update the status of bookings assigned to you.', 'error')
+            return redirect(back_url)
     conn.execute('UPDATE bookings SET status=%s WHERE id=%s', (new_status, booking_id))
     conn.commit(); conn.close()
     if booking and new_status == 'Complete':
@@ -2165,7 +2182,7 @@ def update_booking_status(booking_id):
                  target_type='booking', target_id=booking_id,
                  details=f'Booking #{booking_id}: status → {new_status}')
     flash(f'Booking #{booking_id} marked as {new_status}.', 'success')
-    return redirect(url_for('admin_bookings'))
+    return redirect(back_url)
 
 
 @app.route('/admin/members')
