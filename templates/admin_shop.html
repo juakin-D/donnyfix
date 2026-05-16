@@ -255,28 +255,32 @@ th:last-child,td:last-child{white-space:nowrap}
                   </td>
                   <td>
                     <div class="action-btns">
-                      {% if r.status == 'Pending' %}
-                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/confirm"
-                              data-confirm="Confirm this reservation?">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <button class="btn btn-confirm" type="submit">Confirm</button>
-                        </form>
-                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/cancel"
-                              data-confirm="Cancel and return device to stock?">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <button class="btn btn-cancel" type="submit">Cancel</button>
-                        </form>
-                      {% elif r.status == 'Confirmed' %}
-                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/complete"
-                              data-confirm="Mark as sold and complete this sale?">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <button class="btn btn-complete" type="submit">Complete Sale</button>
-                        </form>
-                        <form method="POST" action="/admin/shop/reservations/{{ r.id }}/cancel"
-                              data-confirm="Cancel this confirmed reservation?">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <button class="btn btn-cancel" type="submit">Cancel</button>
-                        </form>
+                      {% if has_permission('edit_inventory') %}
+                        {% if r.status == 'Pending' %}
+                          <form method="POST" action="/admin/shop/reservations/{{ r.id }}/confirm"
+                                data-confirm="Confirm this reservation?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-confirm" type="submit">Confirm</button>
+                          </form>
+                          <form method="POST" action="/admin/shop/reservations/{{ r.id }}/cancel"
+                                data-confirm="Cancel and return device to stock?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-cancel" type="submit">Cancel</button>
+                          </form>
+                        {% elif r.status == 'Confirmed' %}
+                          <form method="POST" action="/admin/shop/reservations/{{ r.id }}/complete"
+                                data-confirm="Mark as sold and complete this sale?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-complete" type="submit">Complete Sale</button>
+                          </form>
+                          <form method="POST" action="/admin/shop/reservations/{{ r.id }}/cancel"
+                                data-confirm="Cancel this confirmed reservation?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-cancel" type="submit">Cancel</button>
+                          </form>
+                        {% else %}
+                          <span style="font-size:.78rem;color:var(--muted)">No actions</span>
+                        {% endif %}
                       {% else %}
                         <span style="font-size:.78rem;color:var(--muted)">No actions</span>
                       {% endif %}

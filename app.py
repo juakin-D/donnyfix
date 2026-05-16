@@ -1289,6 +1289,120 @@ def _technician_badge_count(staff_id):
                 pass
 
 
+def generate_sales_alerts():
+    """Generate alerts relevant to the sales role — customer activity and inventory."""
+    alerts = []
+    today  = datetime.today().strftime('%Y-%m-%d')
+    conn   = None
+    try:
+        conn = get_db()
+
+        new_members = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM customers WHERE DATE(created_at)=CURRENT_DATE"
+        ).fetchone()['cnt']
+        if new_members > 0:
+            alerts.append({'id': 'new_members_today', 'type': 'member', 'severity': 'info',
+                'icon': '🎉', 'title': f'{new_members} new member(s) today',
+                'description': 'New customers signed up.',
+                'url': '/admin/members', 'count': new_members})
+
+        bookings_today = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM bookings WHERE date=%s", (today,)
+        ).fetchone()['cnt']
+        if bookings_today > 0:
+            alerts.append({'id': 'bookings_today', 'type': 'booking', 'severity': 'info',
+                'icon': '📅', 'title': f'{bookings_today} booking(s) today',
+                'description': 'Repairs scheduled for today.',
+                'url': '/admin/bookings', 'count': bookings_today})
+
+        stock = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM inventory WHERE status='In Stock'"
+        ).fetchone()['cnt']
+        if stock < 5:
+            alerts.append({'id': 'low_stock', 'type': 'inventory', 'severity': 'warning',
+                'icon': '📦', 'title': f'Low stock — {stock} device(s)',
+                'description': 'Inventory is running low. Notify the manager.',
+                'url': '/admin/inventory', 'count': stock})
+
+        try:
+            enquiries = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM device_enquiries WHERE status='New'"
+            ).fetchone()['cnt']
+            if enquiries > 0:
+                alerts.append({'id': 'new_enquiries', 'type': 'shop', 'severity': 'warning',
+                    'icon': '💬', 'title': f'{enquiries} new device enquiry/enquiries',
+                    'description': 'Customers looking for phones. Follow up within 24 hours.',
+                    'url': '/admin/shop', 'count': enquiries})
+        except Exception:
+            pass
+
+        try:
+            pending = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM reservations WHERE status='Pending'"
+            ).fetchone()['cnt']
+            if pending > 0:
+                alerts.append({'id': 'pending_reservations', 'type': 'shop', 'severity': 'warning',
+                    'icon': '🛍️', 'title': f'{pending} pending reservation(s)',
+                    'description': 'Devices reserved — deposits not yet confirmed.',
+                    'url': '/admin/shop', 'count': pending})
+        except Exception:
+            pass
+
+        expiring = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM customers WHERE membership_expiry::date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'"
+        ).fetchone()['cnt']
+        if expiring > 0:
+            alerts.append({'id': 'expiring_soon', 'type': 'member', 'severity': 'warning',
+                'icon': '⏰', 'title': f'{expiring} membership(s) expiring this week',
+                'description': 'Contact members about renewal.',
+                'url': '/admin/members', 'count': expiring})
+
+    except Exception as exc:
+        logger.error('generate_sales_alerts failed: %s', exc)
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    severity_order = {'critical': 0, 'warning': 1, 'info': 2}
+    alerts.sort(key=lambda a: severity_order.get(a['severity'], 3))
+    return alerts
+
+
+def _sales_badge_count():
+    """Quick count of actionable alerts for sales role — enquiries, expiring members, pending reservations."""
+    conn = None
+    try:
+        conn = get_db()
+        count = 0
+        try:
+            count += conn.execute(
+                "SELECT COUNT(*) AS cnt FROM device_enquiries WHERE status='New'"
+            ).fetchone()['cnt']
+        except Exception:
+            pass
+        count += conn.execute(
+            "SELECT COUNT(*) AS cnt FROM customers WHERE membership_expiry::date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'"
+        ).fetchone()['cnt']
+        try:
+            count += conn.execute(
+                "SELECT COUNT(*) AS cnt FROM reservations WHERE status='Pending'"
+            ).fetchone()['cnt']
+        except Exception:
+            pass
+        return int(count)
+    except Exception:
+        return 0
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 def _pending_payment_count():
     try:
         conn = get_db()
@@ -1314,6 +1428,11 @@ def inject_helpers():
         if role == 'technician' and staff_id:
             try:
                 alert_count = _technician_badge_count(staff_id)
+            except Exception:
+                pass
+        elif role == 'sales':
+            try:
+                alert_count = _sales_badge_count()
             except Exception:
                 pass
         else:
@@ -1824,6 +1943,8 @@ def admin_login():
             flash(f'Welcome, {staff["name"]}.', 'success')
             if staff['role'] == 'technician':
                 return redirect(url_for('admin_my_jobs'))
+            if staff['role'] == 'sales':
+                return redirect(url_for('admin_bookings'))
             return redirect(url_for('admin'))
 
         flash('Invalid credentials.', 'error')
@@ -1843,6 +1964,8 @@ def admin_logout():
 def admin():
     if session.get('admin_role') == 'technician':
         return redirect(url_for('admin_my_jobs'))
+    if session.get('admin_role') == 'sales':
+        return redirect(url_for('admin_bookings'))
     today = datetime.today().strftime('%Y-%m-%d')
     now   = datetime.now()
     conn  = get_db()
@@ -3619,6 +3742,9 @@ def admin_inventory_export():
 @app.route('/admin/revenue')
 @admin_required
 def admin_revenue():
+    if not has_permission('view_revenue'):
+        flash('You do not have permission to view revenue.', 'error')
+        return redirect(url_for('admin'))
     conn = get_db()
     try:
         this_month_collections = float(conn.execute(
@@ -4959,6 +5085,8 @@ def admin_notifications():
     staff_id = session.get('admin_staff_id')
     if role == 'technician' and staff_id:
         alerts = generate_technician_alerts(staff_id)
+    elif role == 'sales':
+        alerts = generate_sales_alerts()
     else:
         alerts = generate_admin_alerts()
     critical = [a for a in alerts if a['severity'] == 'critical']
@@ -4980,6 +5108,8 @@ def admin_notifications_json():
     staff_id = session.get('admin_staff_id')
     if role == 'technician' and staff_id:
         alerts = generate_technician_alerts(staff_id)
+    elif role == 'sales':
+        alerts = generate_sales_alerts()
     else:
         alerts = generate_admin_alerts()
     urgent = [a for a in alerts if a['severity'] in ('critical', 'warning')]

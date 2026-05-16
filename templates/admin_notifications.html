@@ -73,6 +73,9 @@
   {% if session.get('admin_role') == 'technician' %}
   <div class="all-clear-title">No Jobs Right Now</div>
   <div class="all-clear-sub">You have no pending or urgent jobs assigned. Take a break — new assignments will show up here when they come in.</div>
+  {% elif session.get('admin_role') == 'sales' %}
+  <div class="all-clear-title">All Caught Up</div>
+  <div class="all-clear-sub">No new enquiries, low-stock alerts, or pending reservations at the moment. Everything looks good on the sales front.</div>
   {% else %}
   <div class="all-clear-title">All Clear</div>
   <div class="all-clear-sub">No alerts right now. The business is running smoothly. Check back later.</div>

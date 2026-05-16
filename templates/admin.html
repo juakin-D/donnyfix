@@ -187,9 +187,11 @@ th:last-child,td:last-child{white-space:nowrap}
   <table>
     <thead>
       <tr>
+        {% if has_permission('edit_bookings') %}
         <th style="width:40px">
           <input type="checkbox" id="select-all" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer" title="Select all">
         </th>
+        {% endif %}
         <th>#</th>
         <th>Customer</th>
         <th>Contact</th>
@@ -204,10 +206,12 @@ th:last-child,td:last-child{white-space:nowrap}
     <tbody id="bookings-tbody">
       {% for b in bookings %}
       <tr data-date="{{ b['date'] }}" data-name="{{ b['name']|lower }}" data-email="{{ b['email']|lower }}" data-phone="{{ b['phone']|lower }}">
+        {% if has_permission('edit_bookings') %}
         <td style="width:40px">
           <input type="checkbox" class="bulk-check" value="{{ b['id'] }}"
                  style="width:16px;height:16px;accent-color:var(--green);cursor:pointer">
         </td>
+        {% endif %}
         <td><span class="td-mono">#{{ b['id'] }}</span></td>
         <td>
           <div class="td-name">{{ b['name'] }}</div>

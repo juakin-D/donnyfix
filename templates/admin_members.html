@@ -218,7 +218,7 @@ th:last-child,td:last-child{white-space:nowrap}
                 <td>
                   <div class="action-cell">
                     <a href="/admin/members/{{ m.id }}" class="act-btn" style="font-size:12px;color:var(--blue);background:rgba(59,158,232,.08);border-color:rgba(59,158,232,.25);">👁 View</a>
-                    {% if m.plan_id %}
+                    {% if m.plan_id and has_permission('edit_installments') %}
                     <button class="act-btn plan-{{ m.plan_status | lower }} open-plan-modal"
                         data-plan-id="{{ m.plan_id }}"
                         data-plan-name="{{ m.name }}"
@@ -233,12 +233,14 @@ th:last-child,td:last-child{white-space:nowrap}
                         data-name="{{ m.name }}"
                         data-email="{{ m.email }}"
                         title="Send message to {{ m.name }}">✉ Message</button>
+                    {% if has_permission('edit_members') %}
                     <button class="act-btn edit open-member-modal"
                         data-id="{{ m.id }}"
                         data-name="{{ m.name }}"
                         data-tier="{{ m.tier }}"
                         data-expiry="{{ m.expiry or '' }}"
                         title="Update membership">✏ Edit</button>
+                    {% endif %}
                     {% if has_permission('extend_membership') %}
                     <form class="extend-form" method="POST" action="/admin/members/{{ m.id }}/extend">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
