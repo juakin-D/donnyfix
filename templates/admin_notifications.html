@@ -70,8 +70,13 @@
 {% if not alerts %}
 <div class="all-clear">
   <div class="all-clear-icon">✅</div>
+  {% if session.get('admin_role') == 'technician' %}
+  <div class="all-clear-title">No Jobs Right Now</div>
+  <div class="all-clear-sub">You have no pending or urgent jobs assigned. Take a break — new assignments will show up here when they come in.</div>
+  {% else %}
   <div class="all-clear-title">All Clear</div>
   <div class="all-clear-sub">No alerts right now. The business is running smoothly. Check back later.</div>
+  {% endif %}
 </div>
 
 {% else %}

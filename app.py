@@ -1133,6 +1133,162 @@ def generate_admin_alerts():
     return alerts
 
 
+def generate_technician_alerts(staff_id):
+    """Generate alerts specific to one technician — only their assigned jobs."""
+    alerts = []
+    today  = datetime.today().strftime('%Y-%m-%d')
+
+    if not staff_id:
+        return alerts
+
+    conn = None
+    try:
+        conn = get_db()
+
+        try:
+            new_jobs = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM bookings WHERE assigned_to=%s AND status='Pending'",
+                (staff_id,)
+            ).fetchone()['cnt']
+            if new_jobs > 0:
+                alerts.append({
+                    'id': 'new_assigned_jobs', 'type': 'booking', 'severity': 'critical',
+                    'icon': '🆕',
+                    'title': f'{new_jobs} new job(s) assigned to you',
+                    'description': 'These bookings are waiting for you to start. Check My Jobs.',
+                    'url': '/admin/my-jobs', 'count': new_jobs,
+                })
+        except Exception:
+            new_jobs = 0
+
+        try:
+            urgent_jobs = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM bookings WHERE assigned_to=%s AND priority='Urgent' AND status IN ('Pending','In Progress')",
+                (staff_id,)
+            ).fetchone()['cnt']
+            if urgent_jobs > 0:
+                alerts.append({
+                    'id': 'urgent_jobs', 'type': 'booking', 'severity': 'critical',
+                    'icon': '🔴',
+                    'title': f'{urgent_jobs} URGENT job(s) need immediate attention',
+                    'description': 'These repairs are marked urgent by management. Prioritise them now.',
+                    'url': '/admin/my-jobs', 'count': urgent_jobs,
+                })
+        except Exception:
+            urgent_jobs = 0
+
+        try:
+            today_jobs = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM bookings WHERE assigned_to=%s AND date=%s AND status IN ('Pending','In Progress')",
+                (staff_id, today)
+            ).fetchone()['cnt']
+            if today_jobs > 0:
+                alerts.append({
+                    'id': 'today_jobs', 'type': 'booking', 'severity': 'warning',
+                    'icon': '📅',
+                    'title': f'{today_jobs} job(s) scheduled for today',
+                    'description': 'These repairs are booked for today. Make sure they are completed by end of day.',
+                    'url': '/admin/my-jobs', 'count': today_jobs,
+                })
+        except Exception:
+            today_jobs = 0
+
+        try:
+            in_progress = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM bookings WHERE assigned_to=%s AND status='In Progress'",
+                (staff_id,)
+            ).fetchone()['cnt']
+            if in_progress > 0:
+                alerts.append({
+                    'id': 'in_progress_jobs', 'type': 'booking', 'severity': 'info',
+                    'icon': '🔧',
+                    'title': f'{in_progress} repair(s) in progress',
+                    'description': 'These jobs are started but not yet marked complete.',
+                    'url': '/admin/my-jobs', 'count': in_progress,
+                })
+        except Exception:
+            in_progress = 0
+
+        try:
+            total_active = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM bookings WHERE assigned_to=%s AND status IN ('Pending','In Progress')",
+                (staff_id,)
+            ).fetchone()['cnt']
+            if total_active > 0 and total_active != new_jobs:
+                alerts.append({
+                    'id': 'total_active_jobs', 'type': 'booking', 'severity': 'info',
+                    'icon': '📋',
+                    'title': f'{total_active} total active job(s) in your queue',
+                    'description': 'Your complete workload including pending and in-progress repairs.',
+                    'url': '/admin/my-jobs', 'count': total_active,
+                })
+        except Exception:
+            pass
+
+        try:
+            completed_today = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM bookings WHERE assigned_to=%s AND status='Complete' AND date=%s",
+                (staff_id, today)
+            ).fetchone()['cnt']
+            if completed_today > 0:
+                alerts.append({
+                    'id': 'completed_today', 'type': 'booking', 'severity': 'info',
+                    'icon': '✅',
+                    'title': f'{completed_today} job(s) completed today',
+                    'description': 'Great work! Keep it up.',
+                    'url': '/admin/my-jobs', 'count': completed_today,
+                })
+        except Exception:
+            pass
+
+    except Exception as exc:
+        logger.error('generate_technician_alerts failed: %s', exc)
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    severity_order = {'critical': 0, 'warning': 1, 'info': 2}
+    alerts.sort(key=lambda a: severity_order.get(a['severity'], 3))
+    return alerts
+
+
+def _technician_badge_count(staff_id):
+    """Quick count of actionable alerts for a technician (new assigned + urgent only)."""
+    if not staff_id:
+        return 0
+    conn = None
+    try:
+        conn = get_db()
+        new_assigned = 0
+        urgent = 0
+        try:
+            new_assigned = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM bookings WHERE assigned_to=%s AND status='Pending'",
+                (staff_id,)
+            ).fetchone()['cnt']
+        except Exception:
+            pass
+        try:
+            urgent = conn.execute(
+                "SELECT COUNT(*) AS cnt FROM bookings WHERE assigned_to=%s AND priority='Urgent' AND status IN ('Pending','In Progress')",
+                (staff_id,)
+            ).fetchone()['cnt']
+        except Exception:
+            pass
+        return int(new_assigned + urgent)
+    except Exception:
+        return 0
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 def _pending_payment_count():
     try:
         conn = get_db()
@@ -1153,12 +1309,20 @@ def inject_helpers():
     pending_count = 0
     alert_count   = 0
     if session.get('admin_logged_in'):
+        role     = session.get('admin_role', '')
+        staff_id = session.get('admin_staff_id')
+        if role == 'technician' and staff_id:
+            try:
+                alert_count = _technician_badge_count(staff_id)
+            except Exception:
+                pass
+        else:
+            try:
+                alert_count = _alert_badge_count()
+            except Exception:
+                pass
         try:
             pending_count = _pending_payment_count()
-        except Exception:
-            pass
-        try:
-            alert_count = _alert_badge_count()
         except Exception:
             pass
     return dict(membership_status=membership_status,
@@ -4791,10 +4955,15 @@ def reject_pending_deposit(pd_id):
 @app.route('/admin/notifications')
 @admin_required
 def admin_notifications():
-    alerts       = generate_admin_alerts()
-    critical     = [a for a in alerts if a['severity'] == 'critical']
-    warnings     = [a for a in alerts if a['severity'] == 'warning']
-    info         = [a for a in alerts if a['severity'] == 'info']
+    role     = session.get('admin_role', '')
+    staff_id = session.get('admin_staff_id')
+    if role == 'technician' and staff_id:
+        alerts = generate_technician_alerts(staff_id)
+    else:
+        alerts = generate_admin_alerts()
+    critical = [a for a in alerts if a['severity'] == 'critical']
+    warnings = [a for a in alerts if a['severity'] == 'warning']
+    info     = [a for a in alerts if a['severity'] == 'info']
     return render_template('admin_notifications.html',
                            alerts=alerts, critical=critical,
                            warnings=warnings, info=info,
@@ -4807,8 +4976,13 @@ def admin_notifications():
 @app.route('/admin/notifications/json')
 @admin_required
 def admin_notifications_json():
-    alerts  = generate_admin_alerts()
-    urgent  = [a for a in alerts if a['severity'] in ('critical', 'warning')]
+    role     = session.get('admin_role', '')
+    staff_id = session.get('admin_staff_id')
+    if role == 'technician' and staff_id:
+        alerts = generate_technician_alerts(staff_id)
+    else:
+        alerts = generate_admin_alerts()
+    urgent = [a for a in alerts if a['severity'] in ('critical', 'warning')]
     return jsonify({
         'alerts':         urgent[:10],
         'total':          len(alerts),
