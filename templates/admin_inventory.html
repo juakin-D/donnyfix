@@ -129,11 +129,13 @@ th:last-child,td:last-child{white-space:nowrap}
           <div class="stat-value">{{ total_sold }}</div>
           <div class="stat-sub">devices sold</div>
         </div>
+        {% if has_permission('view_revenue') %}
         <div class="stat-card gold">
           <div class="stat-label">Stock Value</div>
           <div class="stat-value">{{ fmt_ghs(stock_value) }}</div>
           <div class="stat-sub">Potential: {{ fmt_ghs(potential_revenue) }}</div>
         </div>
+        {% endif %}
       </div>
 
       <!-- ADD DEVICE PANEL -->
@@ -399,11 +401,13 @@ th:last-child,td:last-child{white-space:nowrap}
         {% endif %}
       </div>
 
+      {% if has_permission('view_revenue') %}
       <!-- PROFIT SUMMARY -->
       <div class="profit-bar">
         📈 Total profit on sold devices this month:
         <strong>{{ fmt_ghs(monthly_profit) }}</strong>
       </div>
+      {% endif %}
 
       {% if has_permission('edit_inventory') %}
       <!-- EDIT MODAL -->
