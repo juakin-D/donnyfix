@@ -237,9 +237,9 @@ th:last-child,td:last-child{white-space:nowrap}
                   {% if s.id != current_staff_id %}
                   <button class="act-btn edit open-edit-modal"
                     data-id="{{ s.id }}"
-                    data-name="{{ s.name|tojson }}"
-                    data-phone="{{ (s.phone or '')|tojson }}"
-                    data-role="{{ s.role|tojson }}"
+                    data-name="{{ s.name }}"
+                    data-phone="{{ s.phone or '' }}"
+                    data-role="{{ s.role }}"
                     data-active="{{ s.is_active }}">
                     ✏ Edit
                   </button>
@@ -247,7 +247,7 @@ th:last-child,td:last-child{white-space:nowrap}
                   {% if session.get('admin_is_master') or session.get('admin_role') == 'owner' %}
                   <button class="act-btn edit open-reset-modal"
                     data-id="{{ s.id }}"
-                    data-name="{{ s.name|tojson }}">
+                    data-name="{{ s.name }}">
                     🔑 Reset
                   </button>
                   {% endif %}
@@ -416,16 +416,16 @@ th:last-child,td:last-child{white-space:nowrap}
       btn.addEventListener('click', function() {
         openEditModal(
           this.dataset.id,
-          JSON.parse(this.dataset.name),
-          JSON.parse(this.dataset.phone),
-          JSON.parse(this.dataset.role),
+          this.dataset.name,
+          this.dataset.phone,
+          this.dataset.role,
           parseInt(this.dataset.active, 10)
         );
       });
     });
     document.querySelectorAll('.open-reset-modal').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        openResetModal(this.dataset.id, JSON.parse(this.dataset.name));
+        openResetModal(this.dataset.id, this.dataset.name);
       });
     });
 
