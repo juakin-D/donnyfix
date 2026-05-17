@@ -251,12 +251,20 @@ th:last-child,td:last-child{white-space:nowrap}
                     🔑 Reset
                   </button>
                   {% endif %}
-                  {% if s.is_active and s.id != current_staff_id %}
-                  <form method="POST" action="/admin/staff/{{ s.id }}/deactivate"
-                        data-confirm="Deactivate {{ s.name|e }}?" style="display:inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="act-btn warn">⏸ Deactivate</button>
-                  </form>
+                  {% if s.id != current_staff_id %}
+                    {% if s.is_active %}
+                    <form method="POST" action="/admin/staff/{{ s.id }}/deactivate"
+                          data-confirm="Deactivate {{ s.name|e }}?" style="display:inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="act-btn warn">⏸ Deactivate</button>
+                    </form>
+                    {% else %}
+                    <form method="POST" action="/admin/staff/{{ s.id }}/reactivate"
+                          data-confirm="Reactivate {{ s.name|e }}?" style="display:inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="act-btn" style="border-color:rgba(0,196,106,.3);color:var(--green);background:var(--green-glow)">▶ Reactivate</button>
+                    </form>
+                    {% endif %}
                   {% endif %}
                   {% if session.get('admin_is_master') and s.id != current_staff_id %}
                   <form method="POST" action="/admin/staff/{{ s.id }}/delete"

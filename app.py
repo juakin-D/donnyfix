@@ -4142,6 +4142,29 @@ def admin_staff_deactivate(staff_id):
     return redirect(url_for('admin_staff'))
 
 
+@app.route('/admin/staff/<int:staff_id>/reactivate', methods=['POST'])
+@admin_required
+def admin_staff_reactivate(staff_id):
+    if not has_permission('manage_staff'):
+        flash('You do not have permission to do that.', 'error')
+        return redirect(url_for('admin'))
+
+    conn = get_db()
+    staff = conn.execute('SELECT name FROM staff WHERE id=%s', (staff_id,)).fetchone()
+    if not staff:
+        conn.close()
+        flash('Staff member not found.', 'error')
+        return redirect(url_for('admin_staff'))
+    conn.execute('UPDATE staff SET is_active=1 WHERE id=%s', (staff_id,))
+    conn.commit()
+    conn.close()
+    logger.info('Admin %s reactivated staff #%d (%s)', session.get('admin_username'), staff_id, staff['name'])
+    log_activity('Reactivated staff account', 'staff', target_type='staff', target_id=staff_id,
+                 details=f'Reactivated {staff["name"]}')
+    flash(f"{staff['name']}'s account has been reactivated.", 'success')
+    return redirect(url_for('admin_staff'))
+
+
 @app.route('/admin/staff/<int:staff_id>/delete', methods=['POST'])
 @admin_required
 def admin_staff_delete(staff_id):
